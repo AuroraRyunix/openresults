@@ -1,0 +1,17 @@
+# Normalize text to LF in the repository AND in working copies, because
+# `mix format --check-formatted` flags CRLF files as unformatted and a
+# CRLF-vs-LF diff on a file nobody edited wastes an afternoon. The sibling
+# projects learned this the hard way.
+* text=auto
+
+*.ex text eol=lf
+*.exs text eol=lf
+*.heex text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# EXCEPT snapshot fixtures, whose exact bytes are the contract under test.
+test/fixtures/** -text
