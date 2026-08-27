@@ -3,41 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title default="OpenResults" suffix=" · Phoenix Framework" phx-no-format>{assigns[:page_title]}</.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
-    </script>
-    <script>
-      (() => {
-        const systemTheme = () => matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-
-        const setTheme = (theme) => {
-          if (theme === "system") {
-            localStorage.removeItem("phx:theme");
-            document.documentElement.setAttribute("data-theme", systemTheme());
-            document.documentElement.setAttribute("data-theme-source", "system");
-          } else {
-            localStorage.setItem("phx:theme", theme);
-            document.documentElement.setAttribute("data-theme", theme);
-            document.documentElement.setAttribute("data-theme-source", "user");
-          }
-        };
-        if (!document.documentElement.hasAttribute("data-theme")) {
-          setTheme(localStorage.getItem("phx:theme") || "system");
-        }
-        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
-        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
-
-        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
-          if (document.documentElement.getAttribute("data-theme-source") === "system") {
-            document.documentElement.setAttribute("data-theme", systemTheme());
-          }
-        });
-      })();
-    </script>
+    <title>
+      {[assigns[:page_title], "OpenResults"] |> Enum.reject(&is_nil/1) |> Enum.join(" - ")}
+    </title>
+    <link rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!--
+      No script tag, and no CSRF meta tag to feed one. These pages are read
+      only and carry no session, so there is no token to hand a client and
+      nothing for JavaScript to do. Hundreds of phones load this over a
+      playing hall's wifi; a result should be readable the moment the HTML
+      lands.
+    --%>
   </head>
   <body>
-    {@inner_content}
+    <div class="page">
+      <a class="brand" href={~p"/"}>OpenResults</a>
+      {@inner_content}
+    </div>
   </body>
 </html>

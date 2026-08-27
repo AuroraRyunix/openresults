@@ -11,6 +11,13 @@ config :openresults,
   ecto_repos: [OpenResults.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# The bearer token an arbiter's machine publishes with. Deliberately nil here:
+# a default that works is a default that reaches production. Each environment
+# supplies its own, and config/runtime.exs reads OPENRESULTS_INGEST_TOKEN so a
+# release never carries the real one in its build. Unset means every publish
+# is refused, which is the right way for this to fail.
+config :openresults, :ingest_token, nil
+
 # Configure the endpoint
 config :openresults, OpenResultsWeb.Endpoint,
   url: [host: "localhost"],
@@ -65,4 +72,4 @@ import_config "#{config_env()}.exs"
 # without an elevated terminal, and this project has no colocated hooks to
 # import from node_modules. The warning is noise on every compile.
 config :phoenix_live_view,
-  disable_symlink_warning: true
+  colocated_assets: [disable_symlink_warning: true]

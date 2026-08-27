@@ -1,5 +1,10 @@
 import Config
 
+# The token the ingest tests present. Set here rather than in each test so a
+# test that forgets to authenticate fails for that reason and not because the
+# server had no token configured either.
+config :openresults, :ingest_token, "test-ingest-token"
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used

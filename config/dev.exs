@@ -1,5 +1,9 @@
 import Config
 
+# A fixed token so `curl` against a local server is not a two-step ceremony.
+# Worthless anywhere else - dev binds to loopback only.
+config :openresults, :ingest_token, "dev-ingest-token"
+
 # Configure your database
 config :openresults, OpenResults.Repo,
   database: Path.expand("../openresults_dev.db", __DIR__),

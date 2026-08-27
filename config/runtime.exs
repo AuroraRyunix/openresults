@@ -20,6 +20,16 @@ if System.get_env("PHX_SERVER") do
   config :openresults, OpenResultsWeb.Endpoint, server: true
 end
 
+# Outside the prod block on purpose, so a dev or staging box can point a real
+# OpenPairings at it by exporting one variable. Absent, whatever the
+# environment's config file set stands - and in prod that is nil, so publishing
+# is refused until someone sets this. Refusing to ingest is a better failure
+# than refusing to boot: the read side keeps serving the tournaments already
+# published while the token is sorted out.
+if ingest_token = System.get_env("OPENRESULTS_INGEST_TOKEN") do
+  config :openresults, :ingest_token, ingest_token
+end
+
 config :openresults, OpenResultsWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 

@@ -1,0 +1,26 @@
+<header class="masthead">
+  <h1>OpenResults</h1>
+  <p class="details"><span>Published tournaments</span></p>
+</header>
+
+<section>
+  <p :if={@snapshots == []} class="empty">
+    Nothing has been published yet.
+  </p>
+
+  <ul class="tournaments">
+    <li :for={snapshot <- @snapshots}>
+      <a href={~p"/t/#{snapshot.tournament_slug}"}>
+        {Tournament.name(snapshot.payload)}
+      </a>
+      <span class="details">
+        <span :if={Tournament.info(snapshot.payload)["city"]}>
+          {Tournament.info(snapshot.payload)["city"]}
+        </span>
+        <span :if={dates(Tournament.info(snapshot.payload))}>
+          {dates(Tournament.info(snapshot.payload))}
+        </span>
+      </span>
+    </li>
+  </ul>
+</section>

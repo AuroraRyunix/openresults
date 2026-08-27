@@ -1,0 +1,420 @@
+{
+  "players": [
+    {
+      "category": "A",
+      "club": "SF Berlin",
+      "federation": "GER",
+      "fide_id": 1503014,
+      "name": "Müller, Jörg",
+      "no": 1,
+      "rating": 2601,
+      "title": "GM"
+    },
+    {
+      "category": "A",
+      "club": "ŠK Beograd",
+      "federation": "SRB",
+      "fide_id": 2503014,
+      "name": "Đurić, Nikola",
+      "no": 2,
+      "rating": 2455,
+      "title": "IM"
+    },
+    {
+      "category": "A",
+      "club": "Gonzaga CC",
+      "federation": "IRL",
+      "fide_id": 3503014,
+      "name": "Ó Súilleabháin, Séamus",
+      "no": 3,
+      "rating": 2312,
+      "title": "FM"
+    },
+    {
+      "category": "A",
+      "club": "KSz Polonia",
+      "federation": "POL",
+      "fide_id": null,
+      "name": "Łukasiewicz, Paweł",
+      "no": 4,
+      "rating": 2208,
+      "title": null
+    },
+    {
+      "category": "A",
+      "club": "KGSRL",
+      "federation": "BEL",
+      "fide_id": 4503014,
+      "name": "Vandenberghe, Françoise",
+      "no": 5,
+      "rating": 2104,
+      "title": "WFM"
+    },
+    {
+      "category": "B",
+      "club": "CS Universitatea",
+      "federation": "ROU",
+      "fide_id": 5503014,
+      "name": "Ștefănescu, Ioana",
+      "no": 6,
+      "rating": 2033,
+      "title": "WIM"
+    },
+    {
+      "category": "B",
+      "club": "Wasa SK",
+      "federation": "SWE",
+      "fide_id": null,
+      "name": "Ångström, Åsa",
+      "no": 7,
+      "rating": 1955,
+      "title": null
+    },
+    {
+      "category": "B",
+      "club": "TR Reykjavík",
+      "federation": "ISL",
+      "fide_id": 6503014,
+      "name": "Björnsson, Sævar",
+      "no": 8,
+      "rating": 1866,
+      "title": null
+    },
+    {
+      "category": "B",
+      "club": "Cercle d'Échecs",
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "De Smet, Jean-Baptiste",
+      "no": 9,
+      "rating": 1742,
+      "title": null
+    },
+    {
+      "category": "B",
+      "club": null,
+      "federation": "VIE",
+      "fide_id": null,
+      "name": "Nguyễn, Thị Hà",
+      "no": 10,
+      "rating": null,
+      "title": null
+    }
+  ],
+  "published_at": "2026-08-27T20:44:55Z",
+  "rounds": [
+    {
+      "boards": [
+        {
+          "black": 6,
+          "board": 1,
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "result": "0-1",
+          "white": 7
+        },
+        {
+          "black": 8,
+          "board": 3,
+          "result": "1/2-1/2",
+          "white": 3
+        },
+        {
+          "black": 4,
+          "board": 4,
+          "result": "1-0FF",
+          "white": 9
+        },
+        {
+          "black": 10,
+          "board": 5,
+          "result": "1-0U",
+          "white": 5
+        }
+      ],
+      "byes": [],
+      "date": "2026-03-01",
+      "number": 1
+    },
+    {
+      "boards": [
+        {
+          "black": 1,
+          "board": 1,
+          "result": "1/2-1/2",
+          "white": 2
+        },
+        {
+          "black": 3,
+          "board": 2,
+          "result": "0-1",
+          "white": 6
+        },
+        {
+          "black": 7,
+          "board": 3,
+          "result": "0-1FF",
+          "white": 5
+        },
+        {
+          "black": 9,
+          "board": 4,
+          "result": "0-1",
+          "white": 8
+        }
+      ],
+      "byes": [
+        {
+          "kind": "pairing-allocated",
+          "player": 4,
+          "points": 1.0
+        },
+        {
+          "kind": "absent",
+          "player": 10,
+          "points": 0.0
+        }
+      ],
+      "date": "2026-03-02",
+      "number": 2
+    },
+    {
+      "boards": [
+        {
+          "black": 3,
+          "board": 1,
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "result": "1/2-0",
+          "white": 4
+        },
+        {
+          "black": 5,
+          "board": 3,
+          "result": null,
+          "white": 8
+        }
+      ],
+      "byes": [
+        {
+          "kind": "half-point",
+          "player": 6,
+          "points": 0.5
+        },
+        {
+          "kind": "zero-point",
+          "player": 9,
+          "points": 0.0
+        }
+      ],
+      "date": "2026-03-03",
+      "number": 3
+    },
+    {
+      "boards": [
+        {
+          "black": 1,
+          "board": 1,
+          "result": "0-1",
+          "white": 2
+        },
+        {
+          "black": 5,
+          "board": 2,
+          "result": "1-0",
+          "white": 3
+        },
+        {
+          "black": 6,
+          "board": 3,
+          "result": "1/2-1/2",
+          "white": 4
+        },
+        {
+          "black": 7,
+          "board": 4,
+          "result": "1-0",
+          "white": 8
+        },
+        {
+          "black": 9,
+          "board": 5,
+          "result": "0-1",
+          "white": 10
+        }
+      ],
+      "byes": [],
+      "date": "2026-03-05",
+      "number": 5
+    }
+  ],
+  "schema": "openresults/snapshot",
+  "source": {
+    "app": "openpairings",
+    "version": "0.17.1"
+  },
+  "standings": {
+    "after_round": 3,
+    "rows": [
+      {
+        "category": "A",
+        "player": 1,
+        "points": 2.5,
+        "rank": 1,
+        "tiebreaks": [
+          3.0,
+          3.5,
+          2.75,
+          5.0
+        ]
+      },
+      {
+        "category": "B",
+        "player": 9,
+        "points": 2.0,
+        "rank": 2,
+        "tiebreaks": [
+          2.5,
+          4.5,
+          2.5,
+          5.0
+        ]
+      },
+      {
+        "category": "A",
+        "player": 4,
+        "points": 1.5,
+        "rank": 3,
+        "tiebreaks": [
+          4.0,
+          5.5,
+          2.25,
+          2.5
+        ]
+      },
+      {
+        "category": "A",
+        "player": 2,
+        "points": 1.5,
+        "rank": 4,
+        "tiebreaks": [
+          4.0,
+          5.0,
+          2.25,
+          4.0
+        ]
+      },
+      {
+        "category": "A",
+        "player": 3,
+        "points": 1.5,
+        "rank": 5,
+        "tiebreaks": [
+          3.5,
+          4.0,
+          1.0,
+          3.5
+        ]
+      },
+      {
+        "category": "B",
+        "player": 7,
+        "points": 1.0,
+        "rank": 6,
+        "tiebreaks": [
+          3.0,
+          3.0,
+          1.5,
+          2.0
+        ]
+      },
+      {
+        "category": "A",
+        "player": 5,
+        "points": 1.0,
+        "rank": 7,
+        "tiebreaks": [
+          1.0,
+          1.0,
+          0.0,
+          3.0
+        ]
+      },
+      {
+        "category": "B",
+        "player": 6,
+        "points": 0.5,
+        "rank": 8,
+        "tiebreaks": [
+          4.0,
+          4.5,
+          0.25,
+          0.5
+        ]
+      },
+      {
+        "category": "B",
+        "player": 8,
+        "points": 0.5,
+        "rank": 9,
+        "tiebreaks": [
+          2.5,
+          4.0,
+          0.75,
+          1.5
+        ]
+      },
+      {
+        "category": "B",
+        "player": 10,
+        "points": 0.0,
+        "rank": 10,
+        "tiebreaks": [
+          2.5,
+          2.5,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    "tiebreaks": [
+      {
+        "code": "BHC1",
+        "label": "Buchholz Cut-1"
+      },
+      {
+        "code": "BH",
+        "label": "Buchholz"
+      },
+      {
+        "code": "SB",
+        "label": "Sonneborn-Berger"
+      },
+      {
+        "code": "PS",
+        "label": "Progressive score"
+      }
+    ]
+  },
+  "tournament": {
+    "arbiter": "Jorian Burssens",
+    "city": "Ghent",
+    "end_date": "2026-03-05",
+    "federation": "BEL",
+    "fide_rated": true,
+    "name": "Gent Spring Open 2026",
+    "rounds_count": 5,
+    "slug": "gent-spring-open-2026",
+    "start_date": "2026-03-01",
+    "system": "swiss"
+  },
+  "version": 1
+}

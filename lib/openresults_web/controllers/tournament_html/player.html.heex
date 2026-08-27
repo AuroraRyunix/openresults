@@ -1,0 +1,24 @@
+<.masthead payload={@payload} slug={@slug} current={@current} />
+
+<section>
+  <h2>
+    <span :if={@player["title"]} class="title">{@player["title"]}</span>
+    {@player["name"]}
+    <span class="quiet">no. {@player["no"]}</span>
+  </h2>
+
+  <p class="details">
+    <span :if={@player["rating"]}>{@player["rating"]}</span>
+    <span :if={@player["federation"]}>{@player["federation"]}</span>
+    <span :if={@player["club"]}>{@player["club"]}</span>
+    <span :if={@player["category"]}>Category {@player["category"]}</span>
+  </p>
+
+  <.card_table slug={@slug} card={@card} />
+
+  <p :if={Enum.any?(@card, &is_nil(&1.score))} class="footnote">
+    The running score stops at the first round whose result is not public - an
+    unpublished round, a board that is not listed, or a game with no result yet.
+    The arbiter's own total is on the <a href={~p"/t/#{@slug}"}>standings</a>.
+  </p>
+</section>

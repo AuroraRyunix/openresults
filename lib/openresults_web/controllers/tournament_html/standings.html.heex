@@ -1,0 +1,12 @@
+<.masthead payload={@payload} slug={@slug} current={@current} />
+
+<section>
+  <h2>
+    Standings
+    <span :if={Tournament.standings(@payload)["after_round"]} class="quiet">
+      after round {Tournament.standings(@payload)["after_round"]}
+    </span>
+  </h2>
+
+  <.standings_table payload={@payload} slug={@slug} />
+</section>

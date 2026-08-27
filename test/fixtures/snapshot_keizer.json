@@ -1,0 +1,189 @@
+{
+  "players": [
+    {
+      "category": null,
+      "club": "Cercle d'Échecs Gent",
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "Peeters, Wouter",
+      "no": 1,
+      "rating": 2088,
+      "title": null
+    },
+    {
+      "category": null,
+      "club": "Cercle d'Échecs Gent",
+      "federation": "SRB",
+      "fide_id": null,
+      "name": "Đoković, Milica",
+      "no": 2,
+      "rating": 1974,
+      "title": null
+    },
+    {
+      "category": null,
+      "club": "Cercle d'Échecs Gent",
+      "federation": "ESP",
+      "fide_id": null,
+      "name": "Hernández, José María",
+      "no": 3,
+      "rating": 1902,
+      "title": null
+    },
+    {
+      "category": null,
+      "club": "Cercle d'Échecs Gent",
+      "federation": "NED",
+      "fide_id": null,
+      "name": "Van der Meché, Anouk",
+      "no": 4,
+      "rating": 1855,
+      "title": null
+    },
+    {
+      "category": null,
+      "club": "Cercle d'Échecs Gent",
+      "federation": "POL",
+      "fide_id": null,
+      "name": "Kowalczyk, Zofia",
+      "no": 5,
+      "rating": 1768,
+      "title": null
+    },
+    {
+      "category": null,
+      "club": "Cercle d'Échecs Gent",
+      "federation": "IRL",
+      "fide_id": null,
+      "name": "Ó Braonáin, Cillian",
+      "no": 6,
+      "rating": 1690,
+      "title": null
+    }
+  ],
+  "published_at": "2026-08-27T20:44:55Z",
+  "rounds": [
+    {
+      "boards": [
+        {
+          "black": 4,
+          "board": 1,
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 5,
+          "board": 2,
+          "result": "1/2-1/2",
+          "white": 2
+        },
+        {
+          "black": 6,
+          "board": 3,
+          "result": "0-1",
+          "white": 3
+        }
+      ],
+      "byes": [],
+      "date": "2026-01-08",
+      "number": 1
+    },
+    {
+      "boards": [
+        {
+          "black": 1,
+          "board": 1,
+          "result": "0-1",
+          "white": 6
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "result": "1/2-1/2",
+          "white": 4
+        },
+        {
+          "black": 3,
+          "board": 3,
+          "result": "1-0",
+          "white": 5
+        }
+      ],
+      "byes": [],
+      "date": "2026-01-15",
+      "number": 2
+    }
+  ],
+  "schema": "openresults/snapshot",
+  "source": {
+    "app": "openpairings",
+    "version": "0.17.1"
+  },
+  "standings": {
+    "after_round": 2,
+    "rows": [
+      {
+        "category": null,
+        "player": 1,
+        "points": 17.0,
+        "rank": 1,
+        "score": 2.0,
+        "value": 12
+      },
+      {
+        "category": null,
+        "player": 5,
+        "points": 12.0,
+        "rank": 2,
+        "score": 1.5,
+        "value": 11
+      },
+      {
+        "category": null,
+        "player": 2,
+        "points": 9.5,
+        "rank": 3,
+        "score": 1.0,
+        "value": 10
+      },
+      {
+        "category": null,
+        "player": 6,
+        "points": 7.0,
+        "rank": 4,
+        "score": 1.0,
+        "value": 9
+      },
+      {
+        "category": null,
+        "player": 4,
+        "points": 5.0,
+        "rank": 5,
+        "score": 0.5,
+        "value": 8
+      },
+      {
+        "category": null,
+        "player": 3,
+        "points": 0.0,
+        "rank": 6,
+        "score": 0.0,
+        "value": 7
+      }
+    ],
+    "tiebreaks": []
+  },
+  "tournament": {
+    "arbiter": "Jorian Burssens",
+    "city": "Ghent",
+    "end_date": "2026-01-22",
+    "federation": "BEL",
+    "fide_rated": false,
+    "name": "Cercle d'Échecs Gent - Winteravond 2026",
+    "rounds_count": 3,
+    "slug": "cercle-gent-winteravond-2026",
+    "start_date": "2026-01-08",
+    "system": "keizer"
+  },
+  "version": 1
+}
