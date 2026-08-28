@@ -66,4 +66,24 @@ defmodule OpenResults.Registrations do
     )
     |> Repo.all()
   end
+
+  @doc """
+  Deletes every registration held for a tournament, returning how many went.
+
+  Part of a takedown, and the part that actually removes personal data: a
+  snapshot holds names an arbiter chose to publish, but this table holds email
+  addresses typed by members of the public who expected only the organiser to
+  read them. A takedown that removed the snapshots and left this behind would
+  leave the most sensitive rows in the database attached to a tournament that
+  no longer exists to find them by.
+
+  Only ever called from `OpenResults.Takedown.purge/1`.
+  """
+  @spec delete_all_for(String.t()) :: non_neg_integer()
+  def delete_all_for(slug) do
+    {count, _returned} =
+      from(r in Registration, where: r.tournament_slug == ^slug) |> Repo.delete_all()
+
+    count
+  end
 end

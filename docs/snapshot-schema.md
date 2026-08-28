@@ -187,6 +187,115 @@ no float history, no colour history. If the server had those it would be
 tempting to calculate a placing, and then the hall and the web page could
 disagree.
 
+## The tournament key, and taking a tournament down
+
+Not part of the document. It travels in a **header**, and the reason is worth
+stating because the alternative looks tidier: the snapshot is stored whole and
+verbatim, and `GET /api/tournaments/:slug` serves that stored document to the
+public. A credential inside the payload would therefore be written to disk in
+plaintext and then published on a web page. The document describes a
+tournament; a secret is a fact about the transport, and it belongs beside the
+bearer token.
+
+```
+POST /api/snapshots
+Authorization: Bearer <the server's ingest token>
+X-OpenResults-Key: <a random key this machine generated for this tournament>
+```
+
+Two questions, deliberately separated:
+
+| header | answers |
+|---|---|
+| `Authorization` | may this machine talk to this server at all |
+| `X-OpenResults-Key` | may it touch THIS tournament |
+
+The names invite one specific mistake, so it is worth saying once: **both
+headers carry an OpenResults secret and they are not the same secret.**
+`Authorization` holds the server-wide ingest token that an operator put in
+`openresults.service`; `X-OpenResults-Key` holds a per-tournament key the
+arbiter's machine generated and only that machine has. When a publish is
+being debugged, establish which of the two is wrong before anything else.
+
+**The client generates the key**, once per tournament, at random, and keeps
+it. This server stores only a SHA-256 digest of it and can never show it back.
+
+**Trust on first use.** The first publish of a slug that carries a key claims
+it; every later publish of that slug, and any delete, must present the same
+key. It is TOFU, and that is acceptable here because nothing reaches this
+check without the server-wide ingest token - so the exposure it closes is
+*accident*, two machines picking the same obvious slug, rather than attack.
+
+**A publish with no key is accepted for a slug nobody has claimed.** This is
+the additive-only rule applied to authentication. Snapshots already exist from
+before any of this, so slugs exist with a season of history and no key, and
+laptops in the field will not send one until their arbiters update. Refusing
+them would take live tournaments off the air mid-event.
+
+So there is no backfill and no admin step: **a legacy slug is adopted by the
+first publish that carries a key.** Once claimed, a keyless publish to that
+slug is refused - otherwise an old client could take over a claimed tournament
+by simply omitting the header, and the whole thing would be decorative.
+
+| slug | request | result |
+|---|---|---|
+| unclaimed | no key | published, stays unclaimed |
+| unclaimed | a key | published, **claims the slug** |
+| claimed | the same key | published |
+| claimed | a different key | `403 key_mismatch`, nothing changes |
+| claimed | no key | `403 key_required`, nothing changes |
+
+**403, not 401.** A 401 comes from the pipeline and means "you may not talk to
+this server". A 403 means "you may, but not to this tournament". An arbiter
+whose round will not publish needs to know which secret to go and check.
+
+### Taking a tournament down
+
+```
+DELETE /api/tournaments/:slug
+Authorization: Bearer <ingest token>
+X-OpenResults-Key: <the tournament's key>
+```
+
+Removes **everything** this server holds for the slug: every snapshot
+including the whole history, the registration queue with its email addresses,
+and the key claim itself.
+
+Every snapshot, not the current one, and that distinction is the whole route.
+The table is append-only and `/history` serves earlier rows by `?at=`, so
+deleting only the current snapshot would empty every public page - and leave
+the entire event, names and ratings and federations and any round since
+retracted, one query away for anyone holding the ingest token. It would look
+like it worked.
+
+The key claim goes too, so the slug returns to unclaimed and can be published
+again with a fresh key. Answers `200` with counts even when nothing was there,
+because a delete is idempotent and a retry after a timeout is not an error:
+
+```json
+{
+  "status": "deleted",
+  "slug": "gent-spring-open-2026",
+  "deleted": { "snapshots": 11, "registrations": 3, "key": 1 }
+}
+```
+
+An **unclaimed** slug can be deleted by any holder of the ingest token. That
+is deliberate: it is the same authority that could already overwrite the
+tournament into an empty one, and refusing would mean a tournament published
+before keys existed could never be taken down at all - which is the hole this
+route exists to close, left open for exactly the tournaments that have been
+public longest.
+
+### Break-glass
+
+A key lives on one laptop, and laptops die. A request may present the
+**server-wide ingest token** in `X-OpenResults-Key`, and the key check is
+overridden. Every use is logged at warning level with the slug and the action.
+
+It never claims a slug: storing the master secret as a tournament key would
+mean rotating the ingest token locked out every tournament claimed that way.
+
 ## Registration, the other direction
 
 The only payload that travels the other way. The server accepts these from

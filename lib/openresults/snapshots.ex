@@ -18,6 +18,7 @@ defmodule OpenResults.Snapshots do
   alias OpenResults.Envelope
   alias OpenResults.Repo
   alias OpenResults.Snapshots.Snapshot
+  alias OpenResults.TournamentKeys
 
   @schema_id "openresults/snapshot"
 
@@ -41,12 +42,30 @@ defmodule OpenResults.Snapshots do
   Returns `{:error, reason}` for the four things that are genuinely
   unstorable: `:not_an_object`, `:wrong_schema`, `:unknown_version`,
   `:missing_slug`.
+
+  ## Options
+
+    * `:key` - the tournament key the request presented, or `nil`. Checked by
+      `OpenResults.TournamentKeys`, which also claims an unclaimed slug on a
+      first publish. `{:error, :key_required}` and `{:error, :key_mismatch}`
+      come from there.
+
+    * `:received_at` - the server's clock, injectable for tests.
+
+  The key is checked AFTER the envelope, because the slug it authorises
+  against is inside the envelope and there is nothing to authorise until it
+  has been read. It is checked BEFORE anything is written, including before
+  the idempotent-repeat comparison below: a request with the wrong key must
+  change nothing, and it must not learn from a "nothing changed" answer what
+  the tournament currently holds.
   """
   @spec ingest(term(), keyword()) ::
-          {:ok, Snapshot.t()} | {:error, Envelope.error() | Ecto.Changeset.t()}
+          {:ok, Snapshot.t()}
+          | {:error, Envelope.error() | TournamentKeys.error() | Ecto.Changeset.t()}
   def ingest(payload, opts \\ []) do
     with {:ok, slug} <-
-           Envelope.validate(payload, @schema_id, @supported_versions, ["tournament", "slug"]) do
+           Envelope.validate(payload, @schema_id, @supported_versions, ["tournament", "slug"]),
+         :ok <- TournamentKeys.authorize_publish(slug, Keyword.get(opts, :key)) do
       received_at = Keyword.get_lazy(opts, :received_at, &DateTime.utc_now/0)
       store(slug, payload, received_at)
     end
@@ -150,6 +169,25 @@ defmodule OpenResults.Snapshots do
       order_by: [asc: s.tournament_slug]
     )
     |> Repo.all()
+  end
+
+  @doc """
+  Deletes EVERY snapshot held for a tournament, returning how many went.
+
+  Every one, not the current one. The table appends and `/history` serves
+  earlier rows by `?at=`, so removing only the newest row would empty the
+  public pages while leaving the whole event - and any round the arbiter had
+  already retracted - readable by anyone holding the ingest token.
+
+  Only ever called from `OpenResults.Takedown.purge/1`, which is what makes
+  sure the registration queue and the key claim go in the same breath.
+  """
+  @spec delete_all_for(String.t()) :: non_neg_integer()
+  def delete_all_for(slug) do
+    {count, _returned} =
+      from(s in Snapshot, where: s.tournament_slug == ^slug) |> Repo.delete_all()
+
+    count
   end
 
   # Newest by INSERTION, not by timestamp. `received_at` is wall-clock and

@@ -196,6 +196,48 @@ Unset, the app still boots and still serves every tournament already
 published - only publishing is refused. That is the right failure: the read
 side keeps working while the token is sorted out.
 
+### It is also the break-glass key
+
+The ingest token no longer settles who may touch a given tournament. Each
+tournament is claimed by a per-tournament key the arbiter's machine generates
+and sends in `X-OpenResults-Key`; this server keeps only a SHA-256 digest of
+it. See `docs/snapshot-schema.md` for the contract and
+`OpenResults.TournamentKeys` for the reasoning.
+
+That leaves one operational hole - **the key lives on one laptop, and laptops
+die** - so the ingest token doubles as the override. Send it *in the
+tournament-key header* and the key check is bypassed:
+
+```bash
+# Republish a tournament whose key was lost with the machine that held it.
+curl -X POST https://openresults.zerotwo.cloud/api/snapshots \
+  -H "Authorization: Bearer $OPENRESULTS_INGEST_TOKEN" \
+  -H "X-OpenResults-Key: $OPENRESULTS_INGEST_TOKEN" \
+  -H 'Content-Type: application/json' --data @snapshot.json
+
+# Or take it down entirely: every snapshot, the whole history, the
+# registration queue and the key claim.
+curl -X DELETE https://openresults.zerotwo.cloud/api/tournaments/<slug> \
+  -H "Authorization: Bearer $OPENRESULTS_INGEST_TOKEN" \
+  -H "X-OpenResults-Key: $OPENRESULTS_INGEST_TOKEN"
+```
+
+**Every override is logged**, at warning level, with the slug and the action:
+
+```
+[warning] BREAK-GLASS: publish on "gent-spring-open-2026" authorised with the
+server-wide ingest token instead of the tournament key - ...
+```
+
+`journalctl -u openresults -g BREAK-GLASS` finds them. If that line appears
+and nobody on the team was holding the glass hammer, the ingest token has
+leaked and is the thing to rotate.
+
+Rotating the ingest token is safe for the tournaments themselves: it is not
+stored as anybody's tournament key (break-glass deliberately never claims a
+slug), so rotating it costs each arbiter a visit to their Settings page and
+costs no tournament its claim.
+
 ## Ports on this host
 
 Nothing is reachable from the internet except SSH - firewalld's public zone

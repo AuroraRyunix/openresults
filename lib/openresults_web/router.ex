@@ -75,6 +75,16 @@ defmodule OpenResultsWeb.Router do
     # publishing into it.
     get "/tournaments/:slug/history", SnapshotController, :history
 
+    # Takedown. On the write pipeline because it is a write - the most
+    # destructive one here - and gated a second time by the tournament key,
+    # like publishing.
+    #
+    # It removes every snapshot, the whole history, and the registration queue
+    # with the email addresses in it. Until this route existed the only way to
+    # remove a published tournament was to SSH in and edit SQLite, which meant
+    # that in practice a tournament published by accident stayed published.
+    delete "/tournaments/:slug", SnapshotController, :delete
+
     # The arbiter pulling what the public form collected. Token-gated for the
     # same reason as history and for one of its own: this is the only route
     # in the system that returns an email address.

@@ -25,6 +25,7 @@ defmodule OpenResultsWeb.RegistrationController do
   alias OpenResults.Registrations
   alias OpenResults.Registrations.Entry
   alias OpenResults.Snapshots
+  alias OpenResults.TournamentKeys
   alias OpenResultsWeb.Tournament
 
   # Five entries per ten minutes from one address. Chosen to be invisible to
@@ -192,6 +193,36 @@ defmodule OpenResultsWeb.RegistrationController do
   repeatedly.
   """
   def index(conn, %{"slug" => slug}) do
+    case TournamentKeys.authorize_read(slug, tournament_key(conn)) do
+      :ok -> render_index(conn, slug)
+      {:error, reason} -> forbid(conn, reason)
+    end
+  end
+
+  defp tournament_key(conn) do
+    case Plug.Conn.get_req_header(conn, "x-openresults-key") do
+      [key | _rest] -> key
+      [] -> nil
+    end
+  end
+
+  # 403 rather than 401, the same split the publish path makes: 401 means "you
+  # may not talk to this server", 403 means "you may, but not to this
+  # tournament". By here the caller has already proved it holds the ingest
+  # token.
+  defp forbid(conn, reason) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{error: Atom.to_string(reason), detail: forbid_detail(reason)})
+  end
+
+  defp forbid_detail(:key_required),
+    do: "this tournament is claimed; send its key in x-openresults-key"
+
+  defp forbid_detail(:key_mismatch),
+    do: "the tournament key does not match the one this tournament was claimed with"
+
+  defp render_index(conn, slug) do
     registrations = Registrations.list_for_tournament(slug)
 
     json(conn, %{

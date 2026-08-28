@@ -2,11 +2,25 @@ defmodule OpenResultsWeb.SnapshotController do
   @moduledoc """
   Ingest and read-back of published snapshots.
 
-  Three routes. `create` is the trust boundary and is token-gated. `show`
+  Four routes. `create` is the trust boundary and is token-gated. `show`
   serves the CURRENT document and is open, because that document contains
   nothing that was withheld - the withholding happened before it was built.
   `history` serves earlier documents and is token-gated, which is the whole
-  point of the split.
+  point of the split. `delete` removes the tournament entirely.
+
+  `create` and `delete` are also gated per-tournament, by the key in the
+  `x-openresults-key` header - see `OpenResults.TournamentKeys` for what that
+  key is and why it is a second question rather than a stronger version of the
+  first. Two different failures, and they get two different statuses on
+  purpose: **401** is "you may not talk to this server", from the plug on the
+  pipeline, and **403** is "you may, but not to this tournament".
+
+  The key travels in a HEADER and never in the payload. It could not go in the
+  document even if the contract wanted it to: `payload` is stored whole and
+  verbatim, and `show` serves that column to the public, so a key inside it
+  would be written to disk in plaintext and then published on a page. The
+  snapshot describes a tournament; credentials belong to the transport, beside
+  the bearer token.
 
   Withholding holds for the current document ONLY. The table is append-only,
   so an earlier row can contain a round the arbiter has since RETRACTED - a
@@ -24,16 +38,35 @@ defmodule OpenResultsWeb.SnapshotController do
   use OpenResultsWeb, :controller
 
   alias OpenResults.Snapshots
+  alias OpenResults.Takedown
+  alias OpenResults.TournamentKeys
+
+  # The name is OpenPairings' - it was written first, and one spelling of a
+  # header beats two, the same way the contract insists on one spelling of a
+  # result token.
+  #
+  # Read it carefully, because it is easy to misread: this is NOT the
+  # OpenResults ingest token, which travels in `Authorization` beside it. This
+  # one is per-tournament and the arbiter's machine generated it. The two
+  # secrets sit one line apart in every request, so when this is being
+  # debugged, check which is which first.
+  @key_header "x-openresults-key"
 
   @doc """
   `POST /api/snapshots` - accepts a published snapshot.
+
+  The first publish carrying a key claims the slug; every later one must
+  present the same key. A publish carrying no key at all is accepted for a slug
+  nobody has claimed, which is what keeps tournaments published before any of
+  this existed - and laptops running a client too old to send a key - on the
+  air. `OpenResults.TournamentKeys` has the reasoning.
   """
   def create(conn, _params) do
     # `conn.body_params`, not the `params` Phoenix hands in. Those are the body
     # merged with the query string, and the stored document has to be the body
     # verbatim - otherwise `?rounds=[]` on the publish URL would end up inside
     # a payload that is meant to be exactly what the arbiter's machine built.
-    case Snapshots.ingest(conn.body_params) do
+    case Snapshots.ingest(conn.body_params, key: tournament_key(conn)) do
       {:ok, snapshot} ->
         json(conn, %{
           status: "ok",
@@ -41,11 +74,46 @@ defmodule OpenResultsWeb.SnapshotController do
           received_at: DateTime.to_iso8601(snapshot.received_at)
         })
 
+      {:error, reason} when reason in [:key_required, :key_mismatch] ->
+        forbid(conn, reason)
+
       {:error, reason} when is_atom(reason) ->
         reject(conn, reason)
 
       {:error, %Ecto.Changeset{} = changeset} ->
         reject(conn, :invalid, changeset_detail(changeset))
+    end
+  end
+
+  @doc """
+  `DELETE /api/tournaments/:slug` - removes the tournament from this server.
+
+  Everything: every snapshot including the history, the registration queue,
+  and the key claim itself. `OpenResults.Takedown` sets out why a delete that
+  removed only the current snapshot would be a bug that reports success.
+
+  Answers 200 with the counts even when nothing was there, because delete is
+  idempotent and a client retrying after a timeout should not have to tell a
+  404 that means "already gone" from a 404 that means "you typed the slug
+  wrong". The counts distinguish those without making the retry an error.
+  """
+  def delete(conn, %{"slug" => slug}) do
+    case TournamentKeys.authorize_delete(slug, tournament_key(conn)) do
+      :ok ->
+        json(conn, %{status: "deleted", slug: slug, deleted: Takedown.purge(slug)})
+
+      {:error, reason} ->
+        forbid(conn, reason)
+    end
+  end
+
+  # A repeated header is the client's bug, not an ambiguity to resolve: the
+  # first value is used and the rest ignored, the same thing every HTTP stack
+  # does with an unexpected duplicate.
+  defp tournament_key(conn) do
+    case get_req_header(conn, @key_header) do
+      [key | _duplicates] -> key
+      [] -> nil
     end
   end
 
@@ -112,6 +180,25 @@ defmodule OpenResultsWeb.SnapshotController do
     end
   end
 
+  # 403, not 401. The request got past the pipeline's token gate, so it IS
+  # allowed to talk to this server - it is this tournament it may not touch.
+  # Collapsing the two into one status would tell an arbiter whose publish
+  # failed to go and check the wrong secret.
+  #
+  # And unlike `IngestAuth`, which deliberately gives one indistinguishable
+  # answer to every failure, these two say which one happened. That plug is
+  # answering the anonymous internet, where "wrong token" versus "no token
+  # configured" is free intelligence. By here the caller has already proved it
+  # holds the server token, so the only thing the distinction reveals is
+  # whether a slug has been claimed - and against that sits an arbiter in a
+  # playing hall whose round will not publish, for whom "your client is too old
+  # to send a key" and "your key is wrong" have completely different fixes.
+  defp forbid(conn, reason) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{error: Atom.to_string(reason), detail: detail_for(reason)})
+  end
+
   defp reject(conn, reason, detail \\ nil) do
     conn
     |> put_status(:unprocessable_entity)
@@ -122,6 +209,12 @@ defmodule OpenResultsWeb.SnapshotController do
   defp detail_for(:wrong_schema), do: "`schema` must be #{Snapshots.schema_id()}"
   defp detail_for(:unknown_version), do: "`version` is not a version this server understands"
   defp detail_for(:missing_slug), do: "`tournament.slug` is required"
+
+  defp detail_for(:key_required),
+    do: "this tournament has been claimed; send its key in `#{@key_header}`"
+
+  defp detail_for(:key_mismatch),
+    do: "`#{@key_header}` is not the key this tournament was claimed with"
 
   defp changeset_detail(changeset) do
     changeset
