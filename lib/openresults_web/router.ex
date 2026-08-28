@@ -4,12 +4,17 @@ defmodule OpenResultsWeb.Router do
   # The read path, stripped to what a public results page actually needs.
   #
   # Gone from the scaffold's version: `fetch_session`, `fetch_live_flash` and
-  # `protect_from_forgery`. This app has no accounts and nothing on these
-  # pages changes state, so a session would exist only to be created, and CSRF
-  # protects a form submission that cannot happen here. Their absence is the
-  # feature: every response leaves without a Set-Cookie, which is why these
-  # pages need no consent banner and can be cached by anything in front of
-  # them. Add either one back only alongside the thing that needs it.
+  # `protect_from_forgery`. This app has no accounts, so a session would exist
+  # only to be created. Their absence is the feature: every response leaves
+  # without a Set-Cookie, which is why these pages need no consent banner and
+  # can be cached by anything in front of them. Add either one back only
+  # alongside the thing that needs it.
+  #
+  # There is now one form on this pipeline - the entry form below - and it
+  # still needs neither, for the reason set out where it is routed: it acts on
+  # nobody's behalf, so there is no ambient authority for a forged request to
+  # borrow. That reasoning is about THIS form. A form that ever acts for a
+  # visitor brings both plugs back with it.
   pipeline :browser do
     plug :accepts, ["html"]
     plug :put_root_layout, html: {OpenResultsWeb.Layouts, :root}
@@ -34,6 +39,26 @@ defmodule OpenResultsWeb.Router do
     get "/t/:slug", TournamentController, :standings
     get "/t/:slug/round/:n", TournamentController, :round
     get "/t/:slug/player/:no", TournamentController, :player
+
+    # Entry. Under the tournament, beside `round` and `player`, because an
+    # entry is for one event and the slug is the only handle there is - and
+    # because a tournament that has not published here then 404s from the same
+    # lookup as everywhere else, rather than needing its own rule.
+    #
+    # Still on `:browser`, which means still no session and still no CSRF
+    # token, and that is a decision rather than an oversight. CSRF exists to
+    # stop another site making a VISITOR'S browser act with the visitor's
+    # ambient authority. There is no authority here: no account, no session,
+    # nothing this form can do that a stranger with `curl` cannot do more
+    # easily. A token would therefore protect nothing, while the session it
+    # has to be checked against would put a Set-Cookie on a site whose whole
+    # read path is deliberately cookie-free. Revisit both the moment this form
+    # can do something on somebody's behalf.
+    #
+    # What actually guards it: an entry is only accepted for a slug that has
+    # already published, and the controller rate-limits by address.
+    get "/t/:slug/register", RegistrationController, :new
+    post "/t/:slug/register", RegistrationController, :create
   end
 
   # Writes. Everything behind this pipeline can create a tournament page, so
@@ -49,6 +74,11 @@ defmodule OpenResultsWeb.Router do
     # walking back through the append-only table is exactly as sensitive as
     # publishing into it.
     get "/tournaments/:slug/history", SnapshotController, :history
+
+    # The arbiter pulling what the public form collected. Token-gated for the
+    # same reason as history and for one of its own: this is the only route
+    # in the system that returns an email address.
+    get "/tournaments/:slug/registrations", RegistrationController, :index
   end
 
   # Reads. Open, because the CURRENT snapshot only ever contains what an

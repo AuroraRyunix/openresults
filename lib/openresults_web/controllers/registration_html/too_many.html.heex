@@ -1,0 +1,20 @@
+<header class="masthead">
+  <h1>Too many entries</h1>
+</header>
+
+<section>
+  <p class="empty">
+    Several entries have already arrived from this connection, so this one was
+    not sent and nothing has been stored. Try again in about {@minutes} {if @minutes == 1,
+      do: "minute",
+      else: "minutes"}.
+  </p>
+
+  <p class="footnote">
+    A shared connection counts as one: a club, a school or a venue's wifi all
+    look the same from here. If a group is entering together, leave a few
+    minutes between entries, or send the list to the organisers instead.
+  </p>
+
+  <p><a href={@back}>Back</a></p>
+</section>

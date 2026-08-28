@@ -26,7 +26,10 @@ defmodule OpenResultsWeb.TournamentHTML do
   """
   attr :payload, :map, required: true
   attr :slug, :string, required: true
-  attr :current, :any, required: true, doc: ":standings, {:round, n} or {:player, no}"
+
+  attr :current, :any,
+    required: true,
+    doc: ":standings, :register, {:round, n} or {:player, no}"
 
   def masthead(assigns) do
     payload = assigns.payload
@@ -72,6 +75,23 @@ defmodule OpenResultsWeb.TournamentHTML do
           </span>
         <% end %>
       </nav>
+
+      <%!--
+        Outside the round strip, which is labelled "Rounds" and is about them.
+        Shown on every tournament with no attempt to guess whether entries are
+        still open: the payload carries no such field, inventing one would be
+        this app deciding something, and an entry for a tournament that has
+        started is a thing the arbiter refuses - which is what they do with
+        every entry anyway.
+      --%>
+      <p class="entry">
+        <a
+          href={~p"/t/#{@slug}/register"}
+          class={["chip", @current == :register && "current"]}
+        >
+          Enter this tournament
+        </a>
+      </p>
     </header>
     """
   end

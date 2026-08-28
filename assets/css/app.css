@@ -276,6 +276,141 @@ tr.withheld td {
   display: block;
 }
 
+/* The entry form: the one page here with a control on it, and the only one
+   that writes anything. Hand written like the tables, because the scaffold's
+   input component is styled for the daisyUI this app dropped. */
+.entry {
+  margin: 0.75rem 0 0;
+}
+
+.entry-form {
+  max-width: 34rem;
+  margin-top: 1.25rem;
+}
+
+.field {
+  margin: 0 0 1.25rem;
+  border: 0;
+  padding: 0;
+}
+
+.field > label,
+.field > legend {
+  display: block;
+  margin-bottom: 0.3rem;
+  padding: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.field .required {
+  margin-left: 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.field input[type="text"],
+.field input[type="email"] {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The hint sits under the input and the error sits above the hint, so the
+   thing to fix is the first thing read after the box it is about. */
+.field .hint {
+  margin: 0.3rem 0 0;
+  color: var(--quiet);
+  font-size: 0.8125rem;
+}
+
+.field .wrong {
+  margin: 0.35rem 0 0;
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.field-wrong input:not([type="checkbox"]) {
+  border-color: var(--accent);
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.field .check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.field .check input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* Something went wrong that is not about one field. Marked with a rule rather
+   than a colour block: a person who has just lost a form does not need a
+   siren, they need to know nothing was sent. */
+.alarm {
+  margin: 0 0 1.25rem;
+  border-left: 3px solid var(--accent);
+  padding-left: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+
+.actions button {
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  filter: brightness(1.15);
+}
+
+.actions .cancel {
+  font-size: 0.875rem;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

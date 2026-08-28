@@ -1,0 +1,19 @@
+<.masthead payload={@payload} slug={@slug} current={:register} />
+
+<section>
+  <h2>
+    Enter this tournament
+    <span :if={Tournament.info(@payload)["start_date"]} class="quiet">
+      starts {Tournament.info(@payload)["start_date"]}
+    </span>
+  </h2>
+
+  <p class="footnote">
+    This form sends your details to the arbiter of {Tournament.name(@payload)}. It does
+    not enter you. The tournament is run on the arbiter's own machine; this
+    page only holds what you send until they collect it, and they decide who
+    plays. Nothing here will change until they enter you and publish a round.
+  </p>
+
+  <.entry_form form={@form} slug={@slug} rounds={@rounds} alarm={@alarm} />
+</section>

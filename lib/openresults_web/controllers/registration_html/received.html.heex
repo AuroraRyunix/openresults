@@ -1,0 +1,28 @@
+<.masthead payload={@payload} slug={@slug} current={:register} />
+
+<section>
+  <h2>Entry sent</h2>
+
+  <p>
+    The details for <strong>{@name}</strong>
+    are in the queue for the arbiter of {Tournament.name(@payload)}.
+  </p>
+
+  <p class="footnote">
+    <strong>This is not a place in the tournament.</strong>
+    The arbiter reads this queue on their own machine and decides who plays.
+    You will not appear on the <a href={~p"/t/#{@slug}"}>standings</a>, in a
+    pairing, or anywhere else on this site until they have entered you and
+    published a round - and if they need to ask you something first, they will
+    use the address you gave.
+  </p>
+
+  <p class="footnote">
+    Sent it twice, or spotted a mistake? Send it again and say so in the name
+    field, or write to the organisers. Nothing on this page can edit or delete
+    an entry: sorting out two entries for the same player is the arbiter's job,
+    the same as it is with a paper form.
+  </p>
+
+  <p><a href={~p"/t/#{@slug}"}>Back to {Tournament.name(@payload)}</a></p>
+</section>

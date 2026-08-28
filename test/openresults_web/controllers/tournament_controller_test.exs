@@ -118,8 +118,14 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # Player 10 has none of the three. Club play is mostly missing fields.
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
+      # The two 2.5s became 2.0 on 2026-08-28, and the fixture is right.
+      # These files are written by OpenPairings' own `snapshot_test.exs` so
+      # this repo tests against real builder output; that build fixed a
+      # tiebreak bug where an unreported round handed every player's
+      # opponents a phantom half-point. Player 10's Buchholz lost exactly
+      # that half-point. Nothing here changed - the numbers it is given did.
       assert texts(document, "table.standings tbody tr:last-child td") ==
-               ["10", "Nguyễn, Thị Hà", "", "0", "2.5", "2.5", "0", "0"]
+               ["10", "Nguyễn, Thị Hà", "", "0", "2", "2", "0", "0"]
     end
 
     test "a tournament with no standings yet says so instead of showing an empty table", %{

@@ -14,8 +14,9 @@ defmodule OpenResults.Application do
        repos: Application.fetch_env!(:openresults, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:openresults, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: OpenResults.PubSub},
-      # Start a worker by calling: OpenResults.Worker.start_link(arg)
-      # {OpenResults.Worker, arg},
+      # Owns the ETS table behind the entry form's rate limit. Before the
+      # endpoint, so the table exists before anything can be posted at it.
+      OpenResults.RateLimit,
       # Start to serve requests, typically the last entry
       OpenResultsWeb.Endpoint
     ]
