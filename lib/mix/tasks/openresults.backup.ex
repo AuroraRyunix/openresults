@@ -23,10 +23,12 @@ defmodule Mix.Tasks.Openresults.Backup do
 
   @requirements ["app.config"]
 
+  # `app.config` and nothing more. The backup opens its own SQLite connection
+  # rather than going through the Repo, so it needs configuration and not a
+  # running application - and starting one here would put a second web endpoint
+  # up against the port the live service is already bound to.
   @impl Mix.Task
   def run(argv) do
-    {:ok, _} = Application.ensure_all_started(:openresults)
-
     case argv do
       ["--list"] -> list()
       ["--verify", path] -> verify(path)
