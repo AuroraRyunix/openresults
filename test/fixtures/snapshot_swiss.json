@@ -101,7 +101,7 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-29T00:20:45Z",
+  "published_at": "2026-08-29T01:04:10Z",
   "rounds": [
     {
       "boards": [
@@ -408,9 +408,19 @@
   "tournament": {
     "arbiter": "Jorian Burssens",
     "city": "Ghent",
+    "display": {
+      "category": true,
+      "club": true,
+      "federation": true,
+      "player_cards": true,
+      "rating": true,
+      "tiebreaks": true,
+      "title": true
+    },
     "end_date": "2026-03-05",
     "federation": "BEL",
     "fide_rated": true,
+    "listed": true,
     "name": "Gent Spring Open 2026",
     "registration_open": true,
     "rounds_count": 5,

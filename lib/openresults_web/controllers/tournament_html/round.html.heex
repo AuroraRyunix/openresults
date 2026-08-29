@@ -6,11 +6,11 @@
     <span :if={@round["date"]} class="quiet">{@round["date"]}</span>
   </h2>
 
-  <.pairings_table slug={@slug} round={@round} players={@players} />
+  <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />
 </section>
 
 <section :if={Tournament.byes(@round) != []}>
   <h2>Byes</h2>
 
-  <.byes_table slug={@slug} round={@round} players={@players} />
+  <.byes_table slug={@slug} round={@round} players={@players} payload={@payload} />
 </section>

@@ -6,19 +6,145 @@
     <title>
       {[assigns[:page_title], "OpenResults"] |> Enum.reject(&is_nil/1) |> Enum.join(" - ")}
     </title>
+    <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
     <link rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!--
-      No script tag, and no CSRF meta tag to feed one. These pages are read
-      only and carry no session, so there is no token to hand a client and
-      nothing for JavaScript to do. Hundreds of phones load this over a
-      playing hall's wifi; a result should be readable the moment the HTML
-      lands.
+      There was no script tag here at all, and the reason was good: these
+      pages are read-only, carry no session, and hundreds of phones load them
+      over a playing hall's wifi, so a result should be readable the moment
+      the HTML lands.
+
+      That promise is intact. What follows is not an application - there is
+      no bundle, no socket, no framework and no request on load. It is a
+      preference reader that runs before first paint (inline, so there is no
+      round trip and no flash of the wrong theme) and, further down, a
+      right-click handler that fetches one page on demand.
+
+      Every page still renders completely with all of it switched off: the
+      theme falls back to the device's own light/dark setting, and a player's
+      name is still a link to their card. Nothing here is load-bearing, which
+      is the condition under which adding it was worth it.
     --%>
+    <script>
+      (() => {
+        const KEY = "openresults:theme";
+        const root = document.documentElement;
+
+        // localStorage THROWS rather than returning null where a browser
+        // blocks site data - a private window, or a partitioned third-party
+        // frame, which is exactly the club-embed case this site supports.
+        // Unguarded, that would take the whole bootstrap down.
+        const read = () => { try { return localStorage.getItem(KEY); } catch (_) { return null; } };
+
+        const saved = read();
+        // Absent means "system": no attribute at all, so the stylesheet's
+        // prefers-color-scheme query decides. Writing "system" into the
+        // attribute would make the media query stop matching.
+        if (saved && saved !== "system") { root.setAttribute("data-theme", saved); }
+        root.classList.add("has-js");
+      })();
+    </script>
   </head>
   <body>
     <div class="page">
-      <a class="brand" href={~p"/"}>OpenResults</a>
+      <a class="brand" href={~p"/"}>
+        <.logo /> OpenResults
+      </a>
       {@inner_content}
+
+      <footer class="site-foot">
+        <span>Published by the arbiter. Results are theirs, not this site's.</span>
+        <span class="spacer"></span>
+        <label class="theme-switch">
+          Theme
+          <select id="theme-select" aria-label="Colour theme">
+            <option value="system">Match device</option>
+            <option value="paper">Paper</option>
+            <option value="night">Night</option>
+            <option value="board">Board</option>
+            <option value="slate">Slate</option>
+            <option value="contrast">High contrast</option>
+          </select>
+        </label>
+      </footer>
     </div>
+
+    <%!--
+      The player card, shown in place on right-click.
+
+      Empty until something asks for it, and filled from the player's own
+      page rather than from data embedded here - a 200-player open would
+      otherwise ship every card to every visitor to serve the handful who
+      open one. Left-click still navigates to that page, which is what
+      happens with no JavaScript, on a phone, and whenever the fetch fails.
+    --%>
+    <div id="card-overlay" class="card-overlay" hidden>
+      <div class="card-dialog" role="dialog" aria-modal="true" aria-label="Player card">
+        <button type="button" class="card-close" aria-label="Close">Close</button>
+        <div id="card-body">
+          <p class="card-loading">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const KEY = "openresults:theme";
+        const root = document.documentElement;
+
+        const write = (v) => { try { localStorage.setItem(KEY, v); } catch (_) {} };
+        const read = () => { try { return localStorage.getItem(KEY); } catch (_) { return null; } };
+
+        // ---- theme switch ----
+        const select = document.getElementById("theme-select");
+        if (select) {
+          select.value = read() || "system";
+          select.addEventListener("change", () => {
+            const value = select.value;
+            write(value);
+            if (value === "system") { root.removeAttribute("data-theme"); }
+            else { root.setAttribute("data-theme", value); }
+          });
+        }
+
+        // ---- the player card ----
+        const overlay = document.getElementById("card-overlay");
+        const body = document.getElementById("card-body");
+        if (!overlay || !body) { return; }
+
+        const close = () => {
+          overlay.hidden = true;
+          body.innerHTML = '<p class="card-loading">Loading…</p>';
+        };
+
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) { close(); } });
+        overlay.querySelector(".card-close").addEventListener("click", close);
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); } });
+
+        document.addEventListener("contextmenu", (e) => {
+          const link = e.target.closest("a.player[data-player]");
+          if (!link) { return; }
+          e.preventDefault();
+
+          overlay.hidden = false;
+
+          fetch(link.href, {headers: {"accept": "text/html"}})
+            .then((r) => r.ok ? r.text() : Promise.reject(r.status))
+            .then((html) => {
+              const doc = new DOMParser().parseFromString(html, "text/html");
+              const section = doc.querySelector("section");
+              if (!section) { throw new Error("no card"); }
+              body.replaceChildren(section);
+            })
+            .catch(() => {
+              // The card is a convenience; the page behind it is the real
+              // thing. Falling through to it beats an error message about a
+              // feature the visitor did not know existed.
+              close();
+              window.location.href = link.href;
+            });
+        });
+      })();
+    </script>
   </body>
 </html>

@@ -51,6 +51,55 @@ defmodule OpenResultsWeb.Tournament do
   def info(payload), do: object(payload, "tournament")
 
   @doc """
+  Whether this tournament belongs in the front-page list.
+
+  Absent means listed, which is what publishing meant before there was a
+  choice. An arbiter unlists an event to hand out its link rather than
+  advertise it - it stays perfectly readable to anyone holding the address,
+  and the arbiter's own settings page says so in as many words, because
+  reading "unlisted" as "private" is how somebody publishes an event they
+  meant to keep off the web.
+  """
+  def listed?(payload) do
+    case Map.get(info(payload), "listed") do
+      false -> false
+      _listed_or_unstated -> true
+    end
+  end
+
+  @doc """
+  Whether the arbiter allows `key` to be shown - `"rating"`, `"club"`,
+  `"federation"`, `"title"`, `"category"`, `"tiebreaks"`, `"player_cards"`.
+
+  **Absent means shown**, in every direction: a payload from before the
+  field existed, a key this server knows that the arbiter's app has never
+  heard of, and a key the arbiter's app sends that this server does not
+  recognise. All three are the same answer, and it is the same answer this
+  server gave before any of it existed.
+
+  The failure directions are not symmetric. Showing a column an arbiter
+  meant to hide is visible to them and fixed in one click; hiding one they
+  meant to show is invisible from their side - their own screens look right
+  - and surfaces as somebody in the hall asking where the ratings went.
+
+  Note this is a display rule, not an access rule. It decides what a page
+  renders. Nothing here is a substitute for not publishing data that should
+  not leave the arbiter's machine.
+  """
+  def show?(payload, key) do
+    case payload |> info() |> Map.get("display") do
+      %{} = display ->
+        case Map.get(display, key) do
+          false -> false
+          _shown_or_unstated -> true
+        end
+
+      _absent_or_junk ->
+        true
+    end
+  end
+
+  @doc """
   Whether the arbiter is accepting entries for this tournament.
 
   **An absent field means open**, which is the one place in this module where
@@ -399,6 +448,87 @@ defmodule OpenResultsWeb.Tournament do
         bye: string(bye, "kind"),
         points: if(is_number(points), do: points)
     }
+  end
+
+  @doc """
+  Each player's total as the arbiter computed it, as `%{no => points}`.
+
+  From `standings.rows`, not derived. This is the authoritative number - the
+  one the arbiter's tiebreaks ran against - and re-deriving it here would
+  produce a second answer that quietly disagrees the moment a game is
+  adjudicated or a forfeit is entered after the fact.
+
+  Missing for a player with no standings row, which reads as "unknown" rather
+  than zero.
+  """
+  def standings_points(payload) do
+    for row <- standings_rows(payload),
+        no = Map.get(row, "player"),
+        not is_nil(no),
+        into: %{},
+        do: {no, Map.get(row, "points")}
+  end
+
+  @doc """
+  Every player's score going INTO round `number`, as `%{no => points}`.
+
+  What a pairing list means by "score": the points each player carried into
+  the round, which is what explains why these two are on this board. The
+  points they end the round with are on the standings.
+
+  `nil` for a player whose total cannot be known, under exactly the rule
+  `card/2` uses - an unpublished earlier round, a board the arbiter withheld,
+  a game with no result yet, or a token this server cannot read. The two must
+  agree: a player card and a pairing list disagreeing about the same number
+  would be this site contradicting itself, and the contract carries no
+  per-game points precisely so that nobody has to guess which is right.
+
+  One pass over the earlier rounds rather than `card/2` per player, which
+  would re-walk every round's boards once per seat on the page.
+  """
+  def scores_before(payload, number) do
+    earlier = payload |> round_slots() |> Enum.filter(&(&1 < number))
+    by_number = rounds_by_number(payload)
+    start = Map.new(players(payload), &{Map.get(&1, "no"), {:known, 0.0}})
+
+    earlier
+    |> Enum.reduce(start, fn n, running ->
+      contributions = round_contributions(Map.get(by_number, n))
+
+      Map.new(running, fn {no, state} ->
+        {no, advance(state, Map.get(contributions, no, :absent))}
+      end)
+    end)
+    |> Map.new(fn {no, state} -> {no, running_score(state)} end)
+  end
+
+  # `%{no => points}` for one round, or an empty map for a round that was
+  # never published - which leaves every player `:absent`, i.e. unknown,
+  # which is the honest answer for a round nobody can see.
+  defp round_contributions(nil), do: %{}
+
+  defp round_contributions(round) do
+    from_boards =
+      for board <- boards(round),
+          {seat, points} <- board_contributions(board),
+          not is_nil(seat),
+          into: %{},
+          do: {seat, points}
+
+    for bye <- byes(round),
+        no = Map.get(bye, "player"),
+        not is_nil(no),
+        into: from_boards,
+        do: {no, Map.get(bye, "points")}
+  end
+
+  defp board_contributions(board) do
+    case result_points(Map.get(board, "result")) do
+      {white, black} -> [{Map.get(board, "white"), white}, {Map.get(board, "black"), black}]
+      # A board with no result yet contributes an unknown to BOTH seats,
+      # rather than nothing - a game in progress is not a game worth zero.
+      nil -> [{Map.get(board, "white"), :unknown}, {Map.get(board, "black"), :unknown}]
+    end
   end
 
   defp find_board(round, no) do

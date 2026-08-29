@@ -61,7 +61,7 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-29T00:20:45Z",
+  "published_at": "2026-08-29T01:04:10Z",
   "rounds": [
     {
       "boards": [
@@ -176,9 +176,19 @@
   "tournament": {
     "arbiter": "Jorian Burssens",
     "city": "Ghent",
+    "display": {
+      "category": true,
+      "club": true,
+      "federation": true,
+      "player_cards": true,
+      "rating": true,
+      "tiebreaks": true,
+      "title": true
+    },
     "end_date": "2026-01-22",
     "federation": "BEL",
     "fide_rated": false,
+    "listed": true,
     "name": "Cercle d'Échecs Gent - Winteravond 2026",
     "registration_open": false,
     "rounds_count": 3,

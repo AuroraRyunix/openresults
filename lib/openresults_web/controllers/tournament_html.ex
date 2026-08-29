@@ -52,7 +52,9 @@ defmodule OpenResultsWeb.TournamentHTML do
 
       <p class="details">
         <span :if={@info["city"]}>{@info["city"]}</span>
-        <span :if={@info["federation"]}>{@info["federation"]}</span>
+        <span :if={Tournament.show?(@payload, "federation") && @info["federation"]}>
+          {@info["federation"]}
+        </span>
         <span :if={dates(@info)}>{dates(@info)}</span>
         <span :if={@info["arbiter"]}>Arbiter: {@info["arbiter"]}</span>
         <span :if={@info["fide_rated"] == true}>FIDE rated</span>
@@ -144,6 +146,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       # carries points and tiebreaks. Keyed off `system`, as the contract says.
       |> assign(:keizer?, Tournament.keizer?(payload))
       |> assign(:manual_order?, Tournament.manual_order?(payload))
+      |> assign(:show, display_rules(payload))
 
     ~H"""
     <p :if={@manual_order?} class="footnote manual-order">
@@ -162,14 +165,17 @@ defmodule OpenResultsWeb.TournamentHTML do
           <tr>
             <th class="num" scope="col">#</th>
             <th scope="col">Player</th>
-            <th class="num" scope="col">Rating</th>
+            <th :if={@show.rating} class="num" scope="col">Rating</th>
             <%= if @keizer? do %>
               <th class="num" scope="col">Value</th>
               <th class="num" scope="col">Keizer points</th>
               <th class="num" scope="col">Score</th>
             <% else %>
               <th class="num" scope="col">Points</th>
-              <th :for={tiebreak <- @tiebreaks} class="num" scope="col">
+              <%!-- The placings are unaffected by hiding these. The arbiter
+                    is hiding the arithmetic, not the result - the order is
+                    still exactly the one they computed. --%>
+              <th :for={tiebreak <- @tiebreaks} :if={@show.tiebreaks} class="num" scope="col">
                 {Tournament.tiebreak_label(tiebreak)}
               </th>
             <% end %>
@@ -183,17 +189,23 @@ defmodule OpenResultsWeb.TournamentHTML do
                 slug={@slug}
                 no={row["player"]}
                 player={@players[row["player"]]}
+                show={@show}
+                cards?={@show.player_cards}
                 detail
               />
             </td>
-            <td class="num">{@players[row["player"]]["rating"]}</td>
+            <td :if={@show.rating} class="num">{@players[row["player"]]["rating"]}</td>
             <%= if @keizer? do %>
               <td class="num">{number(row["value"])}</td>
               <td class="num strong">{number(row["points"])}</td>
               <td class="num">{number(row["score"])}</td>
             <% else %>
               <td class="num strong">{number(row["points"])}</td>
-              <td :for={{_tiebreak, at} <- Enum.with_index(@tiebreaks)} class="num">
+              <td
+                :for={{_tiebreak, at} <- Enum.with_index(@tiebreaks)}
+                :if={@show.tiebreaks}
+                class="num"
+              >
                 {number(Tournament.tiebreak_value(row, at))}
               </td>
             <% end %>
@@ -211,12 +223,22 @@ defmodule OpenResultsWeb.TournamentHTML do
   hid was withheld when the document was built. There is no filtering to
   forget and nothing on the server to leak.
   """
+  attr :payload, :map, required: true
   attr :slug, :string, required: true
   attr :round, :map, required: true
   attr :players, :map, required: true
 
   def pairings_table(assigns) do
-    assigns = assign(assigns, :boards, Tournament.boards(assigns.round))
+    show = display_rules(assigns.payload)
+
+    assigns =
+      assigns
+      |> assign(:boards, Tournament.boards(assigns.round))
+      |> assign(:show, show)
+      # The points each player carried INTO this round, which is what a
+      # pairing list means by score and what explains why these two are on
+      # this board. Their points after it are on the standings.
+      |> assign(:scores, Tournament.scores_before(assigns.payload, assigns.round["number"]))
 
     ~H"""
     <p :if={@boards == []} class="empty">No boards were published for this round.</p>
@@ -226,25 +248,64 @@ defmodule OpenResultsWeb.TournamentHTML do
         <thead>
           <tr>
             <th class="num" scope="col">Bd</th>
+            <th :if={@show.rating} class="num" scope="col">Elo</th>
+            <th class="num" scope="col" title="Points going into this round">Pts</th>
             <th scope="col">White</th>
             <th class="num" scope="col">Result</th>
             <th scope="col">Black</th>
+            <th class="num" scope="col" title="Points going into this round">Pts</th>
+            <th :if={@show.rating} class="num" scope="col">Elo</th>
           </tr>
         </thead>
         <tbody>
           <tr :for={board <- @boards}>
             <td class="num">{board["board"]}</td>
+            <td :if={@show.rating} class="num">{@players[board["white"]]["rating"]}</td>
+            <td class="num"><.score points={@scores[board["white"]]} /></td>
             <td>
-              <.player_link slug={@slug} no={board["white"]} player={@players[board["white"]]} />
+              <.player_link
+                slug={@slug}
+                no={board["white"]}
+                player={@players[board["white"]]}
+                show={@show}
+                cards?={@show.player_cards}
+                detail
+              />
             </td>
             <td class="num"><.result token={board["result"]} /></td>
             <td>
-              <.player_link slug={@slug} no={board["black"]} player={@players[board["black"]]} />
+              <.player_link
+                slug={@slug}
+                no={board["black"]}
+                player={@players[board["black"]]}
+                show={@show}
+                cards?={@show.player_cards}
+                detail
+              />
             </td>
+            <td class="num"><.score points={@scores[board["black"]]} /></td>
+            <td :if={@show.rating} class="num">{@players[board["black"]]["rating"]}</td>
           </tr>
         </tbody>
       </table>
     </div>
+    """
+  end
+
+  @doc """
+  A running score, or a marker where it cannot be known.
+
+  A blank would read as zero. `Tournament.scores_before/2` returns `nil` the
+  moment an earlier round is unpublished, withheld or unfinished, and saying
+  so is the point - a total that stepped over a gap would be a number the
+  arbiter never agreed to.
+  """
+  attr :points, :any, default: nil
+
+  def score(assigns) do
+    ~H"""
+    <span :if={is_nil(@points)} class="unreported" title="an earlier round is not public">-</span>
+    <span :if={not is_nil(@points)}>{number(@points)}</span>
     """
   end
 
@@ -255,12 +316,16 @@ defmodule OpenResultsWeb.TournamentHTML do
   configurable, so a half-point bye worth something other than a half point is
   the arbiter's decision to state and not this app's to assume.
   """
+  attr :payload, :map, required: true
   attr :slug, :string, required: true
   attr :round, :map, required: true
   attr :players, :map, required: true
 
   def byes_table(assigns) do
-    assigns = assign(assigns, :byes, Tournament.byes(assigns.round))
+    assigns =
+      assigns
+      |> assign(:byes, Tournament.byes(assigns.round))
+      |> assign(:show, display_rules(assigns.payload))
 
     ~H"""
     <div :if={@byes != []} class="scroller">
@@ -274,7 +339,15 @@ defmodule OpenResultsWeb.TournamentHTML do
         </thead>
         <tbody>
           <tr :for={bye <- @byes}>
-            <td><.player_link slug={@slug} no={bye["player"]} player={@players[bye["player"]]} /></td>
+            <td>
+              <.player_link
+                slug={@slug}
+                no={bye["player"]}
+                player={@players[bye["player"]]}
+                show={@show}
+                cards?={@show.player_cards}
+              />
+            </td>
             <td>{bye_kind(bye["kind"])}</td>
             <td class="num">{number(bye["points"])}</td>
           </tr>
@@ -292,8 +365,24 @@ defmodule OpenResultsWeb.TournamentHTML do
   """
   attr :slug, :string, required: true
   attr :card, :list, required: true
+  attr :payload, :map, required: true
 
   def card_table(assigns) do
+    show = display_rules(assigns.payload)
+
+    assigns =
+      assigns
+      |> assign(:show, show)
+      # Each opponent's own total, so a reader can see the strength of the
+      # field somebody actually played - the same column the arbiter's own
+      # Players Card carries, and the reason a 4/5 against the top boards
+      # reads differently from 4/5 against the bottom.
+      |> assign(:totals, Tournament.standings_points(assigns.payload))
+      # `:game` rows span the same columns as the placeholders below them, so
+      # the two have to agree. Counted rather than written out, because they
+      # move with the arbiter's ticks.
+      |> assign(:game_span, 3 + count_if([show.federation, show.title, show.rating]))
+
     ~H"""
     <div class="scroller">
       <table class="card">
@@ -301,7 +390,12 @@ defmodule OpenResultsWeb.TournamentHTML do
           <tr>
             <th class="num" scope="col">Rd</th>
             <th scope="col">Colour</th>
+            <th class="num" scope="col" title="Opponent's pairing number">No</th>
+            <th :if={@show.federation} scope="col">Nat</th>
+            <th :if={@show.title} scope="col">Tit</th>
             <th scope="col">Opponent</th>
+            <th :if={@show.rating} class="num" scope="col">Elo</th>
+            <th class="num" scope="col" title="Opponent's total">Pts</th>
             <th class="num" scope="col">Result</th>
             <th class="num" scope="col">Score</th>
           </tr>
@@ -312,18 +406,31 @@ defmodule OpenResultsWeb.TournamentHTML do
             <%= case entry.kind do %>
               <% :game -> %>
                 <td>{if(entry.colour == :white, do: "White", else: "Black")}</td>
+                <td class="num">{entry.opponent_no}</td>
+                <td :if={@show.federation}>{dash(entry.opponent && entry.opponent["federation"])}</td>
+                <td :if={@show.title}>{dash(entry.opponent && entry.opponent["title"])}</td>
                 <td>
-                  <.player_link slug={@slug} no={entry.opponent_no} player={entry.opponent} detail />
+                  <.player_link
+                    slug={@slug}
+                    no={entry.opponent_no}
+                    player={entry.opponent}
+                    show={@show}
+                    cards?={@show.player_cards}
+                  />
                 </td>
+                <td :if={@show.rating} class="num">
+                  {dash(entry.opponent && entry.opponent["rating"])}
+                </td>
+                <td class="num"><.score points={@totals[entry.opponent_no]} /></td>
                 <td class="num"><.result token={entry.result} /></td>
               <% :bye -> %>
                 <td></td>
-                <td class="quiet">{bye_kind(entry.bye)}</td>
+                <td colspan={@game_span} class="quiet">{bye_kind(entry.bye)}</td>
                 <td class="num">{number(entry.points)}</td>
               <% :unpublished -> %>
-                <td colspan="3" class="quiet">not published</td>
+                <td colspan={@game_span + 2} class="quiet">not published</td>
               <% _no_game -> %>
-                <td colspan="3" class="quiet">no game published for this round</td>
+                <td colspan={@game_span + 2} class="quiet">no game published for this round</td>
             <% end %>
             <td class="num strong">{number(entry.score)}</td>
           </tr>
@@ -331,6 +438,27 @@ defmodule OpenResultsWeb.TournamentHTML do
       </table>
     </div>
     """
+  end
+
+  defp count_if(flags), do: Enum.count(flags, & &1)
+
+  defp dash(nil), do: "-"
+  defp dash(""), do: "-"
+  defp dash(value), do: value
+
+  # The arbiter's display rules as a plain map with atom keys, resolved once
+  # per table. Every key defaults to shown - see `Tournament.show?/2` for why
+  # that direction is the safe one.
+  defp display_rules(payload) do
+    %{
+      rating: Tournament.show?(payload, "rating"),
+      title: Tournament.show?(payload, "title"),
+      federation: Tournament.show?(payload, "federation"),
+      club: Tournament.show?(payload, "club"),
+      category: Tournament.show?(payload, "category"),
+      tiebreaks: Tournament.show?(payload, "tiebreaks"),
+      player_cards: Tournament.show?(payload, "player_cards")
+    }
   end
 
   @doc """
@@ -343,18 +471,48 @@ defmodule OpenResultsWeb.TournamentHTML do
   attr :slug, :string, required: true
   attr :no, :any, required: true
   attr :player, :map, default: nil
-  attr :detail, :boolean, default: false, doc: "show title and rating alongside the name"
+
+  attr :detail, :boolean,
+    default: false,
+    doc: """
+    Show the title alongside the name. Not the rating: every table that wants
+    one has a column for it, and rendering it here as well printed it twice
+    on the standings - which it did before the pairings gained a column, and
+    which adding one to the pairings would have repeated.
+    """
+
+  attr :show, :map,
+    default: %{},
+    doc: "the arbiter's display rules; missing keys mean shown, as everywhere else"
+
+  attr :cards?, :boolean, default: true, doc: "false renders the name without a link"
 
   def player_link(assigns) do
     ~H"""
-    <a :if={@no} href={~p"/t/#{@slug}/player/#{@no}"} class="player">
-      <span :if={@detail && @player && @player["title"]} class="title">{@player["title"]}</span>
+    <a
+      :if={@no && @cards?}
+      href={~p"/t/#{@slug}/player/#{@no}"}
+      class="player"
+      data-player={@no}
+    >
+      <span :if={@detail && shown?(@show, :title) && @player && @player["title"]} class="title">
+        {@player["title"]}
+      </span>
       <span class="name">{(@player && @player["name"]) || "Player #{@no}"}</span>
-      <span :if={@detail && @player && @player["rating"]} class="rating">{@player["rating"]}</span>
     </a>
+    <span :if={@no && not @cards?} class="player">
+      <span :if={@detail && shown?(@show, :title) && @player && @player["title"]} class="title">
+        {@player["title"]}
+      </span>
+      <span class="name">{(@player && @player["name"]) || "Player #{@no}"}</span>
+    </span>
     <span :if={is_nil(@no)} class="player">-</span>
     """
   end
+
+  # Missing means shown, matching `Tournament.show?/2`. Callers build this map
+  # once per table rather than asking the payload per cell.
+  defp shown?(show, key), do: Map.get(show, key, true)
 
   @doc """
   A result token, with its forfeit or unrated marker spelled out.

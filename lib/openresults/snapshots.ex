@@ -169,6 +169,7 @@ defmodule OpenResults.Snapshots do
       order_by: [asc: s.tournament_slug]
     )
     |> Repo.all()
+    |> Enum.filter(&OpenResultsWeb.Tournament.listed?(&1.payload))
   end
 
   @doc """

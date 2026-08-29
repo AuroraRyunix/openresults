@@ -18,9 +18,37 @@
    The heroicons installation itself is managed by your mix.exs */
 @plugin "../vendor/heroicons";
 
-/* Light and dark are taken from the device rather than offered as a toggle.
-   A toggle needs JavaScript to remember the choice, and the phone has already
-   been asked. */
+/* ---------------------------------------------------------------------------
+   Themes
+
+   Seven variables carry the whole site, so a theme is seven lines. That is
+   why there are several: each one is a real choice about a real room, not a
+   hue rotation.
+
+     paper     the original, and still the default - warm off-white, brick
+     night     the original dark
+     board     cream and board-green, the colours of the equipment
+     slate     cool grey-blue, for a screen rather than a page
+     contrast  black on white with heavy rules, for a projector at the back
+               of a hall and for anyone who needs the contrast
+
+   `system` is the absence of a choice: no `data-theme` attribute, and the
+   media query below picks paper or night from the device.
+
+   ## The rule that keeps this from breaking
+
+   `:root` defines the COMPLETE palette. The media query and the explicit
+   themes only redefine variables. Nothing else in this file may declare a
+   colour inside a media query or a `[data-theme]` block - a colour whose
+   only definition sits behind one renders as nothing in the states that do
+   not match, which is how a page ends up with one theme's text on another
+   theme's background.
+
+   The media query is guarded with `:not([data-theme])` so an explicit choice
+   beats the device in both directions: someone who picks paper on a
+   dark-set phone gets paper.
+   --------------------------------------------------------------------------- */
+
 :root {
   --bg: #fbfbfa;
   --panel: #ffffff;
@@ -32,7 +60,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #16171a;
     --panel: #1d1f23;
     --ink: #e9e9e6;
@@ -41,6 +69,59 @@
     --accent: #e2a08c;
     --withheld: #63656b;
   }
+}
+
+:root[data-theme="paper"] {
+  --bg: #fbfbfa;
+  --panel: #ffffff;
+  --ink: #1b1b1a;
+  --quiet: #6a6a68;
+  --rule: #dcdcd8;
+  --accent: #7a2e1e;
+  --withheld: #a8a8a4;
+}
+
+:root[data-theme="night"] {
+  --bg: #16171a;
+  --panel: #1d1f23;
+  --ink: #e9e9e6;
+  --quiet: #9b9b98;
+  --rule: #313339;
+  --accent: #e2a08c;
+  --withheld: #63656b;
+}
+
+:root[data-theme="board"] {
+  --bg: #f2ece0;
+  --panel: #fbf7ee;
+  --ink: #1f2a22;
+  --quiet: #5f6d61;
+  --rule: #d3c9b4;
+  --accent: #2f5d43;
+  --withheld: #a39982;
+}
+
+:root[data-theme="slate"] {
+  --bg: #12161c;
+  --panel: #1a2029;
+  --ink: #dde5ef;
+  --quiet: #8d9bad;
+  --rule: #2b3542;
+  --accent: #7fb2e5;
+  --withheld: #5a6675;
+}
+
+/* Deliberately harsher than the rest. Pure black on pure white, a rule
+   colour that is actually visible rather than a hairline, and an accent that
+   stays legible when a projector washes the top third of the screen out. */
+:root[data-theme="contrast"] {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --ink: #000000;
+  --quiet: #333333;
+  --rule: #000000;
+  --accent: #0000cc;
+  --withheld: #555555;
 }
 
 * {
@@ -421,4 +502,121 @@ tr.withheld td {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   The theme switch, and the player card it sits next to
+
+   Both need JavaScript, which this site had none of on purpose - the root
+   layout's comment is worth reading before adding more. What is here is a
+   preference reader and a fetch, inlined, with no bundle and no socket; the
+   page still renders completely without any of it running, which was the
+   actual promise. See the layout for the argument.
+   --------------------------------------------------------------------------- */
+
+.site-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  color: var(--quiet);
+  font-size: 0.8125rem;
+}
+
+.site-foot .spacer {
+  flex: 1 1 auto;
+}
+
+/* Hidden until the script runs. A switch that cannot switch is worse than no
+   switch - it invites a click and does nothing. */
+.theme-switch {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+html.has-js .theme-switch {
+  display: flex;
+}
+
+.theme-switch select {
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+/* The card overlay. `position: fixed` with a scrolling inner panel, so a
+   nine-round card on a phone scrolls inside the dialog instead of pushing
+   the page around behind it. */
+.card-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.card-overlay[hidden] {
+  display: none;
+}
+
+.card-dialog {
+  max-width: 52rem;
+  max-height: 85vh;
+  overflow: auto;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.card-dialog h2 {
+  margin-top: 0;
+}
+
+.card-dialog .masthead,
+.card-dialog .footnote a {
+  display: none;
+}
+
+.card-close {
+  float: right;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--quiet);
+  font: inherit;
+  cursor: pointer;
+}
+
+.card-loading {
+  color: var(--quiet);
+}
+
+/* Only worth saying where a right-click does something, which is a pointer
+   device. A phone gets the same card by tapping through to the page. */
+@media (hover: hover) {
+  html.has-js .player[data-player]::after {
+    content: "";
+  }
+}
+
+/* The mark sits on the wordmark's baseline rather than the line box's top,
+   which is where `vertical-align: middle` would put a 20px glyph beside
+   13px uppercase text. */
+.brand-mark {
+  vertical-align: -0.35em;
+  margin-right: 0.15rem;
 }

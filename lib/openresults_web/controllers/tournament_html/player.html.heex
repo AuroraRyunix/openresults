@@ -2,19 +2,25 @@
 
 <section>
   <h2>
-    <span :if={@player["title"]} class="title">{@player["title"]}</span>
+    <span :if={Tournament.show?(@payload, "title") && @player["title"]} class="title">
+      {@player["title"]}
+    </span>
     {@player["name"]}
     <span class="quiet">no. {@player["no"]}</span>
   </h2>
 
   <p class="details">
-    <span :if={@player["rating"]}>{@player["rating"]}</span>
-    <span :if={@player["federation"]}>{@player["federation"]}</span>
-    <span :if={@player["club"]}>{@player["club"]}</span>
-    <span :if={@player["category"]}>Category {@player["category"]}</span>
+    <span :if={Tournament.show?(@payload, "rating") && @player["rating"]}>{@player["rating"]}</span>
+    <span :if={Tournament.show?(@payload, "federation") && @player["federation"]}>
+      {@player["federation"]}
+    </span>
+    <span :if={Tournament.show?(@payload, "club") && @player["club"]}>{@player["club"]}</span>
+    <span :if={Tournament.show?(@payload, "category") && @player["category"]}>
+      Category {@player["category"]}
+    </span>
   </p>
 
-  <.card_table slug={@slug} card={@card} />
+  <.card_table slug={@slug} card={@card} payload={@payload} />
 
   <p :if={Enum.any?(@card, &is_nil(&1.score))} class="footnote">
     The running score stops at the first round whose result is not public - an

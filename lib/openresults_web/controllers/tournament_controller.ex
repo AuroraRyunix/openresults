@@ -81,25 +81,42 @@ defmodule OpenResultsWeb.TournamentController do
     with_payload(conn, slug, fn payload ->
       number = integer(no)
 
-      case number && Tournament.player(payload, number) do
-        nil ->
+      cond do
+        # The arbiter has turned player cards off for this tournament. The
+        # link is not rendered either, but a link is a courtesy and a
+        # bookmarked or guessed URL is not - this is the enforcement.
+        not Tournament.show?(payload, "player_cards") ->
           not_found(
             conn,
-            "#{Tournament.name(payload)} has no player #{no}.",
+            "#{Tournament.name(payload)} does not publish player cards.",
             back: ~p"/t/#{slug}"
           )
 
-        player ->
-          render(conn, :player,
-            page_title: "#{Map.get(player, "name")} - #{Tournament.name(payload)}",
-            payload: payload,
-            slug: slug,
-            player: player,
-            card: Tournament.card(payload, number),
-            current: {:player, number}
-          )
+        true ->
+          render_player(conn, payload, slug, no, number)
       end
     end)
+  end
+
+  defp render_player(conn, payload, slug, no, number) do
+    case number && Tournament.player(payload, number) do
+      nil ->
+        not_found(
+          conn,
+          "#{Tournament.name(payload)} has no player #{no}.",
+          back: ~p"/t/#{slug}"
+        )
+
+      player ->
+        render(conn, :player,
+          page_title: "#{Map.get(player, "name")} - #{Tournament.name(payload)}",
+          payload: payload,
+          slug: slug,
+          player: player,
+          card: Tournament.card(payload, number),
+          current: {:player, number}
+        )
+    end
   end
 
   defp with_payload(conn, slug, render_fun) do

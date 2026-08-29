@@ -87,7 +87,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{short["tournament"]["slug"]}") |> doc()
 
       assert texts(document, "table.standings tbody tr:first-child td") ==
-               ["1", "GM Müller, Jörg 2601", "2601", "2.5", "3", "3.5", "", ""]
+               ["1", "GM Müller, Jörg", "2601", "2.5", "3", "3.5", "", ""]
     end
 
     test "rows render in the order they arrived, not in the order this app would sort them", %{
@@ -111,7 +111,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
                ["#", "Player", "Rating", "Value", "Keizer points", "Score"]
 
       assert texts(document, "table.standings tbody tr:first-child td") ==
-               ["1", "Peeters, Wouter 2088", "2088", "12", "17", "2"]
+               ["1", "Peeters, Wouter", "2088", "12", "17", "2"]
     end
 
     test "a player with no rating, title or club renders cleanly", %{conn: conn, slug: slug} do
@@ -156,13 +156,19 @@ defmodule OpenResultsWeb.TournamentControllerTest do
   end
 
   describe "GET /t/:slug/round/:n - pairings" do
-    test "renders board, white, result and black", %{conn: conn, slug: slug} do
+    test "renders board, ratings, running scores, white, result and black", %{
+      conn: conn,
+      slug: slug
+    } do
       document = conn |> get(~p"/t/#{slug}/round/1") |> doc()
 
       assert texts(document, "h2") == ["Round 1 2026-03-01"]
 
+      # Elo, and the points each player carried INTO the round - which is what
+      # a pairing list means by score, and what explains why these two are on
+      # board 1. The points they end the round with are on the standings.
       assert texts(document, "table.pairings tbody tr:first-child td") ==
-               ["1", "Müller, Jörg", "1-0", "Ștefănescu, Ioana"]
+               ["1", "2601", "0", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana", "0", "2033"]
     end
 
     test "a forfeit says it was not played and an unrated game says it will not count", %{
@@ -244,12 +250,15 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     } do
       document = conn |> get(~p"/t/#{slug}/player/1") |> doc()
 
+      # The opponent's number, federation, title, rating and own total - the
+      # same detail the arbiter's own Players Card carries, and the reason 4/5
+      # against the top boards reads differently from 4/5 against the bottom.
       assert texts(document, "table.card tbody tr") == [
-               "1 White WIM Ștefănescu, Ioana 2033 1-0 1",
-               "2 Black IM Đurić, Nikola 2455 1/2-1/2 1.5",
-               "3 White FM Ó Súilleabháin, Séamus 2312 1-0 2.5",
+               "1 White 6 ROU WIM Ștefănescu, Ioana 2033 0.5 1-0 1",
+               "2 Black 2 SRB IM Đurić, Nikola 2455 1.5 1/2-1/2 1.5",
+               "3 White 3 IRL FM Ó Súilleabháin, Séamus 2312 1.5 1-0 2.5",
                "4 not published",
-               "5 Black IM Đurić, Nikola 2455 0-1"
+               "5 Black 2 SRB IM Đurić, Nikola 2455 1.5 0-1"
              ]
     end
 
@@ -321,8 +330,38 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     test "needs no javascript to read a result", %{conn: conn, slug: slug} do
       html = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
 
-      refute html =~ "<script"
+      # This used to refuse any <script> at all. Two inline ones arrived on
+      # 2026-08-29 - a theme preference reader and a right-click handler -
+      # and the promise they had to keep is the one below, not the absence of
+      # the tag: the result is in the HTML that lands, and everything else is
+      # decoration that can fail without taking the page with it.
+      assert html =~ "1-0"
+      assert html =~ "Müller, Jörg"
+
+      # No bundle, and nothing to fetch before the page means something. An
+      # external script is a second request on a playing hall's wifi and a
+      # blank table until it answers.
+      refute html =~ ~s|<script src|
+      refute html =~ ~s|<script defer|
+      refute html =~ "phx-track-static"
+
+      # Still no session anywhere near this site.
       refute html =~ "csrf-token"
+    end
+
+    test "the scripts that are here are inert if they never run", %{conn: conn, slug: slug} do
+      html = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
+
+      # A player's name is a real link to a real page. The right-click card
+      # replaces that navigation; it does not create it, so a browser with
+      # JavaScript off loses a convenience rather than a feature.
+      assert html =~ ~s|href="/t/#{slug}/player/1"|
+
+      # The theme switch is hidden until the script marks the document, so a
+      # control that cannot work is never offered. `has-js` is added by the
+      # inline reader in <head>.
+      assert html =~ "theme-switch"
+      assert html =~ "has-js"
     end
   end
 end

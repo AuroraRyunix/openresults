@@ -498,4 +498,76 @@ defmodule OpenResultsWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  @doc """
+  The site mark.
+
+  Deliberately the same silhouette as OpenPairings' - two wings around an orb
+  - in this site's own rust rather than that one's green. They are halves of
+  one system, and somebody who has seen the arbiter's app should recognise
+  this as its other half without being told; the colour is what says which of
+  the two they are looking at.
+
+  Inline rather than an <img> so it takes the page's own ink colour where it
+  needs to and costs no second request.
+  """
+  def logo(assigns) do
+    ~H"""
+    <svg
+      class="brand-mark"
+      viewBox="0 0 64 48"
+      width="26"
+      height="20"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="or-orb" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#a8452a" />
+          <stop offset="100%" stop-color="#7a2e1e" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M22,18 Q10,10 1,14 Q8,22 10,30 Q16,32 22,30 Q26,26 22,18 Z"
+        fill="#f7f3e8"
+        stroke="#1c1a15"
+        stroke-width="3"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M42,18 Q54,10 63,14 Q56,22 54,30 Q48,32 42,30 Q38,26 42,18 Z"
+        fill="#f7f3e8"
+        stroke="#1c1a15"
+        stroke-width="3"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M6,17 Q12,20 15,25"
+        fill="none"
+        stroke="#1c1a15"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        opacity="0.55"
+      />
+      <path
+        d="M58,18 Q52,21 49,26"
+        fill="none"
+        stroke="#1c1a15"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        opacity="0.55"
+      />
+      <circle cx="32" cy="24" r="14" fill="url(#or-orb)" stroke="#1c1a15" stroke-width="3" />
+      <ellipse
+        cx="27"
+        cy="18"
+        rx="4"
+        ry="6"
+        fill="#ffffff"
+        opacity="0.5"
+        transform="rotate(-25 27 18)"
+      />
+    </svg>
+    """
+  end
 end
