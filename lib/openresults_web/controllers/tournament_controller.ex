@@ -37,13 +37,21 @@ defmodule OpenResultsWeb.TournamentController do
   """
   def standings(conn, %{"slug" => slug}) do
     with_payload(conn, slug, fn payload ->
-      render(conn, :standings,
-        page_title: Tournament.name(payload),
-        payload: payload,
-        slug: slug,
-        current: :standings
-      )
+      if Tournament.show?(payload, "standings") do
+        render_standings(conn, payload, slug)
+      else
+        withheld(conn, payload, slug, "standings")
+      end
     end)
+  end
+
+  defp render_standings(conn, payload, slug) do
+    render(conn, :standings,
+      page_title: Tournament.name(payload),
+      payload: payload,
+      slug: slug,
+      current: :standings
+    )
   end
 
   @doc """
@@ -51,27 +59,35 @@ defmodule OpenResultsWeb.TournamentController do
   """
   def round(conn, %{"slug" => slug, "n" => n}) do
     with_payload(conn, slug, fn payload ->
-      number = integer(n)
-
-      case number && Tournament.round(payload, number) do
-        nil ->
-          not_found(
-            conn,
-            "Round #{n} of #{Tournament.name(payload)} has not been published.",
-            back: ~p"/t/#{slug}"
-          )
-
-        round ->
-          render(conn, :round,
-            page_title: "#{Tournament.name(payload)} - round #{number}",
-            payload: payload,
-            slug: slug,
-            round: round,
-            players: Tournament.players_by_no(payload),
-            current: {:round, number}
-          )
+      if Tournament.show?(payload, "pairings") do
+        render_round(conn, payload, slug, n)
+      else
+        withheld(conn, payload, slug, "round pairings")
       end
     end)
+  end
+
+  defp render_round(conn, payload, slug, n) do
+    number = integer(n)
+
+    case number && Tournament.round(payload, number) do
+      nil ->
+        not_found(
+          conn,
+          "Round #{n} of #{Tournament.name(payload)} has not been published.",
+          back: ~p"/t/#{slug}"
+        )
+
+      round ->
+        render(conn, :round,
+          page_title: "#{Tournament.name(payload)} - round #{number}",
+          payload: payload,
+          slug: slug,
+          round: round,
+          players: Tournament.players_by_no(payload),
+          current: {:round, number}
+        )
+    end
   end
 
   @doc """
@@ -83,23 +99,31 @@ defmodule OpenResultsWeb.TournamentController do
   """
   def player(conn, %{"slug" => slug, "no" => no}) do
     with_payload(conn, slug, fn payload ->
-      number = integer(no)
-
-      cond do
-        # The arbiter has turned player cards off for this tournament. The
-        # link is not rendered either, but a link is a courtesy and a
-        # bookmarked or guessed URL is not - this is the enforcement.
-        not Tournament.show?(payload, "player_cards") ->
-          not_found(
-            conn,
-            "#{Tournament.name(payload)} does not publish player cards.",
-            back: ~p"/t/#{slug}"
-          )
-
-        true ->
-          render_player(conn, payload, slug, no, number)
+      # Links to a page the arbiter has switched off are not rendered, but a
+      # link is a courtesy and a bookmarked or guessed URL is not. This is the
+      # enforcement, and it is why every page in the `:pages` group is checked
+      # in the controller rather than only in the markup.
+      if Tournament.show?(payload, "player_cards") do
+        render_player(conn, payload, slug, no, integer(no))
+      else
+        withheld(conn, payload, slug, "player cards")
       end
     end)
+  end
+
+  # Not a 404: the tournament is right there, and telling somebody it does not
+  # exist sends them hunting for a link that was never broken. The arbiter has
+  # chosen not to publish this part of it, which is a different thing and worth
+  # saying.
+  defp withheld(conn, payload, slug, what) do
+    conn
+    |> put_status(:not_found)
+    |> put_view(html: OpenResultsWeb.TournamentHTML)
+    |> render(:not_found,
+      page_title: Tournament.name(payload),
+      message: "#{Tournament.name(payload)} does not publish #{what}.",
+      back: ~p"/t/#{slug}"
+    )
   end
 
   defp render_player(conn, payload, slug, no, number) do

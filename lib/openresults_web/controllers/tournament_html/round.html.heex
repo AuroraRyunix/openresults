@@ -9,7 +9,7 @@
   <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />
 </section>
 
-<section :if={Tournament.byes(@round) != []}>
+<section :if={Tournament.show?(@payload, "byes") and Tournament.byes(@round) != []}>
   <h2>Byes</h2>
 
   <.byes_table slug={@slug} round={@round} players={@players} payload={@payload} />

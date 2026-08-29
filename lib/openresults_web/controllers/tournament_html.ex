@@ -45,30 +45,38 @@ defmodule OpenResultsWeb.TournamentHTML do
       assigns
       |> assign(:info, Tournament.info(payload))
       |> assign(:slots, slots)
+      |> assign(:show, display_rules(payload))
 
     ~H"""
     <header class="masthead">
       <h1>{Tournament.name(@payload)}</h1>
 
+      <%!-- Facts a printed pairing sheet carries as a matter of course, each
+            behind its own tick. Terse and only when present, because club play
+            is mostly missing fields. --%>
       <p class="details">
-        <span :if={@info["city"]}>{@info["city"]}</span>
-        <span :if={Tournament.show?(@payload, "federation") && @info["federation"]}>
-          {@info["federation"]}
+        <span :if={@show.city && @info["city"]}>{@info["city"]}</span>
+        <span :if={@show.federation && @info["federation"]}>{@info["federation"]}</span>
+        <span :if={@show.dates && dates(@info)}>{dates(@info)}</span>
+        <span :if={@show.arbiter && @info["arbiter"]}>Arbiter: {@info["arbiter"]}</span>
+        <span :if={@show.deputy && @info["deputy"]}>Deputy: {@info["deputy"]}</span>
+        <span :if={@show.time_control && @info["time_control"]}>
+          Tempo: {@info["time_control"]}
         </span>
-        <span :if={dates(@info)}>{dates(@info)}</span>
-        <span :if={@info["arbiter"]}>Arbiter: {@info["arbiter"]}</span>
-        <%!-- Facts a printed pairing sheet carries as a matter of course.
-              Terse and only when present, because club play is mostly
-              missing fields. --%>
-        <span :for={{label, value} <- Tournament.officials(@payload)}>{label}: {value}</span>
-        <span :if={@info["fide_rated"] == true}>FIDE rated</span>
+        <span :if={@show.fide_badge && @info["fide_rated"] == true}>FIDE rated</span>
       </p>
 
-      <nav class="rounds" aria-label="Rounds">
-        <a href={~p"/t/#{@slug}"} class={["chip", @current == :standings && "current"]}>
+      <%!-- A navigation strip with nothing to navigate to is furniture, so it
+            goes entirely when both pages behind it are off. --%>
+      <nav :if={@show.standings or @show.pairings} class="rounds" aria-label="Rounds">
+        <a
+          :if={@show.standings}
+          href={~p"/t/#{@slug}"}
+          class={["chip", @current == :standings && "current"]}
+        >
           Standings
         </a>
-        <%= for {n, published?} <- @slots do %>
+        <%= for {n, published?} <- @slots, @show.pairings do %>
           <a
             :if={published?}
             href={~p"/t/#{@slug}/round/#{n}"}
@@ -259,11 +267,25 @@ defmodule OpenResultsWeb.TournamentHTML do
           <tr>
             <th class="num" scope="col">Bd</th>
             <th :if={@show.rating} class="num" scope="col">Elo</th>
-            <th class="num" scope="col" title="Points going into this round">Pts</th>
+            <th
+              :if={@show.pairing_scores}
+              class="num"
+              scope="col"
+              title="Points going into this round"
+            >
+              Pts
+            </th>
             <th scope="col">White</th>
             <th class="num" scope="col">Result</th>
             <th scope="col">Black</th>
-            <th class="num" scope="col" title="Points going into this round">Pts</th>
+            <th
+              :if={@show.pairing_scores}
+              class="num"
+              scope="col"
+              title="Points going into this round"
+            >
+              Pts
+            </th>
             <th :if={@show.rating} class="num" scope="col">Elo</th>
           </tr>
         </thead>
@@ -271,7 +293,9 @@ defmodule OpenResultsWeb.TournamentHTML do
           <tr :for={board <- @boards}>
             <td class="num">{Tournament.board_label(board)}</td>
             <td :if={@show.rating} class="num">{dash(@players[board["white"]]["rating"])}</td>
-            <td class="num"><.score points={@scores[board["white"]]} /></td>
+            <td :if={@show.pairing_scores} class="num">
+              <.score points={@scores[board["white"]]} />
+            </td>
             <td>
               <.player_link
                 slug={@slug}
@@ -293,7 +317,9 @@ defmodule OpenResultsWeb.TournamentHTML do
                 detail
               />
             </td>
-            <td class="num"><.score points={@scores[board["black"]]} /></td>
+            <td :if={@show.pairing_scores} class="num">
+              <.score points={@scores[board["black"]]} />
+            </td>
             <td :if={@show.rating} class="num">{dash(@players[board["black"]]["rating"])}</td>
           </tr>
         </tbody>
@@ -469,15 +495,11 @@ defmodule OpenResultsWeb.TournamentHTML do
   # per table. Every key defaults to shown - see `Tournament.show?/2` for why
   # that direction is the safe one.
   defp display_rules(payload) do
-    %{
-      rating: Tournament.show?(payload, "rating"),
-      title: Tournament.show?(payload, "title"),
-      federation: Tournament.show?(payload, "federation"),
-      club: Tournament.show?(payload, "club"),
-      category: Tournament.show?(payload, "category"),
-      tiebreaks: Tournament.show?(payload, "tiebreaks"),
-      player_cards: Tournament.show?(payload, "player_cards")
-    }
+    Map.new(
+      ~w(standings pairings player_cards byes rating title federation club category
+         city dates arbiter deputy time_control fide_badge tiebreaks pairing_scores),
+      &{String.to_atom(&1), Tournament.show?(payload, &1)}
+    )
   end
 
   @doc """

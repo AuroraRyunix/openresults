@@ -166,6 +166,94 @@ defmodule OpenResultsWeb.DisplayRulesTest do
     end
   end
 
+  describe "whole pages" do
+    test "standings can be withheld while the rounds stay", %{conn: conn} do
+      slug = publish(hiding(["standings"]))
+
+      # Some arbiters hold the league table back until the last round is in.
+      html = conn |> get(~p"/t/#{slug}") |> html_response(404)
+      assert html =~ "does not publish standings"
+
+      # The rounds are untouched, and reachable.
+      assert conn |> get(~p"/t/#{slug}/round/1") |> html_response(200) =~ "Round 1"
+    end
+
+    test "round pairings can be withheld while the standings stay", %{conn: conn} do
+      slug = publish(hiding(["pairings"]))
+
+      assert conn |> get(~p"/t/#{slug}/round/1") |> html_response(404) =~
+               "does not publish round pairings"
+
+      standings = conn |> get(~p"/t/#{slug}") |> html_response(200)
+      assert standings =~ "Standings"
+
+      # And the round strip stops offering rounds nobody can open.
+      refute standings =~ ~s|href="/t/#{slug}/round/1"|
+    end
+
+    test "the round strip disappears entirely when both pages are off", %{conn: conn} do
+      slug = publish(hiding(["standings", "pairings"]))
+
+      # A navigation strip with nothing to navigate to is furniture.
+      html = conn |> get(~p"/t/#{slug}/player/1") |> html_response(200)
+      refute html =~ ~s|aria-label="Rounds"|
+    end
+
+    test "byes can be hidden without hiding the boards", %{conn: conn} do
+      slug = publish(hiding(["byes"]))
+      html = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
+
+      refute html =~ "table.byes"
+      assert html =~ "table"
+    end
+
+    test "a withheld page says so rather than claiming not to exist", %{conn: conn} do
+      slug = publish(hiding(["standings"]))
+      html = conn |> get(~p"/t/#{slug}") |> html_response(404)
+
+      # The tournament IS there. Telling somebody it is not sends them hunting
+      # for a link that was never broken.
+      assert html =~ "Gent Spring Open 2026"
+      assert html =~ ~s|href="/t/#{slug}"|
+    end
+  end
+
+  describe "the tournament's own details" do
+    test "each can be hidden on its own", %{conn: conn} do
+      slug = publish(hiding(["city", "arbiter"]))
+      html = conn |> get(~p"/t/#{slug}") |> html_response(200)
+
+      refute html =~ "Ghent"
+      refute html =~ "Jorian Burssens"
+
+      # Unticking two must not clear the line.
+      assert html =~ "2026-03-01"
+    end
+
+    test "dates, tempo and the FIDE badge too", %{conn: conn} do
+      slug = publish(hiding(["dates", "fide_badge"]))
+      html = conn |> get(~p"/t/#{slug}") |> html_response(200)
+
+      refute html =~ "2026-03-01 to 2026-03-05"
+      refute html =~ "FIDE rated"
+      assert html =~ "Ghent"
+    end
+  end
+
+  describe "columns inside a page" do
+    test "the running scores on the pairings are their own tick", %{conn: conn} do
+      open = publish(SnapshotPayloads.swiss())
+      assert conn |> get(~p"/t/#{open}/round/1") |> html_response(200) =~ "Points going into"
+
+      hidden = publish(hiding(["pairing_scores"]))
+      html = conn |> get(~p"/t/#{hidden}/round/1") |> html_response(200)
+
+      refute html =~ "Points going into"
+      # The boards themselves are untouched.
+      assert html =~ "1-0"
+    end
+  end
+
   describe "player cards" do
     test "the link is not offered when they are off", %{conn: conn} do
       slug = publish(hiding(["player_cards"]))

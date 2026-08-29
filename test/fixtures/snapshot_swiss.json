@@ -101,7 +101,7 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-29T11:23:29Z",
+  "published_at": "2026-08-29T11:32:43Z",
   "rounds": [
     {
       "boards": [
@@ -276,7 +276,7 @@
   "schema": "openresults/snapshot",
   "source": {
     "app": "openpairings",
-    "version": "0.17.1"
+    "version": "0.18.0"
   },
   "standings": {
     "after_round": 3,
@@ -429,12 +429,22 @@
     "city": "Ghent",
     "deputy": null,
     "display": {
+      "arbiter": true,
+      "byes": true,
       "category": true,
+      "city": true,
       "club": true,
+      "dates": true,
+      "deputy": true,
       "federation": true,
+      "fide_badge": true,
+      "pairing_scores": true,
+      "pairings": true,
       "player_cards": true,
       "rating": true,
+      "standings": true,
       "tiebreaks": true,
+      "time_control": true,
       "title": true
     },
     "end_date": "2026-03-05",
