@@ -101,7 +101,7 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-28T22:13:08Z",
+  "published_at": "2026-08-29T00:20:45Z",
   "rounds": [
     {
       "boards": [
@@ -263,6 +263,7 @@
   },
   "standings": {
     "after_round": 3,
+    "manual_order": false,
     "rows": [
       {
         "category": "A",
@@ -411,6 +412,7 @@
     "federation": "BEL",
     "fide_rated": true,
     "name": "Gent Spring Open 2026",
+    "registration_open": true,
     "rounds_count": 5,
     "slug": "gent-spring-open-2026",
     "start_date": "2026-03-01",

@@ -51,6 +51,32 @@ defmodule OpenResultsWeb.Tournament do
   def info(payload), do: object(payload, "tournament")
 
   @doc """
+  Whether the arbiter is accepting entries for this tournament.
+
+  **An absent field means open**, which is the one place in this module where
+  the tolerant default is not merely convenient but load-bearing.
+
+  `registration_open` was added to the contract on 2026-08-29, when the
+  arbiter's app stopped serving its own entry form and this became the only
+  one. Every snapshot published before that date is silent on the question,
+  and this server accepted entries for all of them - so reading silence as
+  "open" is what those tournaments already do, and reading it as "closed"
+  would shut every one of them the moment this deployed, without a word to
+  the arbiter and without anything in the UI to explain it.
+
+  The failure directions are not symmetric. An entry that should not have
+  been taken lands in a queue an arbiter reads and rejects; a form that is
+  shut when it should be open turns a real person away and tells nobody. So
+  the tolerant reading is also the safe one.
+  """
+  def registration_open?(payload) do
+    case Map.get(info(payload), "registration_open") do
+      false -> false
+      _open_or_unstated -> true
+    end
+  end
+
+  @doc """
   The tournament's display name, falling back to its slug.
   """
   def name(payload) do
@@ -198,6 +224,23 @@ defmodule OpenResultsWeb.Tournament do
   moment two players are level.
   """
   def standings_rows(payload), do: standings(payload) |> list("rows") |> Enum.filter(&is_map/1)
+
+  @doc """
+  Whether the arbiter set this order by hand rather than computing it.
+
+  Absent means no, which is both the old behaviour and the honest one: a
+  payload that does not mention hand-ordering is from an app that could not
+  tell us, and claiming a disclosure the arbiter never made would be worse
+  than omitting one.
+
+  The rows are rendered in the sent order either way - see `standings_rows/1`.
+  This exists so the page can SAY so. The arbiter's app used to carry that
+  disclosure on its own public standings page; that page was removed on
+  2026-08-29, and this is where it went.
+  """
+  def manual_order?(payload) do
+    Map.get(standings(payload), "manual_order") == true
+  end
 
   @doc """
   The declared tiebreaks, in the arbiter's chosen order.

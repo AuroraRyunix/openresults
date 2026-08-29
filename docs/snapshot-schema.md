@@ -66,7 +66,8 @@ whole document is trivially idempotent.
     "rounds_count": 9,
     "system": "swiss",
     "arbiter": "Jorian Burssens",
-    "fide_rated": true
+    "fide_rated": true,
+    "registration_open": true
   },
 
   "players": [
@@ -98,6 +99,7 @@ whole document is trivially idempotent.
 
   "standings": {
     "after_round": 5,
+    "manual_order": false,
     "tiebreaks": [
       { "code": "BH", "label": "Buchholz" },
       { "code": "SB", "label": "Sonneborn-Berger" }
@@ -156,10 +158,34 @@ server only ever sees one vocabulary.
 `"full-point"`, `"absent"`. The kind and its point value are both carried
 because the value is configurable and the kind is what an arbiter recognises.
 
+**`tournament.registration_open`** - whether the arbiter is accepting entries
+through this site's form. Added 2026-08-29. **Absent means open.**
+
+That default is load-bearing rather than merely tolerant. The arbiter's app
+enforced this flag itself until it stopped serving its own entry form; every
+snapshot published before then is silent, and this server accepted entries
+for all of them. Reading silence as "closed" would have shut every
+already-published form the moment the field shipped, with nothing in either
+app to explain why. The failure directions are not symmetric either: an entry
+that should not have been taken lands in a queue an arbiter reads and
+rejects, while a form that is shut when it should be open turns a real person
+away and tells nobody.
+
 **`standings.tiebreaks`** - declared once, ordered, with a human label.
 `rows[].tiebreaks` is positional against it. This is what lets the renderer
 stay dumb: it does not know what BH means, how many there are, or what order
 the arbiter chose.
+
+**`standings.manual_order`** - whether the arbiter set `rows[].rank` by hand
+instead of computing it from the tiebreaks. Added 2026-08-29. Absent means
+no.
+
+It changes nothing about how the rows are read: they are rendered in the sent
+order regardless, because that order is the arbiter's answer either way. It
+exists so the page can say which kind of answer it is. Until this field
+existed the disclosure lived only on the arbiter app's own public standings
+page, which was removed - so the ordering would have travelled while the fact
+that a person chose it did not.
 
 **`standings.after_round`** - which round the placings reflect. Not
 necessarily the highest published round: an arbiter may publish pairings for

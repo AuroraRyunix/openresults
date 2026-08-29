@@ -148,8 +148,25 @@ defmodule OpenResultsWeb.RegistrationController do
         )
 
       snapshot ->
-        render_fun.(snapshot.payload)
+        if Tournament.registration_open?(snapshot.payload) do
+          render_fun.(snapshot.payload)
+        else
+          closed(conn, slug)
+        end
     end
+  end
+
+  # The arbiter has shut the door. A 404 would be wrong - the tournament is
+  # right there on this site, and telling a player it does not exist sends
+  # them to look for a link they already have. This says what happened and
+  # points them at the tournament they were trying to enter.
+  #
+  # `403` rather than `200`, so a crawler or a script does not record a
+  # closed form as a working one.
+  defp closed(conn, slug) do
+    conn
+    |> put_status(:forbidden)
+    |> render(:closed, page_title: "Entries are closed", back: ~p"/t/#{slug}")
   end
 
   defp too_many(conn, slug, retry_in_ms) do

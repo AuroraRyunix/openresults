@@ -78,13 +78,19 @@ defmodule OpenResultsWeb.TournamentHTML do
 
       <%!--
         Outside the round strip, which is labelled "Rounds" and is about them.
-        Shown on every tournament with no attempt to guess whether entries are
-        still open: the payload carries no such field, inventing one would be
-        this app deciding something, and an entry for a tournament that has
-        started is a thing the arbiter refuses - which is what they do with
-        every entry anyway.
+
+        Hidden once the arbiter closes entries. This used to be shown on every
+        tournament regardless, because the payload carried no such field and
+        inventing one would have been this app deciding something. It carries
+        `registration_open` as of 2026-08-29, when this became the only entry
+        form there is, so the arbiter's own answer is now available and gets
+        used.
+
+        Hiding the link is not the enforcement - `RegistrationController`
+        checks the same flag on both actions, because a link is a courtesy and
+        a bookmarked URL is not.
       --%>
-      <p class="entry">
+      <p :if={Tournament.registration_open?(@payload)} class="entry">
         <a
           href={~p"/t/#{@slug}/register"}
           class={["chip", @current == :register && "current"]}
@@ -137,8 +143,15 @@ defmodule OpenResultsWeb.TournamentHTML do
       # Keizer standings carry value, Keizer points and score where a swiss
       # carries points and tiebreaks. Keyed off `system`, as the contract says.
       |> assign(:keizer?, Tournament.keizer?(payload))
+      |> assign(:manual_order?, Tournament.manual_order?(payload))
 
     ~H"""
+    <p :if={@manual_order?} class="footnote manual-order">
+      The order below was set by the arbiter, not computed from the tiebreaks.
+      The points and tiebreak columns are unchanged; the rank column is their
+      decision.
+    </p>
+
     <p :if={@rows == []} class="empty">
       No standings have been published for this tournament yet.
     </p>
