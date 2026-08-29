@@ -21,6 +21,7 @@ defmodule OpenResultsWeb.RegistrationController do
 
   use OpenResultsWeb, :controller
 
+  alias OpenResults.FideLookup
   alias OpenResults.RateLimit
   alias OpenResults.Registrations
   alias OpenResults.Registrations.Entry
@@ -70,6 +71,30 @@ defmodule OpenResultsWeb.RegistrationController do
          ) do
       :ok -> store(conn, slug, submitted(params))
       {:denied, retry_in_ms} -> too_many(conn, slug, retry_in_ms)
+    end
+  end
+
+  @doc """
+  `GET /t/:slug/fide?q=` - candidates from the arbiter's FIDE list.
+
+  Behind the same closed-form gate as the form itself: a tournament that is
+  not taking entries has no reason to lend anybody a search, and leaving this
+  open would make it reachable for every tournament on the site regardless.
+  """
+  def fide(conn, %{"slug" => slug} = params) do
+    case Snapshots.latest(slug) do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{"players" => []})
+
+      snapshot ->
+        if Tournament.registration_open?(snapshot.payload) do
+          query = params |> Map.get("q", "") |> to_string()
+          tempo = Tournament.info(snapshot.payload)["tempo"]
+
+          json(conn, %{"players" => FideLookup.search(query, tempo)})
+        else
+          conn |> put_status(:forbidden) |> json(%{"players" => []})
+        end
     end
   end
 
@@ -134,6 +159,10 @@ defmodule OpenResultsWeb.RegistrationController do
       slug: slug,
       rounds: Tournament.round_slots(payload),
       alarm: Keyword.get(opts, :alarm),
+      # Offered only where this deployment can actually reach an arbiter's
+      # FIDE list. A search box that cannot search is worse than none: it
+      # invites a click and answers nothing.
+      fide_search?: FideLookup.configured?(),
       form: Phoenix.Component.to_form(changeset, as: :registration)
     )
   end

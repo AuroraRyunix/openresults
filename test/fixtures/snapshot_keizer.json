@@ -61,7 +61,7 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-29T10:09:18Z",
+  "published_at": "2026-08-29T10:20:50Z",
   "rounds": [
     {
       "boards": [
@@ -203,6 +203,7 @@
     "slug": "cercle-gent-winteravond-2026",
     "start_date": "2026-01-08",
     "system": "keizer",
+    "tempo": "standard",
     "time_control": null
   },
   "version": 1

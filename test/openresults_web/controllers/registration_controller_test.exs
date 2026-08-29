@@ -59,9 +59,15 @@ defmodule OpenResultsWeb.RegistrationControllerTest do
 
       assert LazyHTML.query(document, "form#registration-form") |> Enum.count() == 1
 
+      # Every named control, not just the inputs. This looked only at
+      # `input[name]` until a <select> was added for the title, at which point
+      # a whole field became invisible to a test whose entire claim is "and no
+      # others" - the one assertion that has to enumerate everything.
       named =
         document
-        |> LazyHTML.query("form#registration-form input[name]")
+        |> LazyHTML.query(
+          "form#registration-form input[name], form#registration-form select[name]"
+        )
         |> Enum.map(&(&1 |> LazyHTML.attribute("name") |> List.first()))
         |> Enum.uniq()
 
@@ -72,6 +78,8 @@ defmodule OpenResultsWeb.RegistrationControllerTest do
                "registration[federation]",
                "registration[fide_id]",
                "registration[club]",
+               "registration[title]",
+               "registration[birth_year]",
                "registration[requested_byes][]"
              ]
     end

@@ -67,6 +67,11 @@ defmodule OpenResults.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
+      # The only outbound HTTP this site makes: lending the entry form a
+      # search of the arbiter's FIDE list. Deliberately the same client the
+      # arbiter's app uses, so its `Req.Test` stubbing works in these tests
+      # the same way it does over there.
+      {:req, "~> 0.5"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"}
     ]

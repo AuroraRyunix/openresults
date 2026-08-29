@@ -59,6 +59,12 @@ defmodule OpenResultsWeb.Router do
     # already published, and the controller rate-limits by address.
     get "/t/:slug/register", RegistrationController, :new
     post "/t/:slug/register", RegistrationController, :create
+
+    # The entry form's FIDE search, proxied so the arbiter's address and the
+    # token stay off the page - see `OpenResults.FideLookup`. Returns an
+    # empty list rather than an error whenever it cannot answer, because the
+    # form works without it.
+    get "/t/:slug/fide", RegistrationController, :fide
   end
 
   # Writes. Everything behind this pipeline can create a tournament page, so

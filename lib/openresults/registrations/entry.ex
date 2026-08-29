@@ -53,10 +53,27 @@ defmodule OpenResults.Registrations.Entry do
     field :federation, :string
     field :fide_id, :integer
     field :club, :string
+    field :title, :string
+    field :birth_year, :integer
     field :requested_byes, {:array, :integer}
   end
 
-  @fields ~w(name email rating federation fide_id club requested_byes)a
+  @fields ~w(name email rating federation fide_id club title birth_year requested_byes)a
+
+  # The FIDE titles, as FIDE spells them. Free text would collect "gm",
+  # "Grandmaster", "GM (inactive)" and a dozen other things the arbiter would
+  # have to normalise by hand, and a title is one of the few fields where the
+  # vocabulary really is closed.
+  @titles ~w(GM IM FM CM WGM WIM WFM WCM)
+
+  @doc "The titles the form offers, in FIDE's own order of seniority."
+  def titles, do: @titles
+
+  # Wide enough for anybody who could plausibly enter a tournament, and narrow
+  # enough to catch a mistyped rating in the birth-year box. The upper bound
+  # moves with nothing: a birth year in the future is always a typo, and the
+  # form is not worth teaching about leap seconds.
+  @birth_years 1900..2030
 
   @doc """
   An untouched form, for the first render.
@@ -102,6 +119,13 @@ defmodule OpenResults.Registrations.Entry do
     )
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/,
       message: "that does not look like an email address - check for a missing @ or a typo"
+    )
+    |> validate_inclusion(:birth_year, @birth_years,
+      message:
+        "a birth year is four digits between #{@birth_years.first} and #{@birth_years.last} - leave it empty if you would rather not say"
+    )
+    |> validate_inclusion(:title, @titles,
+      message: "that is not a FIDE title - leave it empty if you do not have one"
     )
     |> validate_inclusion(:rating, @rating_range,
       message:
@@ -156,6 +180,13 @@ defmodule OpenResults.Registrations.Entry do
       "fide_id" => entry.fide_id,
       "club" => entry.club,
       "email" => entry.email,
+      # Added 2026-08-29 with the form fields. `title` is in the registration
+      # contract; `birth_year` is not, and travels anyway because the arbiter's
+      # accept path already reads it (it is what tells two players with the
+      # same name apart) and the additive rule cuts both ways - a reader that
+      # does not know a field ignores it.
+      "title" => entry.title,
+      "birth_year" => entry.birth_year,
       "requested_byes" => entry.requested_byes
     }
     |> Enum.reject(fn {_key, value} -> value in [nil, []] end)

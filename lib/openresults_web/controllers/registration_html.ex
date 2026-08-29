@@ -17,6 +17,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
 
   import OpenResultsWeb.TournamentHTML, only: [masthead: 1]
 
+  alias OpenResults.Registrations.Entry
   alias OpenResultsWeb.Tournament
 
   embed_templates "registration_html/*"
@@ -36,6 +37,8 @@ defmodule OpenResultsWeb.RegistrationHTML do
   """
   attr :form, Phoenix.HTML.Form, required: true
   attr :slug, :string, required: true
+  attr :fide_search?, :boolean, default: false
+  attr :fide_url, :string, default: nil
   attr :rounds, :list, required: true, doc: "the rounds a bye may be requested for"
   attr :alarm, :string, default: nil, doc: "a failure that is not about one field"
 
@@ -59,6 +62,31 @@ defmodule OpenResultsWeb.RegistrationHTML do
       <p :if={@form.errors != []} class="alarm" role="alert">
         Nothing has been sent. Fix what is marked below and send it again.
       </p>
+
+      <%!-- The FIDE search, when this deployment can reach an arbiter's
+            list. It fills the fields below and is never required: everything
+            it would fill can be typed, and a player who is not on the FIDE
+            list never uses it at all.
+
+            Sits above the name field rather than beside it because it is the
+            first thing to try, and because a player who finds themselves here
+            can skip the four fields underneath. --%>
+      <div :if={@fide_search?} class="fide-search" id="fide-search" data-endpoint={@fide_url}>
+        <label for="fide-query">Find yourself on the FIDE list</label>
+        <input
+          type="search"
+          id="fide-query"
+          autocomplete="off"
+          placeholder="Start typing your name, or paste your FIDE ID"
+        />
+        <p class="hint">
+          Optional. It fills in the fields below - check them, and correct anything
+          that is out of date. If you are not on the FIDE list, just fill them in
+          yourself.
+        </p>
+        <ul id="fide-results" class="fide-results" hidden></ul>
+        <p id="fide-none" class="hint" hidden>No match. Fill the fields in below instead.</p>
+      </div>
 
       <.field
         field={@form[:name]}
@@ -111,6 +139,23 @@ defmodule OpenResultsWeb.RegistrationHTML do
         autocomplete="organization"
       />
 
+      <.field
+        field={@form[:title]}
+        label="Title"
+        options={Entry.titles()}
+        hint="Your FIDE title, if you hold one."
+      />
+
+      <.field
+        field={@form[:birth_year]}
+        type="text"
+        label="Birth year"
+        hint="Four digits. Some tournaments have age categories, and the arbiter cannot
+              work one out from a name. Leave it empty if you would rather not say."
+        inputmode="numeric"
+        maxlength="4"
+      />
+
       <.byes_field :if={@rounds != []} field={@form[:requested_byes]} rounds={@rounds} />
 
       <div class="actions">
@@ -134,6 +179,12 @@ defmodule OpenResultsWeb.RegistrationHTML do
 
   attr :rest, :global, include: ~w(autocomplete inputmode maxlength pattern placeholder required)
 
+  attr :options, :list,
+    default: nil,
+    doc: "renders a <select> instead of an <input>; the empty option is added for you"
+
+  attr :blank, :string, default: "None", doc: "label for the empty option of a select"
+
   def field(assigns) do
     field = assigns.field
     errors = Enum.map(field.errors, &translate_error/1)
@@ -155,7 +206,28 @@ defmodule OpenResultsWeb.RegistrationHTML do
         <span :if={@rest[:required]} class="required">required</span>
       </label>
 
+      <select
+        :if={@options}
+        id={@field.id}
+        name={@field.name}
+        aria-describedby={@described_by}
+        aria-invalid={@errors != [] && "true"}
+      >
+        <%!-- Always first and always selected-able. A closed vocabulary with
+              no way to say "none of these" turns an optional field into a
+              required one by accident. --%>
+        <option value="">{@blank}</option>
+        <option
+          :for={option <- @options}
+          value={option}
+          selected={to_string(@field.value) == option}
+        >
+          {option}
+        </option>
+      </select>
+
       <input
+        :if={is_nil(@options)}
         type={@type}
         id={@field.id}
         name={@field.name}

@@ -200,6 +200,137 @@
           });
         }
 
+        // ---- finding yourself on the FIDE list ----
+        //
+        // Fills the form's fields; never required, never blocking. Everything
+        // it would fill can be typed, and a player who is not on the FIDE list
+        // ignores it entirely. The panel is only rendered where this
+        // deployment can actually reach an arbiter's list, so there is no
+        // "search unavailable" state to explain.
+        const fide = document.getElementById("fide-search");
+
+        if (fide) {
+          const box = document.getElementById("fide-query");
+          const list = document.getElementById("fide-results");
+          const none = document.getElementById("fide-none");
+          const endpoint = fide.dataset.endpoint;
+          let timer = null;
+          let latest = 0;
+
+          const field = (name) => document.getElementById("registration_" + name);
+
+          const fill = (player) => {
+            // Only what came back. A blank from the FIDE list means "not
+            // recorded", and writing it over something the person already
+            // typed would be this page deciding it knows better.
+            const set = (name, value) => {
+              const el = field(name);
+              if (el && value !== null && value !== undefined && value !== "") {
+                el.value = value;
+              }
+            };
+
+            set("name", player.name);
+            set("rating", player.rating);
+            set("federation", player.federation);
+            set("fide_id", player.fide_id);
+            set("title", player.title);
+            set("birth_year", player.birth_year);
+
+            list.hidden = true;
+            none.hidden = true;
+            box.value = "";
+            // Straight to the one field the list cannot supply, which is the
+            // one the arbiter actually needs.
+            field("email")?.focus();
+          };
+
+          const render = (players) => {
+            list.replaceChildren();
+
+            if (!players.length) {
+              list.hidden = true;
+              none.hidden = false;
+              return;
+            }
+
+            none.hidden = true;
+
+            for (const player of players) {
+              const li = document.createElement("li");
+              const button = document.createElement("button");
+              button.type = "button";
+
+              const who = document.createElement("span");
+              who.className = "who";
+              who.textContent = [player.title, player.name].filter(Boolean).join(" ");
+
+              const about = document.createElement("span");
+              about.className = "about";
+              about.textContent = [player.federation, player.rating, player.birth_year]
+                .filter(Boolean)
+                .join(" \u00b7 ");
+
+              button.append(who, about);
+              button.addEventListener("click", () => fill(player));
+              li.append(button);
+              list.append(li);
+            }
+
+            list.hidden = false;
+          };
+
+          const run = (query) => {
+            // Every response carries the number of the request that asked for
+            // it. Without that, a slow search for "van" can land after a fast
+            // one for "van der berg" and replace the right answers with
+            // stale ones.
+            const mine = ++latest;
+
+            fetch(endpoint + "?q=" + encodeURIComponent(query), {
+              headers: {"accept": "application/json"},
+            })
+              .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+              .then((data) => {
+                if (mine !== latest) { return; }
+                render(data.players || []);
+              })
+              .catch(() => {
+                // The form works without this. An error about somebody else's
+                // server is not something the person typing their name can do
+                // anything with.
+                if (mine !== latest) { return; }
+                list.hidden = true;
+                none.hidden = false;
+              });
+          };
+
+          box.addEventListener("input", () => {
+            clearTimeout(timer);
+            const query = box.value.trim();
+
+            if (query.length < 2) {
+              list.hidden = true;
+              none.hidden = true;
+              return;
+            }
+
+            // A request per keystroke would be a search per letter of a
+            // surname, against a machine that is also running a tournament.
+            timer = setTimeout(() => run(query), 250);
+          });
+
+          // The panel is inside the form, so Enter in it would submit a
+          // half-filled entry.
+          box.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") { e.preventDefault(); }
+          });
+
+          document.addEventListener("click", (e) => {
+            if (!fide.contains(e.target)) { list.hidden = true; }
+          });
+        }
+
         document.addEventListener("contextmenu", (e) => {
           const link = e.target.closest("a.player[data-player]");
           if (!link) { return; }

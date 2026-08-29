@@ -15,5 +15,12 @@
     plays. Nothing here will change until they enter you and publish a round.
   </p>
 
-  <.entry_form form={@form} slug={@slug} rounds={@rounds} alarm={@alarm} />
+  <.entry_form
+    form={@form}
+    slug={@slug}
+    rounds={@rounds}
+    alarm={@alarm}
+    fide_search?={@fide_search?}
+    fide_url={~p"/t/#{@slug}/fide"}
+  />
 </section>

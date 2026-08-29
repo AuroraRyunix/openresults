@@ -30,6 +30,26 @@ if ingest_token = System.get_env("OPENRESULTS_INGEST_TOKEN") do
   config :openresults, :ingest_token, ingest_token
 end
 
+# Lending the entry form a search of the arbiter's FIDE list - see
+# `OpenResults.FideLookup`. Both must be set or the feature is simply absent
+# and the form asks people to type their own details, which is what it did
+# before this existed.
+#
+# On a deployment where both applications share a box this is
+# `http://localhost:4001` and the request never leaves the machine. There is
+# no sensible value for a results site that cannot reach an arbiter, which is
+# why it is opt-in rather than defaulted.
+#
+# The token is the arbiter's own ingest token, because it is the same pair of
+# machines and a second secret would be a second thing to rotate.
+if lookup = System.get_env("FIDE_LOOKUP_ENDPOINT") do
+  config :openresults, :fide_lookup_endpoint, lookup
+end
+
+if lookup_token = System.get_env("FIDE_LOOKUP_TOKEN") do
+  config :openresults, :fide_lookup_token, lookup_token
+end
+
 config :openresults, OpenResultsWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 

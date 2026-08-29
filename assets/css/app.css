@@ -651,3 +651,87 @@ html.has-js .theme-switch {
 .live-status[hidden] {
   display: none;
 }
+
+/* Matches the text inputs beside it - a select that keeps the browser's own
+   chrome next to hand-styled fields reads as a different kind of control. */
+.field select {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+
+/* The FIDE search panel. Set apart from the fields it fills, because it is a
+   different kind of thing - a shortcut, not an answer the form needs. */
+.fide-search {
+  margin-bottom: 1.5rem;
+  padding: 0.875rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.fide-search label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.fide-search input {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.fide-results {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.fide-results[hidden] {
+  display: none;
+}
+
+.fide-results li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.fide-results button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fide-results button:hover,
+.fide-results button:focus {
+  background: var(--bg);
+}
+
+.fide-results .who {
+  font-weight: 600;
+}
+
+.fide-results .about {
+  display: block;
+  color: var(--quiet);
+  font-size: 0.8125rem;
+}
