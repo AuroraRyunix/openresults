@@ -57,6 +57,34 @@ defmodule OpenResultsWeb.DisplayRulesTest do
     end
   end
 
+  describe "the front page listing" do
+    test "a listed tournament appears", %{conn: conn} do
+      _slug = publish(SnapshotPayloads.swiss())
+
+      assert conn |> get(~p"/") |> html_response(200) =~ "Gent Spring Open 2026"
+    end
+
+    test "an unlisted one does not, but its own page still works", %{conn: conn} do
+      payload = put_in(SnapshotPayloads.swiss(), ["tournament", "listed"], false)
+      slug = publish(payload)
+
+      refute conn |> get(~p"/") |> html_response(200) =~ "Gent Spring Open 2026"
+
+      # Unlisting is not taking down, and the settings page that offers it
+      # says so in as many words: the address still works for anyone holding
+      # it. This hides an event from somebody browsing, not from somebody
+      # who was sent the link.
+      assert conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Gent Spring Open 2026"
+    end
+
+    test "absent means listed, for payloads that predate the field", %{conn: conn} do
+      payload = update_in(SnapshotPayloads.swiss(), ["tournament"], &Map.delete(&1, "listed"))
+      _slug = publish(payload)
+
+      assert conn |> get(~p"/") |> html_response(200) =~ "Gent Spring Open 2026"
+    end
+  end
+
   describe "ratings" do
     test "are shown by default on standings and pairings", %{conn: conn} do
       slug = publish(SnapshotPayloads.swiss())

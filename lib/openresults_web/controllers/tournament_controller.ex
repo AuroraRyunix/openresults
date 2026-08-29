@@ -22,10 +22,14 @@ defmodule OpenResultsWeb.TournamentController do
   `GET /` - the tournaments that have published.
   """
   def index(conn, _params) do
-    render(conn, :index,
-      page_title: "Tournaments",
-      snapshots: Snapshots.list_current()
-    )
+    # Filtered here rather than in `Snapshots.list_current/0`: which
+    # tournaments exist is a storage question and which ones are advertised is
+    # a presentation one. A storage function that silently omits rows is a
+    # trap for the next caller - a takedown sweep or an admin view would
+    # quietly skip every unlisted tournament and give no reason.
+    listed = Enum.filter(Snapshots.list_current(), &Tournament.listed?(&1.payload))
+
+    render(conn, :index, page_title: "Tournaments", snapshots: listed)
   end
 
   @doc """

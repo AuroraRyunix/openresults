@@ -136,10 +136,27 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Wide, because the content is tables. 60rem is a reading measure and it was
+   the wrong instrument here: a standings table with four tiebreak columns, or
+   a pairing list with a rating and a score either side of both names, does not
+   fit in one and ends up scrolling sideways inside `.scroller` while two
+   thirds of a desktop screen sits empty.
+
+   Running text is capped separately below, so widening this does not produce
+   1400px lines of prose. */
 .page {
-  max-width: 60rem;
+  max-width: 90rem;
   margin: 0 auto;
-  padding: 1rem 0.75rem 4rem;
+  padding: 1rem 1rem 4rem;
+}
+
+/* The prose that lives between the tables. A measure, not a container width -
+   these are sentences and they stay readable at the same length whatever the
+   page around them is doing. */
+.footnote,
+.empty,
+.masthead .details {
+  max-width: 52rem;
 }
 
 a {
@@ -613,10 +630,13 @@ html.has-js .theme-switch {
   }
 }
 
-/* The mark sits on the wordmark's baseline rather than the line box's top,
-   which is where `vertical-align: middle` would put a 20px glyph beside
-   13px uppercase text. */
+/* Tailwind's preflight sets `svg { display: block }` - sensible for the
+   image-in-a-card case it is written for, and wrong for a glyph sitting in a
+   line of text: it put the mark on its own line above the wordmark. This is
+   the whole fix; the vertical-align below is the ordinary baseline nudge a
+   20px glyph needs beside 13px uppercase text. */
 .brand-mark {
+  display: inline-block;
   vertical-align: -0.35em;
-  margin-right: 0.15rem;
+  margin-right: 0.3rem;
 }

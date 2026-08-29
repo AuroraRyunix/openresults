@@ -61,7 +61,7 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-29T01:04:10Z",
+  "published_at": "2026-08-29T09:48:29Z",
   "rounds": [
     {
       "boards": [
@@ -188,7 +188,7 @@
     "end_date": "2026-01-22",
     "federation": "BEL",
     "fide_rated": false,
-    "listed": true,
+    "listed": false,
     "name": "Cercle d'Échecs Gent - Winteravond 2026",
     "registration_open": false,
     "rounds_count": 3,
