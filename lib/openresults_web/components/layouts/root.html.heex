@@ -71,18 +71,17 @@
   </head>
   <body>
     <div class="page">
-      <a class="brand" href={~p"/"}>
-        <.logo /> OpenResults
-      </a>
-      <%!-- `data-live` marks the region the refresher replaces. Everything
-            outside it - the theme, the scroll position, an open card - is
-            untouched, which is the whole reason this is not a page reload. --%>
-      <div id="live-region" data-live>{@inner_content}</div>
-
-      <footer class="site-foot">
-        <span>Published by the arbiter. Results are theirs, not this site's.</span>
-        <span id="live-status" class="live-status" hidden aria-live="polite"></span>
-        <span class="spacer"></span>
+      <%!-- The picker lives up here, not in the footer where it started.
+            A popover anchored to the last element on the page can only open
+            upwards, and an absolutely positioned panel does not grow the
+            document - so at the bottom of a long page part of it was simply
+            outside the viewport with no way to scroll to it. Up here it opens
+            downwards into a page that already has room, which is also where
+            the arbiter's app keeps its own. --%>
+      <div class="masthead-bar">
+        <a class="brand" href={~p"/"}>
+          <.logo /> OpenResults
+        </a>
         <%!-- The same popover the arbiter's app uses, so the two feel like
               one system. The active option is highlighted purely from CSS,
               keyed off the `data-theme` / `data-theme-source` attributes the
@@ -113,6 +112,16 @@
             </button>
           </div>
         </details>
+      </div>
+      <%!-- `data-live` marks the region the refresher replaces. Everything
+            outside it - the theme, the scroll position, an open card - is
+            untouched, which is the whole reason this is not a page reload. --%>
+      <div id="live-region" data-live>{@inner_content}</div>
+
+      <footer class="site-foot">
+        <span>Published by the arbiter. Results are theirs, not this site's.</span>
+        <span id="live-status" class="live-status" hidden aria-live="polite"></span>
+        <span class="spacer"></span>
       </footer>
     </div>
 
