@@ -54,9 +54,11 @@ defmodule OpenResultsWeb.RegistrationGateTest do
       assert OpenResults.Registrations.list_for_tournament(slug) == []
     end
 
-    test "and the tournament page stops advertising it", %{conn: conn, slug: slug} do
+    test "and the tournament page shows no way in", %{conn: conn, slug: slug} do
       html = conn |> get(~p"/t/#{slug}") |> html_response(200)
 
+      # True of an open tournament too since the link came down - kept because
+      # it is the assertion that will matter again the day it goes back.
       refute html =~ "Enter this tournament"
       # The tournament itself is still perfectly readable - closing entries is
       # not taking the event down.
@@ -75,9 +77,16 @@ defmodule OpenResultsWeb.RegistrationGateTest do
       {:ok, slug: SnapshotPayloads.swiss() |> with_registration(true) |> publish()}
     end
 
-    test "the form renders and the tournament page links to it", %{conn: conn, slug: slug} do
+    test "the form renders", %{conn: conn, slug: slug} do
       assert conn |> get(~p"/t/#{slug}/register") |> html_response(200) =~ "registration-form"
-      assert conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Enter this tournament"
+    end
+
+    test "but the tournament page does not advertise it", %{conn: conn, slug: slug} do
+      # The link came down on 2026-08-29: the form is not finished, and a link
+      # on a public page is a promise - somebody follows it, fills it in, and
+      # believes they have entered. The gate below it is unchanged, so this is
+      # about what is offered rather than about what is allowed.
+      refute conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Enter this tournament"
     end
   end
 

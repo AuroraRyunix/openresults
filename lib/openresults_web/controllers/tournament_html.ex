@@ -83,27 +83,16 @@ defmodule OpenResultsWeb.TournamentHTML do
       </nav>
 
       <%!--
-        Outside the round strip, which is labelled "Rounds" and is about them.
+        The "Enter this tournament" link was here, gated on
+        `registration_open`. Taken down on 2026-08-29 because the entry form
+        is not finished, and a link on a public page is a promise: somebody
+        follows it, fills it in, and believes they have entered.
 
-        Hidden once the arbiter closes entries. This used to be shown on every
-        tournament regardless, because the payload carried no such field and
-        inventing one would have been this app deciding something. It carries
-        `registration_open` as of 2026-08-29, when this became the only entry
-        form there is, so the arbiter's own answer is now available and gets
-        used.
-
-        Hiding the link is not the enforcement - `RegistrationController`
-        checks the same flag on both actions, because a link is a courtesy and
-        a bookmarked URL is not.
+        Only the link is gone. The form, its gate and the whole registration
+        queue behind it are untouched, so this is one element to put back -
+        `<p :if={Tournament.registration_open?(@payload)} class="entry">` with
+        a chip linking to ~p"/t/\#{@slug}/register" - and nothing to rebuild.
       --%>
-      <p :if={Tournament.registration_open?(@payload)} class="entry">
-        <a
-          href={~p"/t/#{@slug}/register"}
-          class={["chip", @current == :register && "current"]}
-        >
-          Enter this tournament
-        </a>
-      </p>
     </header>
     """
   end
