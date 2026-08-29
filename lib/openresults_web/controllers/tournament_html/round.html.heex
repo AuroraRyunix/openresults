@@ -2,7 +2,7 @@
 
 <section>
   <h2>
-    Round {@round["number"]}
+    {Tournament.round_heading(@payload, @round["number"])}
     <span :if={@round["date"]} class="quiet">{@round["date"]}</span>
   </h2>
 

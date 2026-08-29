@@ -9,4 +9,12 @@
   </h2>
 
   <.standings_table payload={@payload} slug={@slug} />
+
+  <%!-- Keizer's ladder is not a FIDE tiebreak table and reads like a broken
+        one if nobody says so: the points move for reasons that are not in the
+        results column. --%>
+  <p :if={Tournament.keizer?(@payload)} class="footnote">
+    These are Keizer points, not FIDE tiebreaks - the whole ladder is
+    recalculated from results, byes and absences every time.
+  </p>
 </section>

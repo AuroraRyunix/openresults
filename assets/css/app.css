@@ -640,3 +640,14 @@ html.has-js .theme-switch {
   vertical-align: -0.35em;
   margin-right: 0.3rem;
 }
+
+/* Said quietly, in the footer, and only when something actually happened -
+   a badge that pulses on every poll teaches people to ignore it. */
+.live-status {
+  color: var(--quiet);
+  font-size: 0.75rem;
+}
+
+.live-status[hidden] {
+  display: none;
+}

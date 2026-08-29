@@ -61,25 +61,28 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-29T09:48:29Z",
+  "published_at": "2026-08-29T10:09:18Z",
   "rounds": [
     {
       "boards": [
         {
           "black": 4,
           "board": 1,
+          "label": "1",
           "result": "1-0",
           "white": 1
         },
         {
           "black": 5,
           "board": 2,
+          "label": "2",
           "result": "1/2-1/2",
           "white": 2
         },
         {
           "black": 6,
           "board": 3,
+          "label": "3",
           "result": "0-1",
           "white": 3
         }
@@ -93,18 +96,21 @@
         {
           "black": 1,
           "board": 1,
+          "label": "1",
           "result": "0-1",
           "white": 6
         },
         {
           "black": 2,
           "board": 2,
+          "label": "2",
           "result": "1/2-1/2",
           "white": 4
         },
         {
           "black": 3,
           "board": 3,
+          "label": "3",
           "result": "1-0",
           "white": 5
         }
@@ -176,6 +182,7 @@
   "tournament": {
     "arbiter": "Jorian Burssens",
     "city": "Ghent",
+    "deputy": null,
     "display": {
       "category": true,
       "club": true,
@@ -189,12 +196,14 @@
     "federation": "BEL",
     "fide_rated": false,
     "listed": false,
+    "match_format": false,
     "name": "Cercle d'Échecs Gent - Winteravond 2026",
     "registration_open": false,
     "rounds_count": 3,
     "slug": "cercle-gent-winteravond-2026",
     "start_date": "2026-01-08",
-    "system": "keizer"
+    "system": "keizer",
+    "time_control": null
   },
   "version": 1
 }

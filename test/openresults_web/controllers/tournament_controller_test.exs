@@ -49,7 +49,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
       assert texts(document, "table.standings thead th") ==
-               ["#", "Player", "Rating", "Points"] ++
+               ["#", "Player", "Rating", "Cat", "Points"] ++
                  ["Buchholz Cut-1", "Buchholz", "Sonneborn-Berger", "Progressive score"]
     end
 
@@ -70,7 +70,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{rebuilt["tournament"]["slug"]}") |> doc()
 
       assert texts(document, "table.standings thead th") ==
-               ["#", "Player", "Rating", "Points", "Average rating"]
+               ["#", "Player", "Rating", "Cat", "Points", "Average rating"]
 
       assert texts(document, "table.standings tbody tr:first-child td:last-child") == ["1997"]
     end
@@ -87,7 +87,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{short["tournament"]["slug"]}") |> doc()
 
       assert texts(document, "table.standings tbody tr:first-child td") ==
-               ["1", "GM Müller, Jörg", "2601", "2.5", "3", "3.5", "", ""]
+               ["1", "GM Müller, Jörg", "2601", "A", "2.5", "3", "3.5", "", ""]
     end
 
     test "rows render in the order they arrived, not in the order this app would sort them", %{
@@ -125,7 +125,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # opponents a phantom half-point. Player 10's Buchholz lost exactly
       # that half-point. Nothing here changed - the numbers it is given did.
       assert texts(document, "table.standings tbody tr:last-child td") ==
-               ["10", "Nguyễn, Thị Hà", "", "0", "2", "2", "0", "0"]
+               ["10", "Nguyễn, Thị Hà", "", "B", "0", "2", "2", "0", "0"]
     end
 
     test "a tournament with no standings yet says so instead of showing an empty table", %{
@@ -347,6 +347,25 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       # Still no session anywhere near this site.
       refute html =~ "csrf-token"
+    end
+
+    test "the refresher targets a region, not the page", %{conn: conn, slug: slug} do
+      html = conn |> get(~p"/t/#{slug}") |> html_response(200)
+
+      # The contract between the server-rendered page and the refresher: it
+      # replaces this region and nothing else, so the theme, the scroll
+      # position and an open card all survive an update.
+      #
+      # (There is no `refute html =~ "location.reload"` here, tempting as it
+      # was - the script's own comment explains why it does not reload, so
+      # that assertion tested the prose rather than the behaviour.)
+      assert html =~ ~s|id="live-region"|
+
+      # And it must leave the entry form alone: replacing the DOM under
+      # somebody mid-sentence would clear what they had typed.
+      form = conn |> get(~p"/t/#{slug}/register") |> html_response(200)
+      assert form =~ "registration-form"
+      assert form =~ "isForm"
     end
 
     test "the scripts that are here are inert if they never run", %{conn: conn, slug: slug} do

@@ -18,7 +18,8 @@
       no bundle, no socket, no framework and no request on load. It is a
       preference reader that runs before first paint (inline, so there is no
       round trip and no flash of the wrong theme) and, further down, a
-      right-click handler that fetches one page on demand.
+      right-click handler and a refresher, both of which only ever act after
+      the page is already readable.
 
       Every page still renders completely with all of it switched off: the
       theme falls back to the device's own light/dark setting, and a player's
@@ -50,10 +51,14 @@
       <a class="brand" href={~p"/"}>
         <.logo /> OpenResults
       </a>
-      {@inner_content}
+      <%!-- `data-live` marks the region the refresher replaces. Everything
+            outside it - the theme, the scroll position, an open card - is
+            untouched, which is the whole reason this is not a page reload. --%>
+      <div id="live-region" data-live>{@inner_content}</div>
 
       <footer class="site-foot">
         <span>Published by the arbiter. Results are theirs, not this site's.</span>
+        <span id="live-status" class="live-status" hidden aria-live="polite"></span>
         <span class="spacer"></span>
         <label class="theme-switch">
           Theme
@@ -120,6 +125,80 @@
         overlay.addEventListener("click", (e) => { if (e.target === overlay) { close(); } });
         overlay.querySelector(".card-close").addEventListener("click", close);
         document.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); } });
+
+        // ---- keeping the page current ----
+        //
+        // The pages this replaced were LiveViews on a PubSub topic: standings
+        // moved as results were entered. This site is static by design, and a
+        // spectator refreshing their phone every two minutes was the most
+        // visible thing lost in the move.
+        //
+        // A re-fetch and a swap, not a reload. `location.reload()` would be
+        // four lines and would throw away scroll position every 20 seconds,
+        // which on a 200-player standings table means losing your place while
+        // reading it - worse than the problem.
+        //
+        // Deliberately does nothing at all on the entry form: replacing the
+        // DOM under somebody who is typing would clear what they had written.
+        const live = document.getElementById("live-region");
+        const status = document.getElementById("live-status");
+        const isForm = !!document.querySelector("#registration-form");
+
+        if (live && !isForm) {
+          let failures = 0;
+
+          const swap = (html) => {
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            const fresh = doc.getElementById("live-region");
+            if (!fresh) { throw new Error("no live region"); }
+
+            // Compare before touching the DOM. Most polls find nothing new,
+            // and replacing identical markup would collapse an open <details>
+            // and drop focus for no reason.
+            if (fresh.innerHTML === live.innerHTML) { return false; }
+
+            live.innerHTML = fresh.innerHTML;
+            return true;
+          };
+
+          const tick = () => {
+            // Nothing to update while the tab is in the background, and a
+            // phone in a pocket should not be polling a server all round.
+            if (document.hidden) { return; }
+
+            fetch(window.location.href, {headers: {"accept": "text/html"}})
+              .then((r) => r.ok ? r.text() : Promise.reject(r.status))
+              .then((html) => {
+                failures = 0;
+                if (status) { status.hidden = true; }
+                if (swap(html)) {
+                  // Said quietly and only when something actually changed, so
+                  // a spectator knows the page is live rather than stuck.
+                  if (status) {
+                    status.textContent = "updated just now";
+                    status.hidden = false;
+                  }
+                }
+              })
+              .catch(() => {
+                // A hall's wifi drops. Say so rather than showing a page that
+                // has silently stopped being current, and keep trying - this
+                // is not an error worth ending the session over.
+                failures += 1;
+                if (failures >= 2 && status) {
+                  status.textContent = "not updating - connection lost";
+                  status.hidden = false;
+                }
+              });
+          };
+
+          setInterval(tick, 20000);
+          // A tab brought back to the front is stale by however long it was
+          // hidden, and its reader is looking at it right now.
+          document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) { tick(); }
+          });
+        }
 
         document.addEventListener("contextmenu", (e) => {
           const link = e.target.closest("a.player[data-player]");

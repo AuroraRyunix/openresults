@@ -101,37 +101,42 @@
       "title": null
     }
   ],
-  "published_at": "2026-08-29T09:48:29Z",
+  "published_at": "2026-08-29T10:09:18Z",
   "rounds": [
     {
       "boards": [
         {
           "black": 6,
           "board": 1,
+          "label": "1",
           "result": "1-0",
           "white": 1
         },
         {
           "black": 2,
           "board": 2,
+          "label": "2",
           "result": "0-1",
           "white": 7
         },
         {
           "black": 8,
           "board": 3,
+          "label": "3",
           "result": "1/2-1/2",
           "white": 3
         },
         {
           "black": 4,
           "board": 4,
+          "label": "4",
           "result": "1-0FF",
           "white": 9
         },
         {
           "black": 10,
           "board": 5,
+          "label": "5",
           "result": "1-0U",
           "white": 5
         }
@@ -145,24 +150,28 @@
         {
           "black": 1,
           "board": 1,
+          "label": "1",
           "result": "1/2-1/2",
           "white": 2
         },
         {
           "black": 3,
           "board": 2,
+          "label": "2",
           "result": "0-1",
           "white": 6
         },
         {
           "black": 7,
           "board": 3,
+          "label": "3",
           "result": "0-1FF",
           "white": 5
         },
         {
           "black": 9,
           "board": 4,
+          "label": "4",
           "result": "0-1",
           "white": 8
         }
@@ -187,18 +196,21 @@
         {
           "black": 3,
           "board": 1,
+          "label": "1",
           "result": "1-0",
           "white": 1
         },
         {
           "black": 2,
           "board": 2,
+          "label": "2",
           "result": "1/2-0",
           "white": 4
         },
         {
           "black": 5,
           "board": 3,
+          "label": "3",
           "result": null,
           "white": 8
         }
@@ -223,30 +235,35 @@
         {
           "black": 1,
           "board": 1,
+          "label": "1",
           "result": "0-1",
           "white": 2
         },
         {
           "black": 5,
           "board": 2,
+          "label": "2",
           "result": "1-0",
           "white": 3
         },
         {
           "black": 6,
           "board": 3,
+          "label": "3",
           "result": "1/2-1/2",
           "white": 4
         },
         {
           "black": 7,
           "board": 4,
+          "label": "4",
           "result": "1-0",
           "white": 8
         },
         {
           "black": 9,
           "board": 5,
+          "label": "5",
           "result": "0-1",
           "white": 10
         }
@@ -263,7 +280,9 @@
   },
   "standings": {
     "after_round": 3,
+    "manual_incomplete": false,
     "manual_order": false,
+    "manual_stale": false,
     "rows": [
       {
         "category": "A",
@@ -408,6 +427,7 @@
   "tournament": {
     "arbiter": "Jorian Burssens",
     "city": "Ghent",
+    "deputy": null,
     "display": {
       "category": true,
       "club": true,
@@ -421,12 +441,14 @@
     "federation": "BEL",
     "fide_rated": true,
     "listed": true,
+    "match_format": false,
     "name": "Gent Spring Open 2026",
     "registration_open": true,
     "rounds_count": 5,
     "slug": "gent-spring-open-2026",
     "start_date": "2026-03-01",
-    "system": "swiss"
+    "system": "swiss",
+    "time_control": null
   },
   "version": 1
 }

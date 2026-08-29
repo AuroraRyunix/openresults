@@ -275,6 +275,43 @@ defmodule OpenResultsWeb.Tournament do
   def standings_rows(payload), do: standings(payload) |> list("rows") |> Enum.filter(&is_map/1)
 
   @doc """
+  The label to print beside a board - what the hall's printed sheet says.
+
+  Falls back to the raw board number, which is what every snapshot published
+  before 2026-08-29 carries and what an ordinary board's label is anyway.
+
+  The two differ when a fixed-table player is in the round: their board is
+  renumbered (1001, say) and the boards after them close the gap. Rendering
+  the raw column there put the public page and the printed sheet into
+  disagreement about which game is board 12.
+  """
+  def board_label(board) do
+    case Map.get(board, "label") do
+      label when is_binary(label) and label != "" -> label
+      _absent -> to_string(Map.get(board, "board"))
+    end
+  end
+
+  @doc """
+  Whether a hand-set order has stopped describing the tournament.
+
+  `:stale` - a result changed since the arbiter last set the order.
+  `:incomplete` - a player joined afterwards and has not been placed.
+
+  Absent means no, for the same reason as everywhere else here: a payload
+  that could not tell us has not made the claim, and inventing a warning on
+  an arbiter's behalf is worse than omitting one. The arbiter's own standings
+  page shows both, and until 2026-08-29 neither travelled - so this site said
+  "the arbiter chose this order" while their screen said "...and it may no
+  longer match the real standings".
+  """
+  def manual_warning?(payload, kind) when kind in [:stale, :incomplete] do
+    key = if kind == :stale, do: "manual_stale", else: "manual_incomplete"
+
+    manual_order?(payload) and Map.get(standings(payload), key) == true
+  end
+
+  @doc """
   Whether the arbiter set this order by hand rather than computing it.
 
   Absent means no, which is both the old behaviour and the honest one: a
@@ -289,6 +326,53 @@ defmodule OpenResultsWeb.Tournament do
   """
   def manual_order?(payload) do
     Map.get(standings(payload), "manual_order") == true
+  end
+
+  @doc """
+  How to name a round, for a tournament played as matches.
+
+  A round-robin or swiss played in two-game matches numbers its rounds 1..2n,
+  but nobody in the hall calls round 4 "round 4" - it is game 2 of match 2,
+  and that is what the arbiter's own round picker says. Absent means an
+  ordinary tournament, which is almost all of them.
+  """
+  def match_format?(payload), do: Map.get(info(payload), "match_format") == true
+
+  @doc "Short round label: `\"3\"`, or `\"M2-1\"` for a match-format event."
+  def round_label(payload, number) when is_integer(number) do
+    if match_format?(payload) do
+      "M#{div(number - 1, 2) + 1}-#{if rem(number, 2) == 1, do: 1, else: 2}"
+    else
+      to_string(number)
+    end
+  end
+
+  def round_label(_payload, number), do: to_string(number)
+
+  @doc "Full round heading: `\"Round 3\"`, or `\"Match 2, game 1\"`."
+  def round_heading(payload, number) when is_integer(number) do
+    if match_format?(payload) do
+      "Match #{div(number - 1, 2) + 1}, game #{if rem(number, 2) == 1, do: 1, else: 2}"
+    else
+      "Round #{number}"
+    end
+  end
+
+  def round_heading(_payload, number), do: "Round #{number}"
+
+  @doc """
+  The tournament facts a printed pairing sheet carries as a matter of course -
+  deputy arbiter and time control, beside the chief arbiter the masthead
+  already showed.
+
+  Returns `[]` when the payload carries neither, which is every snapshot
+  published before 2026-08-29 and most club events.
+  """
+  def officials(payload) do
+    info = info(payload)
+
+    [{"Deputy", string(info, "deputy")}, {"Tempo", string(info, "time_control")}]
+    |> Enum.reject(fn {_label, value} -> is_nil(value) end)
   end
 
   @doc """

@@ -57,6 +57,10 @@ defmodule OpenResultsWeb.TournamentHTML do
         </span>
         <span :if={dates(@info)}>{dates(@info)}</span>
         <span :if={@info["arbiter"]}>Arbiter: {@info["arbiter"]}</span>
+        <%!-- Facts a printed pairing sheet carries as a matter of course.
+              Terse and only when present, because club play is mostly
+              missing fields. --%>
+        <span :for={{label, value} <- Tournament.officials(@payload)}>{label}: {value}</span>
         <span :if={@info["fide_rated"] == true}>FIDE rated</span>
       </p>
 
@@ -70,10 +74,10 @@ defmodule OpenResultsWeb.TournamentHTML do
             href={~p"/t/#{@slug}/round/#{n}"}
             class={["chip", @current == {:round, n} && "current"]}
           >
-            {n}
+            {Tournament.round_label(@payload, n)}
           </a>
           <span :if={not published?} class="chip withheld" title="not published">
-            {n}<span class="visually-hidden">, not published</span>
+            {Tournament.round_label(@payload, n)}<span class="visually-hidden">, not published</span>
           </span>
         <% end %>
       </nav>
@@ -146,13 +150,28 @@ defmodule OpenResultsWeb.TournamentHTML do
       # carries points and tiebreaks. Keyed off `system`, as the contract says.
       |> assign(:keizer?, Tournament.keizer?(payload))
       |> assign(:manual_order?, Tournament.manual_order?(payload))
+      |> assign(:manual_stale?, Tournament.manual_warning?(payload, :stale))
+      |> assign(:manual_incomplete?, Tournament.manual_warning?(payload, :incomplete))
       |> assign(:show, display_rules(payload))
+      # Only when the tournament actually groups its players. A column of
+      # dashes on every ordinary open is noise.
+      |> assign(:categories?, Enum.any?(Tournament.standings_rows(payload), & &1["category"]))
 
     ~H"""
     <p :if={@manual_order?} class="footnote manual-order">
       The order below was set by the arbiter, not computed from the tiebreaks.
       The points and tiebreak columns are unchanged; the rank column is their
       decision.
+      <span :if={@manual_incomplete?}>
+        A player was added after that order was set and has not been placed in it yet.
+      </span>
+      <%!-- The one that matters. "The arbiter chose this order" and "the
+            arbiter chose this order and it is now out of date" are different
+            statements, and only the first was travelling. --%>
+      <strong :if={@manual_stale?}>
+        A result has changed since the order was last set, so it may no longer match the
+        real standings.
+      </strong>
     </p>
 
     <p :if={@rows == []} class="empty">
@@ -166,6 +185,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             <th class="num" scope="col">#</th>
             <th scope="col">Player</th>
             <th :if={@show.rating} class="num" scope="col">Rating</th>
+            <th :if={@categories? and @show.category} scope="col">Cat</th>
             <%= if @keizer? do %>
               <th class="num" scope="col">Value</th>
               <th class="num" scope="col">Keizer points</th>
@@ -195,6 +215,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
             </td>
             <td :if={@show.rating} class="num">{@players[row["player"]]["rating"]}</td>
+            <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
             <%= if @keizer? do %>
               <td class="num">{number(row["value"])}</td>
               <td class="num strong">{number(row["points"])}</td>
@@ -259,7 +280,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         </thead>
         <tbody>
           <tr :for={board <- @boards}>
-            <td class="num">{board["board"]}</td>
+            <td class="num">{Tournament.board_label(board)}</td>
             <td :if={@show.rating} class="num">{@players[board["white"]]["rating"]}</td>
             <td class="num"><.score points={@scores[board["white"]]} /></td>
             <td>
