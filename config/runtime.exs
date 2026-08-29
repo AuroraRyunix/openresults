@@ -42,6 +42,26 @@ end
 #
 # The token is the arbiter's own ingest token, because it is the same pair of
 # machines and a second secret would be a second thing to rotate.
+# Backups - see `OpenResults.Backup`. Nothing in this database is
+# reproducible: the snapshots are a published record, `/history?at=` answers a
+# question that cannot be recomputed, the queue holds entries nobody has
+# reviewed, and the keys decide who may withdraw a tournament.
+#
+# BACKUP_DIR defaults to a `backups/` directory beside the database.
+# OPENRESULTS_BACKUP_PASSPHRASE encrypts them, which is worth doing: the
+# registration queue carries the email addresses people gave the entry form.
+if backup_dir = System.get_env("BACKUP_DIR") do
+  config :openresults, :backup_dir, backup_dir
+end
+
+if passphrase = System.get_env("OPENRESULTS_BACKUP_PASSPHRASE") do
+  config :openresults, :backup_passphrase, passphrase
+end
+
+if keep = System.get_env("BACKUP_RETENTION") do
+  config :openresults, :backup_retention, String.to_integer(keep)
+end
+
 # Who may put these pages in an iframe - a CSP `frame-ancestors` source list.
 # Default `*`: this site has no login and no session, so a framing page gains
 # nothing it could not get by fetching the same URL itself, and a club showing

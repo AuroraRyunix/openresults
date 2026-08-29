@@ -18,6 +18,7 @@ defmodule OpenResults.Application do
       # endpoint, so the table exists before anything can be posted at it.
       OpenResults.RateLimit,
       # Start to serve requests, typically the last entry
+      OpenResults.Backup.Scheduler,
       OpenResultsWeb.Endpoint
     ]
 
