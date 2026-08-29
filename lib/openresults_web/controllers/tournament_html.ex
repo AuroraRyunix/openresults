@@ -203,7 +203,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 detail
               />
             </td>
-            <td :if={@show.rating} class="num">{@players[row["player"]]["rating"]}</td>
+            <td :if={@show.rating} class="num">{dash(@players[row["player"]]["rating"])}</td>
             <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
             <%= if @keizer? do %>
               <td class="num">{number(row["value"])}</td>
@@ -270,7 +270,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         <tbody>
           <tr :for={board <- @boards}>
             <td class="num">{Tournament.board_label(board)}</td>
-            <td :if={@show.rating} class="num">{@players[board["white"]]["rating"]}</td>
+            <td :if={@show.rating} class="num">{dash(@players[board["white"]]["rating"])}</td>
             <td class="num"><.score points={@scores[board["white"]]} /></td>
             <td>
               <.player_link
@@ -294,7 +294,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
             </td>
             <td class="num"><.score points={@scores[board["black"]]} /></td>
-            <td :if={@show.rating} class="num">{@players[board["black"]]["rating"]}</td>
+            <td :if={@show.rating} class="num">{dash(@players[board["black"]]["rating"])}</td>
           </tr>
         </tbody>
       </table>
@@ -343,12 +343,16 @@ defmodule OpenResultsWeb.TournamentHTML do
         <thead>
           <tr>
             <th scope="col">Player</th>
+            <th :if={@show.rating} class="num" scope="col">Elo</th>
             <th scope="col">Bye</th>
             <th class="num" scope="col">Points</th>
           </tr>
         </thead>
         <tbody>
           <tr :for={bye <- @byes}>
+            <%!-- `detail` and an Elo column, matching the boards table above.
+                  Without them a player sitting out lost their title and rating
+                  from a page that shows both for everybody who is playing. --%>
             <td>
               <.player_link
                 slug={@slug}
@@ -356,8 +360,10 @@ defmodule OpenResultsWeb.TournamentHTML do
                 player={@players[bye["player"]]}
                 show={@show}
                 cards?={@show.player_cards}
+                detail
               />
             </td>
+            <td :if={@show.rating} class="num">{dash(@players[bye["player"]]["rating"])}</td>
             <td>{bye_kind(bye["kind"])}</td>
             <td class="num">{number(bye["points"])}</td>
           </tr>
@@ -452,6 +458,9 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   defp count_if(flags), do: Enum.count(flags, & &1)
 
+  # A blank table cell reads as "nobody has typed this in"; a dash reads as
+  # "there is none". They are different claims, and for a rating the second is
+  # the true one - an unrated player is not a player whose rating is pending.
   defp dash(nil), do: "-"
   defp dash(""), do: "-"
   defp dash(value), do: value

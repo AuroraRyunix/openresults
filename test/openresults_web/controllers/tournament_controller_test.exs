@@ -125,7 +125,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # opponents a phantom half-point. Player 10's Buchholz lost exactly
       # that half-point. Nothing here changed - the numbers it is given did.
       assert texts(document, "table.standings tbody tr:last-child td") ==
-               ["10", "Nguyễn, Thị Hà", "", "B", "0", "2", "2", "0", "0"]
+               ["10", "Nguyễn, Thị Hà", "-", "B", "0", "2", "2", "0", "0"]
     end
 
     test "a tournament with no standings yet says so instead of showing an empty table", %{
@@ -208,8 +208,8 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{slug}/round/2") |> doc()
 
       assert texts(document, "table.byes tbody tr") == [
-               "Łukasiewicz, Paweł pairing-allocated bye 1",
-               "Nguyễn, Thị Hà absent 0"
+               "Łukasiewicz, Paweł 2208 pairing-allocated bye 1",
+               "Nguyễn, Thị Hà - absent 0"
              ]
     end
 
