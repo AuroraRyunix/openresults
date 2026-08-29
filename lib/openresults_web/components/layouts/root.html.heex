@@ -38,10 +38,33 @@
         const read = () => { try { return localStorage.getItem(KEY); } catch (_) { return null; } };
 
         const saved = read();
-        // Absent means "system": no attribute at all, so the stylesheet's
-        // prefers-color-scheme query decides. Writing "system" into the
-        // attribute would make the media query stop matching.
-        if (saved && saved !== "system") { root.setAttribute("data-theme", saved); }
+
+        // No choice made yet means LIGHT, not "follow the device".
+        //
+        // Following the device is the better default for an application
+        // somebody lives in. This is a page a spectator opens once, often
+        // embedded in a club's own site - and a club site is overwhelmingly
+        // light, so a dark slab dropped into the middle of one reads as
+        // broken rather than as a theme. The same argument applies to a
+        // projector in a hall, which is the other place these pages end up.
+        //
+        // "Match device" is still there, one click away, and once chosen it
+        // wins and persists. Only the default changed.
+        if (saved) {
+          if (saved === "system") {
+            // Deliberately no attribute: the stylesheet's
+            // prefers-color-scheme query is what decides, and writing
+            // "system" into the attribute would stop it matching.
+            root.setAttribute("data-theme-source", "system");
+          } else {
+            root.setAttribute("data-theme", saved);
+            root.setAttribute("data-theme-source", "user");
+          }
+        } else {
+          root.setAttribute("data-theme", "paper");
+          root.setAttribute("data-theme-source", "default");
+        }
+
         root.classList.add("has-js");
       })();
     </script>
@@ -60,17 +83,36 @@
         <span>Published by the arbiter. Results are theirs, not this site's.</span>
         <span id="live-status" class="live-status" hidden aria-live="polite"></span>
         <span class="spacer"></span>
-        <label class="theme-switch">
-          Theme
-          <select id="theme-select" aria-label="Colour theme">
-            <option value="system">Match device</option>
-            <option value="paper">Paper</option>
-            <option value="night">Night</option>
-            <option value="board">Board</option>
-            <option value="slate">Slate</option>
-            <option value="contrast">High contrast</option>
-          </select>
-        </label>
+        <%!-- The same popover the arbiter's app uses, so the two feel like
+              one system. The active option is highlighted purely from CSS,
+              keyed off the `data-theme` / `data-theme-source` attributes the
+              inline script maintains on <html> - no server state, and it
+              reflects the choice instantly. --%>
+        <details class="theme-picker">
+          <summary class="theme-picker-trigger" title="Colour theme" aria-label="Colour theme">
+            <span class="theme-picker-swatch" aria-hidden="true"></span> Theme
+          </summary>
+          <div class="theme-picker-panel" role="group" aria-label="Colour theme">
+            <button
+              :for={
+                {key, label} <- [
+                  {"system", "Match device"},
+                  {"paper", "Paper"},
+                  {"night", "Night"},
+                  {"board", "Board"},
+                  {"slate", "Slate"},
+                  {"contrast", "High contrast"}
+                ]
+              }
+              type="button"
+              class="theme-picker-item"
+              data-theme-opt={key}
+            >
+              <span class={"theme-dot theme-dot-#{key}"} aria-hidden="true"></span>
+              {label}
+            </button>
+          </div>
+        </details>
       </footer>
     </div>
 
@@ -101,14 +143,27 @@
         const read = () => { try { return localStorage.getItem(KEY); } catch (_) { return null; } };
 
         // ---- theme switch ----
-        const select = document.getElementById("theme-select");
-        if (select) {
-          select.value = read() || "system";
-          select.addEventListener("change", () => {
-            const value = select.value;
+        const picker = document.querySelector(".theme-picker");
+
+        if (picker) {
+          picker.addEventListener("click", (e) => {
+            const button = e.target.closest("[data-theme-opt]");
+            if (!button) { return; }
+
+            const value = button.dataset.themeOpt;
             write(value);
-            if (value === "system") { root.removeAttribute("data-theme"); }
-            else { root.setAttribute("data-theme", value); }
+
+            if (value === "system") {
+              root.removeAttribute("data-theme");
+              root.setAttribute("data-theme-source", "system");
+            } else {
+              root.setAttribute("data-theme", value);
+              root.setAttribute("data-theme-source", "user");
+            }
+
+            // A popover that stays open after you have chosen is a popover
+            // you have to dismiss twice.
+            picker.removeAttribute("open");
           });
         }
 

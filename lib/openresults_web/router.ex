@@ -19,6 +19,10 @@ defmodule OpenResultsWeb.Router do
     plug :accepts, ["html"]
     plug :put_root_layout, html: {OpenResultsWeb.Layouts, :root}
     plug :put_secure_browser_headers
+    # Runs AFTER, because it rewrites the header the line above just set.
+    # See `OpenResultsWeb.Framing` for why every page here is safe to embed
+    # and why that is a property of the site rather than a list of routes.
+    plug OpenResultsWeb.Framing
   end
 
   pipeline :api do

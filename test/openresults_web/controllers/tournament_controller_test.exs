@@ -376,11 +376,24 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # JavaScript off loses a convenience rather than a feature.
       assert html =~ ~s|href="/t/#{slug}/player/1"|
 
-      # The theme switch is hidden until the script marks the document, so a
+      # The theme picker is hidden until the script marks the document, so a
       # control that cannot work is never offered. `has-js` is added by the
       # inline reader in <head>.
-      assert html =~ "theme-switch"
+      assert html =~ "theme-picker"
       assert html =~ "has-js"
+    end
+
+    test "an untouched visitor gets the light theme, not the device's", %{conn: conn, slug: slug} do
+      html = conn |> get(~p"/t/#{slug}") |> html_response(200)
+
+      # Following the device is the better default for an app somebody lives
+      # in. This is a page opened once, often inside a club's own site - and
+      # club sites are overwhelmingly light, so a dark slab dropped into the
+      # middle of one reads as broken rather than as a theme.
+      assert html =~ ~s|root.setAttribute("data-theme", "paper")|
+
+      # "Match device" is still one click away, and still wins once chosen.
+      assert html =~ ~s|data-theme-opt="system"|
     end
   end
 end

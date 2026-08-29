@@ -42,6 +42,16 @@ end
 #
 # The token is the arbiter's own ingest token, because it is the same pair of
 # machines and a second secret would be a second thing to rotate.
+# Who may put these pages in an iframe - a CSP `frame-ancestors` source list.
+# Default `*`: this site has no login and no session, so a framing page gains
+# nothing it could not get by fetching the same URL itself, and a club showing
+# its own tournament's standings on its front page is the ordinary case.
+# Set to a space-separated origin list to restrict it, or `'none'` to switch
+# embedding off. See `OpenResultsWeb.Framing`.
+config :openresults,
+       :public_frame_ancestors,
+       System.get_env("PUBLIC_FRAME_ANCESTORS") || "*"
+
 if lookup = System.get_env("FIDE_LOOKUP_ENDPOINT") do
   config :openresults, :fide_lookup_endpoint, lookup
 end
