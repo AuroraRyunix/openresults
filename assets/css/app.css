@@ -1019,3 +1019,12 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   background: var(--accent);
   opacity: 0.28;
 }
+
+/* Which build is serving this page. Quiet - it is for the operator, not the
+   reader - but present on every page, because the question it answers is
+   asked from outside and there is no login to put it behind. */
+.build-id {
+  color: var(--quiet);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}

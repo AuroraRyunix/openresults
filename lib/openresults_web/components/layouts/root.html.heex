@@ -122,6 +122,13 @@
         <span>Published by the arbiter. Results are theirs, not this site's.</span>
         <span id="live-status" class="live-status" hidden aria-live="polite"></span>
         <span class="spacer"></span>
+        <%!-- In the footer of a site with no login, because the person asking
+              "did my deploy land" is looking at this from outside. A version
+              number could not answer it: this app reported the same 0.1.0 for
+              weeks while never having been deployed at all. --%>
+        <span class="build-id" title={OpenResults.Build.long()}>
+          {OpenResults.Build.id()}
+        </span>
       </footer>
     </div>
 
