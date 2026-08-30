@@ -36,13 +36,22 @@ defmodule OpenResultsWeb.Router do
   # The public pages. A tournament is addressed by its slug and a player by
   # `no`, the tournament pairing number - the same two handles the payload
   # uses, so no database id appears in a URL either.
+  # The three read pages get their own scope so they can carry the
+  # revalidation plug, which the entry form below deliberately must not: a
+  # form is not a document, and a browser deciding it already has the answer
+  # is exactly wrong there.
+  scope "/", OpenResultsWeb do
+    pipe_through [:browser, OpenResultsWeb.Plugs.Revalidate]
+
+    get "/t/:slug", TournamentController, :standings
+    get "/t/:slug/round/:n", TournamentController, :round
+    get "/t/:slug/player/:no", TournamentController, :player
+  end
+
   scope "/", OpenResultsWeb do
     pipe_through :browser
 
     get "/", TournamentController, :index
-    get "/t/:slug", TournamentController, :standings
-    get "/t/:slug/round/:n", TournamentController, :round
-    get "/t/:slug/player/:no", TournamentController, :player
 
     # Entry. Under the tournament, beside `round` and `player`, because an
     # entry is for one event and the slug is the only handle there is - and

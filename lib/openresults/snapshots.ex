@@ -119,9 +119,100 @@ defmodule OpenResults.Snapshots do
   """
   @spec latest(String.t()) :: Snapshot.t() | nil
   def latest(slug) do
+    case latest_id(slug) do
+      nil -> nil
+      id -> cached(slug, id)
+    end
+  end
+
+  # One decode per published version, rather than one per reader.
+  #
+  # `OpenResultsWeb.Plugs.Revalidate` already makes an unchanged poll cost a
+  # primary-key lookup, which is the common case and 566x cheaper than a
+  # render. What it cannot help is the moment that actually matters: a round
+  # finishes, the arbiter publishes, and every phone in the hall asks for the
+  # new page inside the next twenty seconds. Each of those is a genuine 200,
+  # and without this each would decode the same ~580 KB document again.
+  #
+  # Keyed by SLUG and validated by id, so a new publish is picked up on the
+  # next request rather than needing anything to remember to invalidate. The
+  # id comes from `latest_id/1`, which the caller has usually just paid for
+  # anyway.
+  #
+  # ETS copies on read, so this saves the decode and not the copy - the
+  # decode is the expensive half. Bounded by the number of tournaments being
+  # read, one entry each, and an entry is replaced rather than added when a
+  # tournament publishes again.
+  defp cached(slug, id) do
+    case lookup(slug) do
+      %Snapshot{id: ^id} = hit ->
+        hit
+
+      _miss_or_stale ->
+        snapshot = slug |> for_slug() |> limit(1) |> Repo.one()
+        if snapshot, do: :ets.insert(table(), {slug, snapshot})
+        snapshot
+    end
+  end
+
+  defp lookup(slug) do
+    case :ets.lookup(table(), slug) do
+      [{^slug, snapshot}] -> snapshot
+      [] -> nil
+    end
+  rescue
+    # The table is created lazily, so the very first read can arrive before
+    # it exists. A cache must never be the reason a page fails.
+    ArgumentError -> nil
+  end
+
+  @cache :openresults_snapshot_cache
+
+  defp table do
+    case :ets.whereis(@cache) do
+      :undefined ->
+        :ets.new(@cache, [:named_table, :public, :set, read_concurrency: true])
+
+      ref ->
+        ref
+    end
+  rescue
+    # Two processes racing to create it: whoever lost just uses the winner's.
+    ArgumentError -> @cache
+  end
+
+  @doc """
+  Forgets everything cached. For tests, and for anything that deletes rows
+  behind this module's back.
+  """
+  def clear_cache do
+    case :ets.whereis(@cache) do
+      :undefined -> :ok
+      _ref -> :ets.delete_all_objects(@cache)
+    end
+
+    :ok
+  end
+
+  @doc """
+  The id of the newest snapshot for `slug`, without loading it.
+
+  The whole point is what it does NOT select. A published document is up to
+  ~580 KB of JSON, and `latest/1` decodes all of it on every page view - so
+  answering "has this changed since you last asked" by loading the snapshot
+  would cost exactly what it is trying to save.
+
+  The id alone identifies a version: the table appends, one row per changed
+  publish, and a byte-identical re-send is collapsed rather than inserted
+  (see `store/3`). So a reader holding id 41 and finding 41 still current is
+  holding the current document, and nothing has to be read to prove it.
+  """
+  @spec latest_id(String.t()) :: integer() | nil
+  def latest_id(slug) do
     slug
     |> for_slug()
     |> limit(1)
+    |> select([s], s.id)
     |> Repo.one()
   end
 
