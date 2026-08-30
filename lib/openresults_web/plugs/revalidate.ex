@@ -40,6 +40,7 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   import Plug.Conn
 
   alias OpenResults.Snapshots
+  alias OpenResultsWeb.Plugs.Revalidate.Page
 
   def init(opts), do: opts
 
@@ -65,12 +66,35 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
           |> put_resp_header("etag", etag)
           |> put_resp_header("cache-control", "private, no-cache")
 
-        if etag in request_etags(conn) do
-          conn |> send_resp(304, "") |> halt()
-        else
-          conn
+        cond do
+          etag in request_etags(conn) ->
+            conn |> send_resp(304, "") |> halt()
+
+          body = Page.get(id, etag) ->
+            conn
+            |> put_resp_content_type("text/html")
+            |> send_resp(200, body)
+            |> halt()
+
+          true ->
+            register_before_send(conn, &keep(&1, id, etag))
         end
     end
+  end
+
+  # Only a plain 200 of HTML. A redirect, a 404 or an error page is not this
+  # document and must never be served in its place.
+  defp keep(%{status: 200} = conn, id, etag) do
+    if html?(conn), do: Page.put(id, etag, IO.iodata_to_binary(conn.resp_body))
+    conn
+  end
+
+  defp keep(conn, _id, _etag), do: conn
+
+  defp html?(conn) do
+    conn
+    |> get_resp_header("content-type")
+    |> Enum.any?(&String.starts_with?(&1, "text/html"))
   end
 
   # The PATH is part of the identity, not just the snapshot. One document
