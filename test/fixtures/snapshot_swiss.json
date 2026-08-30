@@ -1018,7 +1018,8 @@
         "code": "PS",
         "label": "Progressive score"
       }
-    ]
+    ],
+    "tiebreaks_withheld": false
   },
   "tournament": {
     "arbiter": "Jorian Burssens",
@@ -1039,6 +1040,7 @@
       "player_cards": true,
       "rating": true,
       "standings": true,
+      "tiebreak_working": true,
       "tiebreaks": true,
       "time_control": true,
       "title": true

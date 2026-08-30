@@ -403,6 +403,20 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  Whether the placings above were decided partly by a tie-break the arbiter
+  has not published.
+
+  Hiding a column hides the arithmetic, not its effect: two players can sit
+  one above the other with every published number identical and nothing on
+  the page to say why. That reads as a broken table rather than a withheld
+  one, so the document carries this and the page says so.
+
+  Absent means no, which is what publishing meant before an arbiter could
+  hide tie-breaks one at a time.
+  """
+  def tiebreaks_withheld?(payload), do: Map.get(standings(payload), "tiebreaks_withheld") == true
+
+  @doc """
   One player's standings row, or `nil`.
   """
   def standings_row(payload, no) do

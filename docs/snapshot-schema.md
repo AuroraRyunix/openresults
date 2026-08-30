@@ -186,6 +186,23 @@ away and tells nobody.
 stay dumb: it does not know what BH means, how many there are, or what order
 the arbiter chose.
 
+**`standings.tiebreaks`** carries only the tie-breaks the arbiter publishes.
+An arbiter can hide them one at a time, and a hidden one is absent from this
+list, from every `rows[].tiebreaks` (which stays positional against it, so
+there is no gap and no `null`) and from `rows[].working`. Withheld at build
+time, like a round or a board.
+
+**`standings.tiebreaks_withheld`** - whether the ORDER above used a tie-break
+that is not in that list. Added 2026-08-30. Absent means no.
+
+Hiding a column hides the arithmetic, not its effect: two players can sit one
+above the other with every published number identical and nothing to say why,
+which reads as a broken table rather than a withheld one. So the document
+says it happened and the page prints a line. It is compared against the
+tie-breaks that actually ranked, not the configured ones - a tie-break C.07
+Article 10 already dropped never affected the order, so hiding it withholds
+nothing and must not raise the flag.
+
 **`standings.rows[].working`** - how each tie-break number was reached, keyed
 by code. Added 2026-08-30. Absent, or `{}`, means no working was published.
 

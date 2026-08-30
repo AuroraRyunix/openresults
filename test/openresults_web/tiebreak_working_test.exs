@@ -194,6 +194,79 @@ defmodule OpenResultsWeb.TiebreakWorkingTest do
     end
   end
 
+  describe "when the arbiter hides some tie-breaks but not others" do
+    setup %{swiss: swiss} do
+      # What the publisher sends in that case: the hidden code is absent from
+      # the declared list, from every row's values and from the working, and
+      # the flag says the order still used it.
+      partial =
+        swiss
+        |> put_in(["tournament", "slug"], "partly-hidden")
+        |> update_in(["standings"], fn standings ->
+          keep = 0
+
+          standings
+          |> Map.put("tiebreaks", [Enum.at(standings["tiebreaks"], keep)])
+          |> Map.put("tiebreaks_withheld", true)
+          |> Map.update!("rows", fn rows ->
+            Enum.map(rows, fn row ->
+              code = Enum.at(standings["tiebreaks"], keep)["code"]
+
+              row
+              |> Map.put("tiebreaks", [Enum.at(row["tiebreaks"], keep)])
+              |> Map.put("working", Map.take(row["working"], [code]))
+            end)
+          end)
+        end)
+
+      {:ok, _} = Snapshots.ingest(partial)
+      {:ok, partial: partial}
+    end
+
+    test "only the published tie-break has a column", %{conn: conn} do
+      document = conn |> get(~p"/t/partly-hidden") |> doc()
+
+      headers = texts(document, "table.standings thead th")
+
+      assert "Buchholz Cut-1" in headers
+      refute "Sonneborn-Berger" in headers
+    end
+
+    test "the standings say the order used something they do not show", %{conn: conn} do
+      document = conn |> get(~p"/t/partly-hidden") |> doc()
+
+      assert Enum.any?(
+               texts(document, "p.footnote"),
+               &(&1 =~ "also uses tie-breaks this tournament does not publish")
+             )
+    end
+
+    test "a player's card carries the same caveat beside their placing", %{conn: conn} do
+      document = conn |> get(~p"/t/partly-hidden/player/1") |> doc()
+
+      assert Enum.any?(
+               texts(document, "#player-summary p.footnote"),
+               &(&1 =~ "does not publish")
+             )
+    end
+
+    test "the working shown is only the tie-break that was published", %{
+      conn: conn,
+      partial: partial
+    } do
+      assert Tournament.working_codes(partial, 1) == ["BHC1"]
+
+      document = conn |> get(~p"/t/partly-hidden/player/1") |> doc()
+      assert texts(document, ".working-block h4") |> length() == 1
+    end
+
+    test "a tournament publishing everything says nothing", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+
+      refute Enum.any?(texts(document, "p.footnote"), &(&1 =~ "does not publish"))
+    end
+  end
+
   describe "when the arbiter hides the tie-break columns" do
     test "there is no working to show, and the page says nothing about it", %{
       conn: conn,

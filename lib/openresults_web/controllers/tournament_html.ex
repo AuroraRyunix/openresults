@@ -147,6 +147,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       # carries points and tiebreaks. Keyed off `system`, as the contract says.
       |> assign(:keizer?, Tournament.keizer?(payload))
       |> assign(:manual_order?, Tournament.manual_order?(payload))
+      |> assign(:withheld?, Tournament.tiebreaks_withheld?(payload))
       |> assign(:manual_stale?, Tournament.manual_warning?(payload, :stale))
       |> assign(:manual_incomplete?, Tournament.manual_warning?(payload, :incomplete))
       |> assign(:show, display_rules(payload))
@@ -169,6 +170,14 @@ defmodule OpenResultsWeb.TournamentHTML do
         A result has changed since the order was last set, so it may no longer match the
         real standings.
       </strong>
+    </p>
+
+    <%!-- Said where the ordering is, not on a player's card, because the
+          question it answers is about the table: why is that person above
+          me when every number I can see is the same? --%>
+    <p :if={@withheld? and @rows != []} class="footnote">
+      The order also uses tie-breaks this tournament does not publish, so two
+      players can appear one above the other with every column here identical.
     </p>
 
     <p :if={@rows == []} class="empty">
@@ -599,6 +608,12 @@ defmodule OpenResultsWeb.TournamentHTML do
 
     <p :if={@codes == [] and @show.tiebreaks} class="footnote">
       This tournament publishes no breakdown of its tie-breaks.
+    </p>
+
+    <%!-- The placing above is a claim, so the same caveat belongs here: what
+          is listed may not be everything that put them there. --%>
+    <p :if={Tournament.tiebreaks_withheld?(@payload)} class="footnote">
+      The order also uses tie-breaks this tournament does not publish.
     </p>
     """
   end
