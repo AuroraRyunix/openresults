@@ -110,6 +110,16 @@ whole document is trivially idempotent.
         "player": 1,
         "points": 4.5,
         "tiebreaks": [22.5, 18.25],
+        "working": {
+          "BH": {
+            "total": 22.5,
+            "parts": [
+              { "round": 1, "opponent": 12, "value": 4.0 },
+              { "round": 2, "value": 2.5, "kind": "virtual" },
+              { "round": 3, "opponent": 7, "value": 3.5, "kind": "cut" }
+            ]
+          }
+        },
         "category": "A"
       }
     ]
@@ -175,6 +185,56 @@ away and tells nobody.
 `rows[].tiebreaks` is positional against it. This is what lets the renderer
 stay dumb: it does not know what BH means, how many there are, or what order
 the arbiter chose.
+
+**`standings.rows[].working`** - how each tie-break number was reached, keyed
+by code. Added 2026-08-30. Absent, or `{}`, means no working was published.
+
+Each entry is a `total` and a list of `parts`, one per round, and the parts
+sum to the total. A part carries:
+
+| field | meaning |
+| --- | --- |
+| `round` | the round it came from - the join key against `rounds[]` and a player's card |
+| `opponent` | the opponent's `no`, **absent** when there is nobody to name |
+| `value` | what it contributed |
+| `kind` | `played` (**absent** means this), `virtual`, `cut` or `excluded` |
+
+`virtual` is FIDE Article 16's notional opponent for a round the player did
+not play. `cut` is a real contribution that a cut modifier discarded, and
+`excluded` is one the tie-break's own rule did not count - a Koya opponent
+below the threshold. **Both are sent and both must be left out of the sum**;
+they are here so a reader can see what did not count and why, which is the
+half a bare number never showed.
+
+`opponent` and `kind` are omitted at their commonest values rather than sent
+as `null` and `"played"`. There are as many parts as players x codes x
+rounds, so those two keys cost more than the rest of the document put
+together on a large event. Absent-means-the-default is how `listed` and
+`manual_order` already read.
+
+**Only the tie-breaks that cannot be re-derived here are sent.** The Buchholz
+family, Sonneborn-Berger, Koya and average rating - everything built on an
+opponent's Article 16 **adjusted** score, which is not in this document and
+cannot be, because it depends on that opponent's own unplayed rounds. Wins,
+games with Black and the running score are visible in the results already, so
+they are not sent. Direct Encounter is never sent: it is a mini-match among
+players tied on everything else, not a per-round sum.
+
+That restriction is the reason this travels at all rather than being computed
+here. Adding up the opponents' finishing scores on this side would look
+right and be wrong: it would print a total that disagrees with the number
+beside it, in front of the players. See the app's first rule, above - the
+arbiter is the authority.
+
+Sending it costs roughly 3.4x the payload on a 300-player, 11-round event
+(173 KB to 583 KB, measured), and every changed version is kept, so the
+growth compounds across a tournament's publishes. Well inside the body limit,
+but worth knowing before adding more.
+
+**Withheld with the tie-break columns.** An arbiter who turns off
+`display.tiebreaks` is hiding the arithmetic, and this is more of it than the
+columns ever showed, so it is not sent at all rather than sent and hidden -
+the same rule as a withheld round or board.
 
 **`standings.manual_order`** - whether the arbiter set `rows[].rank` by hand
 instead of computing it from the tiebreaks. Added 2026-08-29. Absent means

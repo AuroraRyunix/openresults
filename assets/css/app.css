@@ -864,3 +864,158 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
 .masthead-bar .brand {
   margin-bottom: 0;
 }
+
+/* ---- a player's placing, and where their tie-breaks came from ---- */
+
+/* The overlay card is a peek: it shows this block and offers the page. On
+   the page itself the detail is already underneath, so a link to where you
+   are would be furniture. */
+.card-more {
+  display: none;
+}
+
+.card-dialog .card-more {
+  display: block;
+  margin-bottom: 0;
+}
+
+.placing {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.placing-rank {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.placing-of {
+  color: var(--quiet);
+}
+
+.tiebreak-summary {
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+}
+
+.tiebreak-summary th,
+.tiebreak-summary td {
+  padding: 0.15rem 0.75rem 0.15rem 0;
+  text-align: left;
+  font-weight: inherit;
+  vertical-align: baseline;
+}
+
+.working-block {
+  margin-bottom: 1.25rem;
+}
+
+.working-block h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.working-table {
+  border-collapse: collapse;
+  min-width: 18rem;
+}
+
+.working-table th,
+.working-table td {
+  padding: 0.2rem 0.75rem 0.2rem 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+/* A row that did not count is legible but plainly set aside - the same
+   treatment a withheld round already gets in the card table. */
+.working-table tr.withheld td {
+  color: var(--withheld);
+}
+
+.tag {
+  margin-left: 0.4rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--quiet);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/* ---- the chart ---- */
+
+.chart {
+  margin: 0 0 1.25rem;
+}
+
+/* The viewBox is a fixed 640x190, so the aspect ratio is decided in the
+   markup and not by how many rounds the tournament had. */
+.chart-svg {
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  height: auto;
+}
+
+.chart-grid line {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.chart-grid text,
+.chart-round {
+  fill: var(--quiet);
+  font-size: 10px;
+}
+
+/* Faint enough that the score line reads on top of it. The bars are context;
+   the line is the player. */
+.chart-bar {
+  fill: var(--accent);
+  opacity: 0.28;
+}
+
+.chart-bar-out {
+  fill: var(--withheld);
+  opacity: 0.3;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.chart-dot {
+  fill: var(--accent);
+}
+
+.chart figcaption {
+  color: var(--quiet);
+  font-size: 0.8rem;
+}
+
+.chart-key {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin: 0 0.15rem 0 0.6rem;
+  vertical-align: -0.1em;
+}
+
+.chart-key-line {
+  height: 0.2rem;
+  background: var(--accent);
+}
+
+.chart-key-bar {
+  background: var(--accent);
+  opacity: 0.28;
+}

@@ -403,6 +403,77 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  One player's standings row, or `nil`.
+  """
+  def standings_row(payload, no) do
+    Enum.find(standings_rows(payload), &(Map.get(&1, "player") == no))
+  end
+
+  @doc """
+  How each of `no`'s tiebreak numbers was arrived at, as
+  `%{code => %{"total" => number, "parts" => [part]}}`.
+
+  Empty when the arbiter has hidden the tiebreak columns - the working is
+  withheld at build time in that case, so there is nothing here to hide - and
+  empty for a tiebreak whose arithmetic is not a per-round sum, Direct
+  Encounter being the one that matters.
+
+  **Never computed here.** The contract's first rule is that the arbiter is
+  the authority, and this is the sharpest case for it: Buchholz sums each
+  opponent's Article 16 ADJUSTED score, not the score in their standings row,
+  so adding up the numbers on this page would produce a total that disagrees
+  with the one printed beside it. See `docs/snapshot-schema.md`.
+  """
+  def working(payload, no) do
+    case standings_row(payload, no) do
+      nil -> %{}
+      row -> row |> object("working") |> Map.new(fn {code, w} -> {code, normalise_working(w)} end)
+    end
+  end
+
+  defp normalise_working(working) when is_map(working) do
+    %{
+      "total" => Map.get(working, "total"),
+      "parts" => working |> list("parts") |> Enum.filter(&is_map/1)
+    }
+  end
+
+  defp normalise_working(_not_a_map), do: %{"total" => nil, "parts" => []}
+
+  @doc """
+  A part's kind: `"played"`, `"virtual"`, `"cut"` or `"excluded"`.
+
+  Absent means `"played"`, which is the commonest by a wide margin and so is
+  not sent - the same absent-means-the-default reading `listed` and
+  `manual_order` already have.
+  """
+  def part_kind(part), do: string(part, "kind") || "played"
+
+  @doc """
+  Whether a part was counted towards its tiebreak's total.
+
+  `"cut"` and `"excluded"` parts are published precisely so a reader can see
+  what did NOT count and why; they must never be added back in.
+  """
+  def part_counted?(part), do: part_kind(part) in ["played", "virtual"]
+
+  @doc """
+  The tiebreaks with published working, in the arbiter's own column order.
+
+  Ordered by `standings.tiebreaks` rather than by the working map's keys, so
+  the explanation on a player's page reads down in the same order as the
+  columns on the standings table.
+  """
+  def working_codes(payload, no) do
+    working = working(payload, no)
+
+    payload
+    |> tiebreaks()
+    |> Enum.map(&string(&1, "code"))
+    |> Enum.filter(&Map.has_key?(working, &1))
+  end
+
+  @doc """
   Points the result token awards, as `{white, black}`, or `nil`.
 
   A token this server has never seen returns `nil` rather than a guess.

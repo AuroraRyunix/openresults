@@ -294,7 +294,70 @@
           3.5,
           2.75,
           5.0
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "opponent": 3,
+                "round": 3,
+                "value": 1.5
+              }
+            ],
+            "total": 3.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 6,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "opponent": 3,
+                "round": 3,
+                "value": 1.5
+              }
+            ],
+            "total": 3.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 0.75
+              },
+              {
+                "opponent": 3,
+                "round": 3,
+                "value": 1.5
+              }
+            ],
+            "total": 2.75
+          }
+        }
       },
       {
         "category": "B",
@@ -306,7 +369,69 @@
           4.0,
           2.0,
           5.0
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 4,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 8,
+                "round": 2,
+                "value": 0.5
+              },
+              {
+                "kind": "virtual",
+                "round": 3,
+                "value": 2.0
+              }
+            ],
+            "total": 4.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 4,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 8,
+                "round": 2,
+                "value": 0.5
+              },
+              {
+                "kind": "cut",
+                "round": 3,
+                "value": 2.0
+              }
+            ],
+            "total": 2.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 4,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 8,
+                "round": 2,
+                "value": 0.5
+              },
+              {
+                "kind": "virtual",
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 2.0
+          }
+        }
       },
       {
         "category": "A",
@@ -318,7 +443,69 @@
           5.5,
           2.25,
           2.5
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 9,
+                "round": 1,
+                "value": 2.5
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "opponent": 2,
+                "round": 3,
+                "value": 1.5
+              }
+            ],
+            "total": 5.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 9,
+                "round": 1,
+                "value": 2.5
+              },
+              {
+                "kind": "cut",
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "opponent": 2,
+                "round": 3,
+                "value": 1.5
+              }
+            ],
+            "total": 4.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 9,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "opponent": 2,
+                "round": 3,
+                "value": 0.75
+              }
+            ],
+            "total": 2.25
+          }
+        }
       },
       {
         "category": "A",
@@ -330,7 +517,70 @@
           5.0,
           2.25,
           4.0
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 7,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 2.5
+              },
+              {
+                "opponent": 4,
+                "round": 3,
+                "value": 1.5
+              }
+            ],
+            "total": 5.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 7,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 2.5
+              },
+              {
+                "opponent": 4,
+                "round": 3,
+                "value": 1.5
+              }
+            ],
+            "total": 4.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 7,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 1.25
+              },
+              {
+                "opponent": 4,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 2.25
+          }
+        }
       },
       {
         "category": "A",
@@ -342,7 +592,70 @@
           3.5,
           0.75,
           3.5
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 8,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "opponent": 6,
+                "round": 2,
+                "value": 0.5
+              },
+              {
+                "opponent": 1,
+                "round": 3,
+                "value": 2.5
+              }
+            ],
+            "total": 3.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 8,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "opponent": 6,
+                "round": 2,
+                "value": 0.5
+              },
+              {
+                "opponent": 1,
+                "round": 3,
+                "value": 2.5
+              }
+            ],
+            "total": 3.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 8,
+                "round": 1,
+                "value": 0.25
+              },
+              {
+                "opponent": 6,
+                "round": 2,
+                "value": 0.5
+              },
+              {
+                "opponent": 1,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.75
+          }
+        }
       },
       {
         "category": "B",
@@ -354,7 +667,70 @@
           2.5,
           1.0,
           2.0
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 5,
+                "round": 2,
+                "value": 1.0
+              },
+              {
+                "opponent": 10,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 2.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 5,
+                "round": 2,
+                "value": 1.0
+              },
+              {
+                "kind": "cut",
+                "opponent": 10,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 2.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 5,
+                "round": 2,
+                "value": 1.0
+              },
+              {
+                "opponent": 10,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 1.0
+          }
+        }
       },
       {
         "category": "A",
@@ -366,7 +742,55 @@
           1.0,
           0.0,
           3.0
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 10,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 7,
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 10,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 7,
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 10,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 7,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
       },
       {
         "category": "B",
@@ -378,7 +802,69 @@
           4.5,
           0.25,
           0.5
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 2.5
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "kind": "virtual",
+                "round": 3,
+                "value": 0.5
+              }
+            ],
+            "total": 4.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 2.5
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "kind": "cut",
+                "round": 3,
+                "value": 0.5
+              }
+            ],
+            "total": 4.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "kind": "virtual",
+                "round": 3,
+                "value": 0.25
+              }
+            ],
+            "total": 0.25
+          }
+        }
       },
       {
         "category": "B",
@@ -390,7 +876,55 @@
           4.0,
           0.75,
           1.5
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 3,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 9,
+                "round": 2,
+                "value": 2.5
+              }
+            ],
+            "total": 4.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 3,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 9,
+                "round": 2,
+                "value": 2.5
+              }
+            ],
+            "total": 2.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 3,
+                "round": 1,
+                "value": 0.75
+              },
+              {
+                "opponent": 9,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.75
+          }
+        }
       },
       {
         "category": "B",
@@ -402,7 +936,69 @@
           2.0,
           0.0,
           0.0
-        ]
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 7,
+                "round": 3,
+                "value": 1.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 2.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 7,
+                "round": 3,
+                "value": 1.0
+              },
+              {
+                "kind": "cut",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 2.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 7,
+                "round": 3,
+                "value": 0.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
       }
     ],
     "tiebreaks": [

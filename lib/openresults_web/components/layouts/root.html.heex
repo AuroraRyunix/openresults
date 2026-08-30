@@ -406,7 +406,12 @@
             .then((r) => r.ok ? r.text() : Promise.reject(r.status))
             .then((html) => {
               const doc = new DOMParser().parseFromString(html, "text/html");
-              const section = doc.querySelector("section");
+              // The SUMMARY section, not the page's first one. The page
+              // carries a second, much longer section - the chart, the
+              // round-by-round table, every tie-break contribution - and
+              // lifting that into a dialog would make the peek and the page
+              // the same thing again, which is what this stopped being.
+              const section = doc.querySelector("#player-summary");
               if (!section) { throw new Error("no card"); }
               body.replaceChildren(section);
             })

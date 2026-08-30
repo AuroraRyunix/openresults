@@ -551,6 +551,346 @@ defmodule OpenResultsWeb.TournamentHTML do
     """
   end
 
+  @doc """
+  Why this player is where they are: their placing, their score, and what
+  each tiebreak was made of.
+
+  This is the block the overlay card shows. It is deliberately the SUMMARY
+  and not the whole page - before the working existed, right-clicking a name
+  fetched the player page and put its one section in a dialog, so the two
+  gestures produced identical content and the overlay's only value was not
+  losing your place in the standings. Left-click now leads somewhere with
+  more in it: the round-by-round table, the chart, and every contribution
+  named.
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+  attr :no, :integer, required: true
+
+  def placing(assigns) do
+    payload = assigns.payload
+    row = Tournament.standings_row(payload, assigns.no)
+
+    assigns =
+      assigns
+      |> assign(:row, row)
+      |> assign(:working, Tournament.working(payload, assigns.no))
+      |> assign(:codes, Tournament.working_codes(payload, assigns.no))
+      |> assign(:labels, tiebreak_labels(payload))
+      |> assign(:show, display_rules(payload))
+
+    ~H"""
+    <p :if={@row} class="placing">
+      <span class="placing-rank">{@row["rank"]}</span>
+      <span class="placing-of">
+        of {length(Tournament.standings_rows(@payload))}, on {number(@row["points"])}
+      </span>
+    </p>
+
+    <table :if={@codes != [] and @show.tiebreaks} class="tiebreak-summary">
+      <tbody>
+        <tr :for={code <- @codes}>
+          <th scope="row">{@labels[code]}</th>
+          <td class="num strong">{number(@working[code]["total"])}</td>
+          <td class="quiet">{composition(@working[code]["parts"])}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p :if={@codes == [] and @show.tiebreaks} class="footnote">
+      This tournament publishes no breakdown of its tie-breaks.
+    </p>
+    """
+  end
+
+  # One line saying what a tiebreak is made of, without repeating the table
+  # underneath it on the full page. Says only what is true of THIS list: a
+  # tiebreak with nothing discarded says nothing about discarding.
+  defp composition(parts) do
+    counted = Enum.count(parts, &Tournament.part_counted?/1)
+    cut = Enum.count(parts, &(Tournament.part_kind(&1) == "cut"))
+    excluded = Enum.count(parts, &(Tournament.part_kind(&1) == "excluded"))
+    virtual = Enum.count(parts, &(Tournament.part_kind(&1) == "virtual"))
+
+    [
+      "from #{counted} #{pluralise(counted, "round", "rounds")}",
+      virtual > 0 && "#{virtual} unplayed",
+      cut > 0 && "#{cut} discarded",
+      excluded > 0 && "#{excluded} not counted"
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(", ")
+  end
+
+  defp pluralise(1, one, _many), do: one
+  defp pluralise(_n, _one, many), do: many
+
+  @doc """
+  Every tiebreak's working in full: one row per round, with the opponent it
+  came from and what it was worth.
+
+  The values are the arbiter's own, sent with the document. Nothing on this
+  page adds them up to check, and nothing recomputes them - see
+  `OpenResultsWeb.Tournament.working/2` for why that would be worse than
+  useless here.
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+  attr :no, :integer, required: true
+
+  def working_tables(assigns) do
+    payload = assigns.payload
+
+    assigns =
+      assigns
+      |> assign(:working, Tournament.working(payload, assigns.no))
+      |> assign(:codes, Tournament.working_codes(payload, assigns.no))
+      |> assign(:labels, tiebreak_labels(payload))
+      |> assign(:players, Tournament.players_by_no(payload))
+      |> assign(:show, display_rules(payload))
+
+    ~H"""
+    <section :if={@codes != [] and @show.tiebreaks} class="working">
+      <h3>Where the tie-breaks come from</h3>
+
+      <div :for={code <- @codes} class="working-block">
+        <h4>
+          {@labels[code]}
+          <span class="num strong">{number(@working[code]["total"])}</span>
+        </h4>
+
+        <div class="scroller">
+          <table class="working-table">
+            <thead>
+              <tr>
+                <th class="num" scope="col">Rd</th>
+                <th scope="col">From</th>
+                <th class="num" scope="col">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                :for={part <- @working[code]["parts"]}
+                class={not Tournament.part_counted?(part) && "withheld"}
+              >
+                <td class="num">{part["round"]}</td>
+                <td>
+                  <.part_source
+                    part={part}
+                    slug={@slug}
+                    player={@players[part["opponent"]]}
+                    show={@show}
+                  />
+                </td>
+                <td class="num">{number(part["value"])}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="footnote">
+        These are the arbiter's numbers, published with the results - this page
+        does not calculate them. An unplayed round contributes a notional
+        opponent under FIDE Article 16 rather than a real one, which is why
+        some rows name nobody.
+      </p>
+    </section>
+    """
+  end
+
+  # What a contribution came from: an opponent, a rule, or nobody.
+  attr :part, :map, required: true
+  attr :slug, :string, required: true
+  attr :player, :map, default: nil
+  attr :show, :map, default: %{}
+
+  def part_source(assigns) do
+    ~H"""
+    <.player_link
+      :if={@part["opponent"]}
+      slug={@slug}
+      no={@part["opponent"]}
+      player={@player}
+      show={@show}
+      cards?={Map.get(@show, :player_cards, true)}
+    />
+    <span :if={is_nil(@part["opponent"])} class="quiet">
+      {source_label(@part)}
+    </span>
+    <span :if={Tournament.part_kind(@part) == "cut"} class="tag">discarded</span>
+    <span :if={Tournament.part_kind(@part) == "excluded" and @part["opponent"]} class="tag">
+      not counted
+    </span>
+    """
+  end
+
+  # A part with no opponent to name is an unplayed round - Article 16's
+  # notional opponent - and stays one after a cut modifier discards it. `kind`
+  # holds one value, so marking it `"cut"` overwrites `"virtual"`; the absent
+  # opponent is what survives, and it is enough. The "discarded" tag beside
+  # this says the rest.
+  defp source_label(part) do
+    case Tournament.part_kind(part) do
+      "excluded" -> "not counted"
+      _virtual_or_cut -> "unplayed round"
+    end
+  end
+
+  @doc """
+  One picture of a player's tournament: what each round contributed to a
+  tie-break, and how their own score climbed.
+
+  Both series are in POINTS, which is the only reason they can share an axis.
+  A dual-scale chart that put a running total and a per-round contribution on
+  different axes would let the two cross wherever the scaling happened to put
+  them, and the crossing would mean nothing.
+
+  The bars are the tie-break's own published contributions - the strength of
+  the field this player actually faced, which is what a Buchholz IS. A bar
+  the arbiter's rules did not count (discarded by a cut, or below Koya's
+  threshold) is drawn in the withheld colour rather than left out, because
+  "that round did not help you" is the interesting part.
+
+  Inline SVG, no library: this site ships one stylesheet and one script, and
+  a chart is not a reason to change that.
+  """
+  attr :payload, :map, required: true
+  attr :card, :list, required: true
+  attr :no, :integer, required: true
+
+  def score_chart(assigns) do
+    payload = assigns.payload
+    code = assigns.payload |> Tournament.working_codes(assigns.no) |> List.first()
+    working = Tournament.working(payload, assigns.no)
+
+    bars =
+      case code do
+        nil -> %{}
+        code -> Map.new(working[code]["parts"], &{Map.get(&1, "round"), &1})
+      end
+
+    points =
+      for entry <- assigns.card,
+          is_number(entry.score),
+          do: {entry.round, entry.score}
+
+    max =
+      [
+        Enum.map(points, &elem(&1, 1)),
+        bars |> Map.values() |> Enum.map(&Map.get(&1, "value", 0)) |> Enum.filter(&is_number/1)
+      ]
+      |> List.flatten()
+      |> Enum.max(fn -> 0 end)
+
+    assigns =
+      assigns
+      |> assign(:code, code)
+      |> assign(:label, code && tiebreak_labels(payload)[code])
+      |> assign(:bars, bars)
+      |> assign(:points, points)
+      |> assign(:rounds, Enum.map(assigns.card, & &1.round))
+      |> assign(:max, max)
+
+    ~H"""
+    <figure :if={@rounds != [] and @max > 0} class="chart">
+      <svg viewBox="0 0 640 190" class="chart-svg" role="img">
+        <title>
+          {chart_title(@label)}
+        </title>
+
+        <%!-- Gridlines at whole points, labelled. Two decimals would be
+              noise on an axis whose whole job is "roughly how big". --%>
+        <g class="chart-grid">
+          <g :for={value <- gridlines(@max)}>
+            <line x1="30" x2="630" y1={y(value, @max)} y2={y(value, @max)} />
+            <text x="24" y={y(value, @max) + 4} text-anchor="end">{trunc(value)}</text>
+          </g>
+        </g>
+
+        <g :for={{round, index} <- Enum.with_index(@rounds)}>
+          <% part = @bars[round] %>
+          <rect
+            :if={part && is_number(part["value"]) && part["value"] > 0}
+            x={bar_x(index, @rounds) - bar_width(@rounds) / 2}
+            y={y(part["value"], @max)}
+            width={bar_width(@rounds)}
+            height={164 - y(part["value"], @max)}
+            class={
+              if(Tournament.part_counted?(part), do: "chart-bar", else: "chart-bar chart-bar-out")
+            }
+          />
+          <text x={bar_x(index, @rounds)} y="182" text-anchor="middle" class="chart-round">
+            {round}
+          </text>
+        </g>
+
+        <%!-- The score line stops where the running total does: at the first
+              round whose contribution is not public. A line drawn across that
+              gap would be a number the arbiter never published. --%>
+        <polyline
+          :if={length(@points) > 1}
+          class="chart-line"
+          points={line_points(@points, @rounds, @max)}
+        />
+        <circle
+          :for={{round, score} <- @points}
+          cx={bar_x(Enum.find_index(@rounds, &(&1 == round)), @rounds)}
+          cy={y(score, @max)}
+          r="3"
+          class="chart-dot"
+        />
+      </svg>
+
+      <figcaption>
+        <span class="chart-key chart-key-line"></span>
+        running score
+        <span :if={@label}>
+          <span class="chart-key chart-key-bar"></span> what each round gave to {@label}
+        </span>
+      </figcaption>
+    </figure>
+    """
+  end
+
+  defp chart_title(nil), do: "The player's running score by round."
+
+  defp chart_title(label),
+    do: "The player's running score by round, and each round's contribution to #{label}."
+
+  # A FIXED 640x190 viewBox, with the rounds distributed across it rather
+  # than a width that grows per round. The first version sized the box by
+  # round count, so a five-round event produced a nearly square viewBox that
+  # `width: 100%; height: auto` then scaled into a chart taller than the
+  # screen. The aspect ratio has to be decided here, not by the data.
+  @chart_left 34
+  @chart_right 630
+
+  defp chart_slot(rounds), do: (@chart_right - @chart_left) / max(length(rounds), 1)
+  defp bar_x(index, rounds), do: @chart_left + chart_slot(rounds) * (index + 0.5)
+  defp bar_width(rounds), do: min(28.0, chart_slot(rounds) * 0.55)
+
+  # 26px of bottom gutter for the round numbers, 12px of headroom on top.
+  defp y(_value, max) when max <= 0, do: 164
+  defp y(value, max), do: 164 - value / max * 138
+
+  defp gridlines(max) do
+    step = if max > 8, do: 2, else: 1
+    Stream.iterate(0, &(&1 + step)) |> Enum.take_while(&(&1 <= max)) |> Enum.map(&(&1 / 1))
+  end
+
+  defp line_points(points, rounds, max) do
+    Enum.map_join(points, " ", fn {round, score} ->
+      "#{bar_x(Enum.find_index(rounds, &(&1 == round)), rounds)},#{y(score, max)}"
+    end)
+  end
+
+  defp tiebreak_labels(payload) do
+    payload
+    |> Tournament.tiebreaks()
+    |> Map.new(fn tb -> {Map.get(tb, "code"), Tournament.tiebreak_label(tb)} end)
+  end
+
   # Missing means shown, matching `Tournament.show?/2`. Callers build this map
   # once per table rather than asking the payload per cell.
   defp shown?(show, key), do: Map.get(show, key, true)

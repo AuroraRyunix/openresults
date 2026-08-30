@@ -1,6 +1,16 @@
 <.masthead payload={@payload} slug={@slug} current={@current} />
 
-<section>
+<%!-- Two sections, and the split is load-bearing. The overlay card fetches
+      this page and lifts `#player-summary` out of it, so that is everything
+      a peek should show: who, where they placed, and what the tie-breaks
+      were made of. Everything below it is the reason to open the page
+      properly - the chart, the round-by-round table, and every contribution
+      named against the round it came from.
+
+      Before the working existed the overlay took the page's only section,
+      so a right-click and a left-click produced the same thing and the
+      overlay's whole value was not losing your place in the standings. --%>
+<section id="player-summary">
   <h2>
     <span :if={Tournament.show?(@payload, "title") && @player["title"]} class="title">
       {@player["title"]}
@@ -20,6 +30,20 @@
     </span>
   </p>
 
+  <.placing payload={@payload} slug={@slug} no={@player["no"]} />
+
+  <%!-- Only in the overlay, where there is somewhere further to go. On the
+        page itself the detail is already underneath. --%>
+  <p class="card-more">
+    <a href={~p"/t/#{@slug}/player/#{@player["no"]}"}>Full card, round by round</a>
+  </p>
+</section>
+
+<section id="player-detail">
+  <.score_chart payload={@payload} card={@card} no={@player["no"]} />
+
+  <h3>Round by round</h3>
+
   <.card_table slug={@slug} card={@card} payload={@payload} />
 
   <p :if={Enum.any?(@card, &is_nil(&1.score))} class="footnote">
@@ -27,4 +51,6 @@
     unpublished round, a board that is not listed, or a game with no result yet.
     The arbiter's own total is on the <a href={~p"/t/#{@slug}"}>standings</a>.
   </p>
+
+  <.working_tables payload={@payload} slug={@slug} no={@player["no"]} />
 </section>
