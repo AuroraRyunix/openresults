@@ -243,6 +243,71 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     end
   end
 
+  describe "GET /t/:slug/round/:n?display=1 - the projector view" do
+    test "renders the boards, projected", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}/round/1?display=1") |> doc()
+
+      assert texts(document, "[data-projector] .projector-round") == ["Round 1 2026-03-01"]
+
+      assert texts(document, "table.projector-pairings tbody tr:first-child td") ==
+               ["1", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana"]
+    end
+
+    test "the ordinary URL is unchanged", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}/round/1") |> doc()
+
+      assert texts(document, "[data-projector]") == []
+      assert texts(document, "table.pairings.projector-pairings") == []
+
+      assert texts(document, "table.pairings tbody tr:first-child td") ==
+               ["1", "2601", "0", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana", "0", "2033"]
+    end
+
+    test "a name is plain text, not a link - a tap here pauses the cycle", %{
+      conn: conn,
+      slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}/round/1?display=1") |> doc()
+
+      assert texts(document, "table.projector-pairings a.player") == []
+      assert texts(document, "table.projector-pairings span.player .name") != []
+    end
+
+    test "the page counter and bar are in the markup but hidden, for the script to reveal", %{
+      conn: conn,
+      slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}/round/1?display=1") |> doc()
+
+      foot = LazyHTML.query(document, "#projector-foot")
+      assert LazyHTML.attribute(foot, "hidden") == [""]
+    end
+
+    test "byes still appear, statically, underneath the boards", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}/round/2?display=1") |> doc()
+
+      assert texts(document, ".projector-byes table.byes tbody tr") == [
+               "Łukasiewicz, Paweł 2208 pairing-allocated bye 1",
+               "Nguyễn, Thị Hà - absent 0"
+             ]
+    end
+
+    test "a round the arbiter withheld is still a 404", %{conn: conn, slug: slug} do
+      html = conn |> get(~p"/t/#{slug}/round/4?display=1") |> html_response(404)
+
+      assert html =~ "Round 4 of Gent Spring Open 2026 has not been published"
+    end
+
+    test "an unrecognised display value is the ordinary page, not the projector", %{
+      conn: conn,
+      slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}/round/1?display=0") |> doc()
+
+      assert texts(document, "[data-projector]") == []
+    end
+  end
+
   describe "GET /t/:slug/player/:no - the card" do
     test "one row per round, with colour, opponent, result and running score", %{
       conn: conn,

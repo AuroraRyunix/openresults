@@ -97,11 +97,16 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
     |> Enum.any?(&String.starts_with?(&1, "text/html"))
   end
 
-  # The PATH is part of the identity, not just the snapshot. One document
+  # The PATH is part of the identity, not just the snapshot - one document
   # renders as standings, as a round, and as a card per player, so a reader
   # moving from the standings to a player page must not be told that the page
-  # they have not seen is unchanged.
-  defp etag_for(conn, id), do: ~s("#{id}-#{:erlang.phash2(conn.request_path)}")
+  # they have not seen is unchanged. The QUERY STRING is now part of it too:
+  # a round's own URL renders differently under `?display=1` (the projector
+  # view), and without this a reader's `?display=1` request and somebody
+  # else's plain one would share one ETag and shadow each other's page in
+  # `Page` - whichever variant rendered first would be served to both.
+  defp etag_for(conn, id),
+    do: ~s("#{id}-#{:erlang.phash2({conn.request_path, conn.query_string})}")
 
   # `If-None-Match` may carry several, comma separated, and a cache is
   # allowed to return a weak validator (`W/"..."`) for one we sent strong.

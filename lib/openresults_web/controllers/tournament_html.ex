@@ -409,6 +409,296 @@ defmodule OpenResultsWeb.TournamentHTML do
   end
 
   @doc """
+  A round's boards, projected: readable from across a room, and left to the
+  script below to page through when they do not all fit on the screen in
+  front of them.
+
+  Reached via `?display=1` on the round's own URL, so this is the same
+  document as `pairings_table/1` above and not a separate page - see
+  `TournamentController.round/2`. Two differences from the ordinary table:
+  every name is plain text rather than a link, because a tap here pauses the
+  cycle rather than following it somewhere; and there is no rating or score
+  column, because a hall screen must never need to scroll sideways to find a
+  board, and neither serves what a projector is actually for - finding your
+  name and seeing who you are playing.
+
+  Byes are listed underneath, statically - useful to a player checking
+  whether they are even on a board, and deliberately NOT part of the cycle,
+  same as standings: nobody watches a hall screen for their own bye.
+
+  The pagination itself is client-side JavaScript, and has to be: this is a
+  plain controller with no socket, and a hall screen must keep cycling
+  through a venue's wifi wobbling, not stop the moment it does.
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+  attr :round, :map, required: true
+  attr :players, :map, required: true
+
+  def projector_round(assigns) do
+    assigns =
+      assigns
+      |> assign(:boards, Tournament.boards(assigns.round))
+      |> assign(:show, display_rules(assigns.payload))
+
+    ~H"""
+    <section class="projector" data-projector aria-label="Round pairings, projector view">
+      <header class="projector-head">
+        <h1>{Tournament.name(@payload)}</h1>
+        <p class="projector-round">
+          {Tournament.round_heading(@payload, @round["number"])}
+          <span :if={@round["date"]}>{@round["date"]}</span>
+        </p>
+      </header>
+
+      <p :if={@boards == []} class="empty">No boards were published for this round.</p>
+
+      <div :if={@boards != []} class="projector-table-wrap" id="projector-boards">
+        <table class="pairings projector-pairings">
+          <thead>
+            <tr>
+              <th class="num" scope="col">Bd</th>
+              <th scope="col">White</th>
+              <th class="num" scope="col">Result</th>
+              <th scope="col">Black</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={board <- @boards}>
+              <td class="num">{Tournament.board_label(board)}</td>
+              <td>
+                <.player_link
+                  slug={@slug}
+                  no={board["white"]}
+                  player={@players[board["white"]]}
+                  show={@show}
+                  cards?={false}
+                  detail
+                />
+              </td>
+              <td class="num"><.result token={board["result"]} /></td>
+              <td>
+                <.player_link
+                  slug={@slug}
+                  no={board["black"]}
+                  player={@players[board["black"]]}
+                  show={@show}
+                  cards?={false}
+                  detail
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <%!-- Hidden until the script decides otherwise. A counter reading "1 of
+            1" only tells a viewer that nobody checked, so this stays out of
+            the accessibility tree entirely whenever every board already fits. --%>
+      <div :if={@boards != []} class="projector-foot" id="projector-foot" hidden>
+        <span class="projector-page" id="projector-page"></span>
+        <span class="projector-paused" id="projector-paused" hidden>
+          Paused - tap or press space to resume
+        </span>
+        <%!-- Not decoration: someone looking for board 47 needs to know their
+              page is coming and roughly when, or a rotating screen is worse
+              than a still one. --%>
+        <span class="projector-bar" id="projector-bar" aria-hidden="true">
+          <span class="projector-bar-fill" id="projector-bar-fill"></span>
+        </span>
+      </div>
+
+      <section
+        :if={Tournament.show?(@payload, "byes") and Tournament.byes(@round) != []}
+        class="projector-byes"
+      >
+        <h2>Byes</h2>
+        <.byes_table slug={@slug} round={@round} players={@players} payload={@payload} />
+      </section>
+    </section>
+
+    <script>
+      (() => {
+        const CYCLE_MS = 12000;
+        // Independent of, and slower than, the site-wide 20-second refresher
+        // in the root layout (which is switched off entirely on this page -
+        // see the layout for why): that one replaces a whole region and would
+        // wipe out which page is showing and the running timer along with it.
+        // This swaps only the rows.
+        const REFRESH_MS = 60000;
+
+        const section = document.querySelector("[data-projector]");
+        const wrap = document.getElementById("projector-boards");
+        if (!section || !wrap) { return; }
+
+        const table = wrap.querySelector("table");
+        const tbody = table.querySelector("tbody");
+        const thead = table.querySelector("thead");
+        const foot = document.getElementById("projector-foot");
+        const pageLabel = document.getElementById("projector-page");
+        const pausedLabel = document.getElementById("projector-paused");
+        const bar = document.getElementById("projector-bar");
+        const barFill = document.getElementById("projector-bar-fill");
+
+        let rowsPerPage = 1;
+        let page = 0;
+        let paused = false;
+        let cycleTimer = null;
+
+        const rows = () => Array.from(tbody.querySelectorAll("tr"));
+
+        // How many rows the glass actually holds, measured against an
+        // already-rendered row rather than guessed - so nothing has to be
+        // configured for a particular television.
+        const measure = () => {
+          const sample = rows()[0];
+          if (!sample) { return 1; }
+
+          const rowHeight = sample.getBoundingClientRect().height;
+          if (rowHeight <= 0) { return rowsPerPage || 1; }
+
+          const top = table.getBoundingClientRect().top;
+          const headHeight = thead ? thead.getBoundingClientRect().height : 0;
+          // Room for the page counter and bar below, so the last row is
+          // never half-clipped at the bottom edge.
+          const chrome = headHeight + 72;
+          const usable = window.innerHeight - top - chrome;
+
+          return Math.max(Math.floor(usable / rowHeight), 1);
+        };
+
+        const pageCount = () => Math.max(Math.ceil(rows().length / rowsPerPage), 1);
+
+        // Shows the current page's rows and the counter beneath them.
+        // Deliberately does not touch the progress bar's animation - a
+        // resize or a data refresh must not restart a countdown somebody is
+        // already watching.
+        const applyPage = () => {
+          const count = pageCount();
+          page = Math.min(page, count - 1);
+
+          rows().forEach((row, i) => {
+            row.hidden = Math.floor(i / rowsPerPage) !== page;
+          });
+
+          if (count > 1) {
+            foot.hidden = false;
+            pageLabel.textContent = `Page ${page + 1} of ${count}`;
+            pausedLabel.hidden = !paused;
+            bar.hidden = paused;
+          } else {
+            // Every board fits on one screen: no counter, no bar, no timer.
+            foot.hidden = true;
+          }
+        };
+
+        // Restarts the sweep from empty. Called only where the countdown
+        // itself actually restarts - a page turning over, or a resume - so
+        // the bar and the timer that drives it can never drift apart.
+        const restartBar = () => {
+          if (paused) { return; }
+          barFill.classList.remove("running");
+          void barFill.offsetWidth;
+          barFill.style.animationDuration = `${CYCLE_MS}ms`;
+          barFill.classList.add("running");
+        };
+
+        const scheduleCycle = () => {
+          if (cycleTimer) { clearInterval(cycleTimer); }
+          cycleTimer = paused ? null : setInterval(advance, CYCLE_MS);
+        };
+
+        function advance() {
+          const count = pageCount();
+          if (paused || count <= 1) { return; }
+          page = (page + 1) % count;
+          applyPage();
+          restartBar();
+        }
+
+        const refit = () => {
+          rowsPerPage = measure();
+          applyPage();
+        };
+
+        // A tap holds the page it is on rather than jumping back to the
+        // start, so a player mid-read is not chased off their own board.
+        const togglePause = () => {
+          paused = !paused;
+          applyPage();
+          scheduleCycle();
+          restartBar();
+        };
+
+        section.addEventListener("click", (e) => {
+          // Real links and buttons (the theme picker lives outside this
+          // section, but stay defensive) keep their own behaviour.
+          if (e.target.closest("a, button")) { return; }
+          togglePause();
+        });
+
+        document.addEventListener("keydown", (e) => {
+          if (e.key !== " " && e.code !== "Space") { return; }
+
+          // Do not steal space from something else on the page that wants
+          // it - the theme picker's own trigger, chiefly.
+          const tag = document.activeElement && document.activeElement.tagName;
+          if (["BUTTON", "SUMMARY", "A", "INPUT", "TEXTAREA", "SELECT"].includes(tag)) {
+            return;
+          }
+
+          e.preventDefault();
+          togglePause();
+        });
+
+        let resizeTimer = null;
+
+        const onResize = () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(refit, 150);
+        };
+
+        window.addEventListener("resize", onResize);
+        window.addEventListener("orientationchange", refit);
+
+        // ---- keeping the boards current --------------------------------
+        //
+        // A re-fetch of this same URL and a swap of only the <tbody>, not a
+        // reload - a reload would restart the cycle and blink the screen,
+        // which is exactly what somebody watching this from across a hall
+        // must never see.
+        const refreshRows = () => {
+          if (document.hidden) { return; }
+
+          fetch(window.location.href, { headers: { accept: "text/html" } })
+            .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+            .then((html) => {
+              const doc = new DOMParser().parseFromString(html, "text/html");
+              const fresh = doc.querySelector("#projector-boards tbody");
+              if (!fresh || fresh.innerHTML === tbody.innerHTML) { return; }
+
+              tbody.innerHTML = fresh.innerHTML;
+              refit();
+            })
+            .catch(() => {
+              // The hall's wifi wobbles. The board stays as it was rather
+              // than blank - stale is better than gone.
+            });
+        };
+
+        refit();
+        if (pageCount() > 1) { restartBar(); }
+        scheduleCycle();
+        setInterval(refreshRows, REFRESH_MS);
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) { refreshRows(); }
+        });
+      })();
+    </script>
+    """
+  end
+
+  @doc """
   One player's game in each round.
 
   Every round gets a row, including the ones the arbiter has not published, so

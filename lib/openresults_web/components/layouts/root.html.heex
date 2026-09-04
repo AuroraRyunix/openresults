@@ -39,6 +39,16 @@
 
         const saved = read();
 
+        // A round reached with `?display=1` is the projector view - see the
+        // round template - and needs the high-contrast theme regardless of
+        // what this visitor (or this browser) has otherwise chosen: the room
+        // decides this, not a preference set at a desk somewhere else. Checked
+        // first so it outranks both a saved choice and the device's own
+        // scheme; the picker below is still there, one tap away, to switch it
+        // back for this viewing.
+        const params = new URLSearchParams(location.search);
+        const projector = params.get("display") === "1" || params.get("display") === "true";
+
         // No choice made yet means LIGHT, not "follow the device".
         //
         // Following the device is the better default for an application
@@ -50,7 +60,13 @@
         //
         // "Match device" is still there, one click away, and once chosen it
         // wins and persists. Only the default changed.
-        if (saved) {
+        if (projector) {
+          root.setAttribute("data-theme", "contrast");
+          // "user" rather than "default": the picker highlights whichever
+          // dot matches these two attributes, and "High contrast" is the
+          // true answer to "what theme is this" here, chosen or not.
+          root.setAttribute("data-theme-source", "user");
+        } else if (saved) {
           if (saved === "system") {
             // Deliberately no attribute: the stylesheet's
             // prefers-color-scheme query is what decides, and writing
@@ -70,7 +86,7 @@
     </script>
   </head>
   <body>
-    <div class="page">
+    <div class={["page", assigns[:display?] && "projector-mode"]}>
       <%!-- The picker lives up here, not in the footer where it started.
             A popover anchored to the last element on the page can only open
             upwards, and an absolutely positioned panel does not grow the
@@ -214,8 +230,13 @@
         const live = document.getElementById("live-region");
         const status = document.getElementById("live-status");
         const isForm = !!document.querySelector("#registration-form");
+        // The projector view runs its own refresh, on its own slower clock,
+        // that swaps only its board rows - see the round template. This one
+        // replaces the whole region, which would wipe out which page is
+        // showing and the running cycle timer along with it.
+        const isProjector = !!document.querySelector("[data-projector]");
 
-        if (live && !isForm) {
+        if (live && !isForm && !isProjector) {
           let failures = 0;
 
           const swap = (html) => {

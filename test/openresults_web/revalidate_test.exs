@@ -84,6 +84,25 @@ defmodule OpenResultsWeb.RevalidateTest do
 
       assert again.status == 304
     end
+
+    test "the projector view is a different page too, not the same round again", %{
+      conn: conn,
+      slug: slug
+    } do
+      # Same path, different query string. Without the query string in the
+      # identity, this tag would also validate the plain round page - and
+      # worse, the two would shadow each other in the page cache, so
+      # whichever rendered first would be served for both.
+      round = conn |> get(~p"/t/#{slug}/round/1") |> etag()
+
+      projector =
+        build_conn()
+        |> put_req_header("if-none-match", round)
+        |> get(~p"/t/#{slug}/round/1?display=1")
+
+      assert projector.status == 200
+      assert etag(projector) != round
+    end
   end
 
   describe "what is deliberately left alone" do

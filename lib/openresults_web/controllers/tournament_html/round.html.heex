@@ -1,16 +1,20 @@
-<.masthead payload={@payload} slug={@slug} current={@current} />
+<%= if @display? do %>
+  <.projector_round payload={@payload} slug={@slug} round={@round} players={@players} />
+<% else %>
+  <.masthead payload={@payload} slug={@slug} current={@current} />
 
-<section>
-  <h2>
-    {Tournament.round_heading(@payload, @round["number"])}
-    <span :if={@round["date"]} class="quiet">{@round["date"]}</span>
-  </h2>
+  <section>
+    <h2>
+      {Tournament.round_heading(@payload, @round["number"])}
+      <span :if={@round["date"]} class="quiet">{@round["date"]}</span>
+    </h2>
 
-  <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />
-</section>
+    <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />
+  </section>
 
-<section :if={Tournament.show?(@payload, "byes") and Tournament.byes(@round) != []}>
-  <h2>Byes</h2>
+  <section :if={Tournament.show?(@payload, "byes") and Tournament.byes(@round) != []}>
+    <h2>Byes</h2>
 
-  <.byes_table slug={@slug} round={@round} players={@players} payload={@payload} />
-</section>
+    <.byes_table slug={@slug} round={@round} players={@players} payload={@payload} />
+  </section>
+<% end %>

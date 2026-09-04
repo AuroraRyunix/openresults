@@ -56,18 +56,23 @@ defmodule OpenResultsWeb.TournamentController do
 
   @doc """
   `GET /t/:slug/round/:n` - one round's pairings and byes.
+
+  `?display=1` reaches the projector view of the same round rather than a
+  route of its own: it is the same document and the same 404s, read from
+  across a hall instead of a desk. See `TournamentHTML.projector_round/1` for
+  what that renders.
   """
-  def round(conn, %{"slug" => slug, "n" => n}) do
+  def round(conn, %{"slug" => slug, "n" => n} = params) do
     with_payload(conn, slug, fn payload ->
       if Tournament.show?(payload, "pairings") do
-        render_round(conn, payload, slug, n)
+        render_round(conn, payload, slug, n, display?(params))
       else
         withheld(conn, payload, slug, "round pairings")
       end
     end)
   end
 
-  defp render_round(conn, payload, slug, n) do
+  defp render_round(conn, payload, slug, n, display?) do
     number = integer(n)
 
     case number && Tournament.round(payload, number) do
@@ -85,10 +90,17 @@ defmodule OpenResultsWeb.TournamentController do
           slug: slug,
           round: round,
           players: Tournament.players_by_no(payload),
-          current: {:round, number}
+          current: {:round, number},
+          display?: display?
         )
     end
   end
+
+  # Anything else - unset, "0", a stray value - is the ordinary page. Being
+  # picky here rather than truthy-checking any presence at all means a URL
+  # copied with `?display=` left blank, or a future `?display=list`, does not
+  # silently land somebody on the projector view.
+  defp display?(params), do: params["display"] in ["1", "true"]
 
   @doc """
   `GET /t/:slug/player/:no` - one player's card.
