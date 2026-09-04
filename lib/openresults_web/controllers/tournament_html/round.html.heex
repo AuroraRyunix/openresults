@@ -10,6 +10,15 @@
     </h2>
 
     <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />
+
+    <%!-- The projector view was reachable only by knowing to add ?display=1,
+          which is no way to find a feature. A plain link: whoever is setting
+          up the screen in the hall is on this page already. --%>
+    <p class="quiet">
+      <a href={~p"/t/#{@slug}/round/#{@round["number"]}?display=1"}>
+        Projector view - large boards, cycling automatically
+      </a>
+    </p>
   </section>
 
   <section :if={Tournament.show?(@payload, "byes") and Tournament.byes(@round) != []}>
