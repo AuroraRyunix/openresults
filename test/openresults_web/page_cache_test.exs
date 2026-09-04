@@ -67,6 +67,31 @@ defmodule OpenResultsWeb.PageCacheTest do
     assert build_conn() |> get(~p"/t/#{slug}/player/1") |> html_response(200) == player
   end
 
+  test "the projector view and the ordinary round page are stored separately", %{
+    conn: conn,
+    slug: slug
+  } do
+    # Same path, different query string. A shared cache entry here would mean
+    # whichever one rendered first - the projector or the ordinary page - got
+    # served back for both, to every subsequent reader of either URL.
+    round = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
+    display = build_conn() |> get(~p"/t/#{slug}/round/1?display=1") |> html_response(200)
+
+    refute round == display
+    # A substring check on the raw HTML would also match the layout's own
+    # script, which mentions the `[data-projector]` selector by name on every
+    # page - the element itself is the real signal.
+    assert display
+           |> LazyHTML.from_document()
+           |> LazyHTML.query("[data-projector]")
+           |> Enum.any?()
+
+    refute round |> LazyHTML.from_document() |> LazyHTML.query("[data-projector]") |> Enum.any?()
+
+    assert build_conn() |> get(~p"/t/#{slug}/round/1") |> html_response(200) == round
+    assert build_conn() |> get(~p"/t/#{slug}/round/1?display=1") |> html_response(200) == display
+  end
+
   test "a 404 is never stored as though it were the document", %{conn: conn} do
     assert conn |> get(~p"/t/nope") |> html_response(404)
     assert build_conn() |> get(~p"/t/nope") |> html_response(404)

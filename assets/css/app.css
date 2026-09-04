@@ -1028,3 +1028,160 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+   Projector view
+
+   Reached with `?display=1` on a round's own URL - the same document, read
+   from across a room instead of a desk. High contrast by default: the whole
+   page is the container here, so that is set on `<html>` itself by the
+   bootstrap script in the root layout rather than invented as a colour of
+   its own - this borrows the `contrast` theme defined above. Type scales
+   with the viewport so the same markup suits a laptop being checked and the
+   television it is plugged into.
+   --------------------------------------------------------------------------- */
+
+/* Chrome a hall screen has no use for: the connectivity note belongs to the
+   site-wide refresher, which is switched off on this page in favour of the
+   projector's own, and the build id is for whoever is checking a deploy from
+   outside, not for the room. */
+.projector-mode .site-foot {
+  display: none;
+}
+
+.projector-mode .masthead-bar {
+  margin-bottom: 0.75rem;
+}
+
+.projector-head {
+  margin-bottom: 1rem;
+}
+
+.projector-head h1 {
+  margin: 0 0 0.15rem;
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
+}
+
+.projector-round {
+  margin: 0;
+  color: var(--quiet);
+  font-size: clamp(0.9375rem, 1.6vw, 1.25rem);
+}
+
+/* No `.scroller` here on purpose: four columns should always fit a screen
+   meant to be read rather than scrolled, and nobody can scroll a television
+   from the back of a room. */
+.projector-table-wrap table {
+  width: 100%;
+}
+
+.projector-pairings {
+  font-size: clamp(1.125rem, 2.6vw, 2.25rem);
+}
+
+.projector-pairings th {
+  font-size: clamp(0.75rem, 1.1vw, 1rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.projector-pairings td,
+.projector-pairings th {
+  padding-top: 0.6em;
+  padding-bottom: 0.6em;
+  white-space: nowrap;
+}
+
+.projector-pairings td.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.projector-foot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.projector-foot[hidden] {
+  display: none;
+}
+
+.projector-page {
+  font-size: clamp(0.8125rem, 1.2vw, 1.125rem);
+  font-weight: 600;
+  color: var(--quiet);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.projector-paused {
+  font-size: clamp(0.8125rem, 1.2vw, 1.125rem);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.projector-paused[hidden] {
+  display: none;
+}
+
+/* Not decoration: someone looking for board 47 needs to know their page is
+   coming and roughly when, or a rotating screen is worse than a still one. */
+.projector-bar {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--quiet) 30%, transparent);
+  overflow: hidden;
+}
+
+.projector-bar[hidden] {
+  display: none;
+}
+
+.projector-bar-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+/* `.running` is added and removed by the script on every page turn - see the
+   projector component - which is what lets one restart the sweep from empty
+   rather than accumulate. The duration itself comes from the script too, so
+   the number driving the timer and the number driving the bar can never
+   drift apart into two different answers for "how long is left". */
+.projector-bar-fill.running {
+  animation-name: projector-sweep;
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+@keyframes projector-sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* The bar is a clock, and a clock that does not move is a lie. Hidden rather
+   than frozen for anyone who asked for less motion; the page counter beside
+   it still says where the cycle is. */
+@media (prefers-reduced-motion: reduce) {
+  .projector-bar {
+    display: none;
+  }
+}
+
+.projector-byes {
+  margin-top: 2rem;
+}
+
+.projector-byes h2 {
+  font-size: 1.05rem;
+}
