@@ -765,8 +765,17 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <td class="num"><.score points={@totals[entry.opponent_no]} /></td>
                 <td class="num"><.result token={entry.result} /></td>
               <% :bye -> %>
+                <%!-- The bye's label sits where the opponent's NAME sits, under
+                      "Opponent", with the cells before it left blank - the way
+                      the arbiter's own player card reads it. It used to span
+                      from "No" onwards, so the text started two or three
+                      columns to the left of every name above and below it and
+                      read as if it had landed in the wrong column. --%>
                 <td></td>
-                <td colspan={@game_span} class="quiet">{bye_kind(entry.bye)}</td>
+                <td></td>
+                <td :if={@show.federation}></td>
+                <td :if={@show.title}></td>
+                <td colspan={2 + count_if([@show.rating])} class="quiet">{bye_kind(entry.bye)}</td>
                 <td class="num">{number(entry.points)}</td>
               <% :unpublished -> %>
                 <td colspan={@game_span + 2} class="quiet">not published</td>

@@ -339,6 +339,33 @@ defmodule OpenResultsWeb.TournamentControllerTest do
                "The running score stops at the first round"
     end
 
+    # The text was always right; the PLACE was not. The label used to span
+    # from "No" onwards, so it started two or three columns to the left of
+    # every opponent's name above and below it and read as if it had landed
+    # in the wrong column. It sits under "Opponent" now, like a name.
+    test "a bye's label lines up under the opponent column", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}/player/4") |> doc()
+
+      headers = texts(document, "table.card thead th")
+      opponent_at = Enum.find_index(headers, &(&1 == "Opponent"))
+      # Opponent, Elo and Pts: what a game row fills with the opponent's detail.
+      span_wanted = Enum.find_index(headers, &(&1 == "Result")) - opponent_at
+
+      {label_at, label_span} =
+        document
+        |> LazyHTML.query("table.card tbody tr:nth-child(2) td")
+        |> Enum.reduce_while(0, fn cell, column ->
+          span = cell |> LazyHTML.attribute("colspan") |> List.first("1") |> String.to_integer()
+
+          if LazyHTML.text(cell) =~ "bye",
+            do: {:halt, {column, span}},
+            else: {:cont, column + span}
+        end)
+
+      assert label_at == opponent_at
+      assert label_span == span_wanted
+    end
+
     test "a bye is a row of its own with the arbiter's value", %{conn: conn, slug: slug} do
       document = conn |> get(~p"/t/#{slug}/player/4") |> doc()
 
