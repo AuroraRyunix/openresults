@@ -120,17 +120,66 @@ defmodule OpenResultsWeb.PageCacheTest do
 
   describe "the store itself" do
     test "answers nil for a version it does not hold" do
-      assert Page.get(999, ~s("999-1")) == nil
+      assert Page.get("nobody", 999, ~s("999-1")) == nil
     end
 
-    test "drops everything when the version moves" do
-      Page.put(1, ~s("1-a"), "old")
-      assert Page.get(1, ~s("1-a")) == "old"
+    test "a get before the table exists returns nil rather than raising" do
+      # The table is created lazily. Deleting it (not merely clearing it, as
+      # `Page.clear/0` does) is the only way to put the store back into that
+      # pre-existence state from a test.
+      if :ets.whereis(:openresults_page_cache) != :undefined,
+        do: :ets.delete(:openresults_page_cache)
 
-      Page.put(2, ~s("2-a"), "new")
+      assert Page.get("nobody", 999, ~s("999-1")) == nil
+    end
 
-      refute Page.get(1, ~s("1-a"))
-      assert Page.get(2, ~s("2-a")) == "new"
+    test "a new snapshot for the same tournament drops that tournament's old entries" do
+      Page.put("alpha", 1, ~s("1-a"), "old")
+      assert Page.get("alpha", 1, ~s("1-a")) == "old"
+
+      Page.put("alpha", 2, ~s("2-a"), "new")
+
+      refute Page.get("alpha", 1, ~s("1-a"))
+      assert Page.get("alpha", 2, ~s("2-a")) == "new"
+    end
+
+    test "one tournament's publish does not evict another tournament's pages" do
+      # This is the defect this store used to have: one global version row
+      # meant ANY tournament publishing discarded the whole table, so every
+      # other live tournament's cache was wiped too. Snapshot ids are
+      # distinct per tournament here on purpose - they come from one shared,
+      # globally auto-incrementing table in real use, so this is what two
+      # tournaments publishing independently actually looks like.
+      Page.put("alpha", 1, ~s("1-a"), "alpha's page")
+      Page.put("bravo", 2, ~s("2-a"), "bravo's page")
+
+      # Bravo publishes again - a new snapshot id, but only for bravo.
+      Page.put("bravo", 3, ~s("3-a"), "bravo's new page")
+
+      assert Page.get("alpha", 1, ~s("1-a")) == "alpha's page"
+      assert Page.get("bravo", 3, ~s("3-a")) == "bravo's new page"
+      refute Page.get("bravo", 2, ~s("2-a"))
+    end
+
+    test "the per-tournament cap drops only that tournament's entries" do
+      # Bravo's one page sits untouched on either side of alpha walking
+      # itself past its own cap (512) - the flood is alpha's problem alone.
+      Page.put("bravo", 1, ~s("1-a"), "bravo's page")
+      for n <- 1..514, do: Page.put("alpha", 1, ~s("1-#{n}"), "alpha page #{n}")
+
+      refute Page.get("alpha", 1, ~s("1-1"))
+      assert Page.get("alpha", 1, ~s("1-514")) == "alpha page 514"
+      assert Page.get("bravo", 1, ~s("1-a")) == "bravo's page"
+    end
+
+    test "clear/0 empties everything, every tournament included" do
+      Page.put("alpha", 1, ~s("1-a"), "alpha's page")
+      Page.put("bravo", 1, ~s("1-a"), "bravo's page")
+
+      Page.clear()
+
+      refute Page.get("alpha", 1, ~s("1-a"))
+      refute Page.get("bravo", 1, ~s("1-a"))
     end
   end
 end

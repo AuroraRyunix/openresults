@@ -27,34 +27,45 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
 
   ## Freshness
 
-  Keyed by the snapshot id, so it cannot outlive the publish that replaced
-  it: a new id is a different key and the old entries are dropped wholesale.
-  Nothing has to remember to invalidate, and there is no window in which
-  yesterday's standings could be served - which is the property the
-  maintainer rejected CDN caching to protect.
+  Keyed by the snapshot id and scoped to the tournament that produced it, so
+  a page cannot outlive the publish that replaced it, and a publish cannot
+  touch a page it has nothing to do with: a new id for one tournament is a
+  different key for that tournament alone, and it is only that tournament's
+  old entries that get dropped. Nothing has to remember to invalidate, and
+  there is no window in which yesterday's standings could be served - which
+  is the property the maintainer rejected CDN caching to protect.
+
+  Scoping by tournament is what keeps this working under load rather than
+  against it. Without the tournament in the key, one arbiter's publish would
+  discard every **other** live tournament's warm cache too - collapsing the
+  hit rate to near zero exactly when several events running at once is the
+  scenario this cache exists for.
 
   ## Bounds
 
-  One entry per distinct path visited since the last publish, and the whole
-  table is discarded when the snapshot id moves. A 450-player event has one
-  large page (the standings) and several hundred small ones (a card per
-  player); the cap exists for the pathological case where something walks
-  every player page, and drops the table rather than evicting cleverly -
-  losing a cache costs a re-render, which is what would have happened
-  anyway.
+  One entry per distinct path visited since a tournament's last publish, and
+  the cap applies per tournament rather than to the table as a whole, so one
+  event having a busy day cannot evict another event's cache. A 450-player
+  event has one large page (the standings) and several hundred small ones (a
+  card per player); the cap exists for the pathological case where something
+  walks every player page, and drops that tournament's own entries rather
+  than evicting cleverly - losing a cache costs a re-render, which is what
+  would have happened anyway.
   """
 
   @table :openresults_page_cache
 
   # Enough for the standings, every round, and a few hundred player cards -
-  # the pages a real audience actually opens between two publishes.
+  # the pages a real audience actually opens between two publishes. Applied
+  # per tournament: several tournaments each holding this many entries is the
+  # point, not a leak - see "Bounds" above.
   @max_entries 512
 
   @doc """
-  The stored body for this exact page and version, or `nil`.
+  The stored body for this exact tournament, page and version, or `nil`.
   """
-  def get(snapshot_id, etag) do
-    case :ets.lookup(table(), key(snapshot_id, etag)) do
+  def get(slug, snapshot_id, etag) do
+    case :ets.lookup(table(), key(slug, snapshot_id, etag)) do
       [{_key, body}] -> body
       [] -> nil
     end
@@ -65,28 +76,30 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
   end
 
   @doc """
-  Stores a rendered body against the version it was rendered from.
+  Stores a rendered body against the tournament and version it was rendered
+  from.
   """
-  def put(snapshot_id, etag, body) when is_binary(body) do
+  def put(slug, snapshot_id, etag, body) when is_binary(body) do
     table = table()
 
-    # A new snapshot makes every stored page stale at once. Dropping them
-    # here rather than letting them age out is what keeps this bounded to
-    # one version's worth of pages.
-    case :ets.lookup(table, :version) do
-      [{:version, ^snapshot_id}] -> :ok
-      _older_or_empty -> reset(table, snapshot_id)
+    # A new snapshot makes every stored page of THIS tournament stale at
+    # once. Dropping them here rather than letting them age out is what
+    # keeps this bounded to one version's worth of pages - and only this
+    # tournament's pages, so somebody else's publish is not our problem.
+    case :ets.lookup(table, version_key(slug)) do
+      [{_key, ^snapshot_id}] -> :ok
+      _older_or_empty -> reset(table, slug, snapshot_id)
     end
 
-    if :ets.info(table, :size) > @max_entries, do: reset(table, snapshot_id)
+    if count(table, slug) > @max_entries, do: reset(table, slug, snapshot_id)
 
-    :ets.insert(table, {key(snapshot_id, etag), body})
+    :ets.insert(table, {key(slug, snapshot_id, etag), body})
     :ok
   rescue
     ArgumentError -> :ok
   end
 
-  @doc "Forgets everything. For tests, and for anything deleting rows behind us."
+  @doc "Forgets everything, every tournament included. For tests, and for anything deleting rows behind us."
   def clear do
     case :ets.whereis(@table) do
       :undefined -> :ok
@@ -96,12 +109,24 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
     :ok
   end
 
-  defp reset(table, snapshot_id) do
-    :ets.delete_all_objects(table)
-    :ets.insert(table, {:version, snapshot_id})
+  # Wipes one tournament's entries and restamps its version, leaving every
+  # other tournament in the table untouched - the whole reason the key and
+  # the version row both carry the tournament now.
+  defp reset(table, slug, snapshot_id) do
+    :ets.match_delete(table, {{slug, :_, :_}, :_})
+    :ets.insert(table, {version_key(slug), snapshot_id})
   end
 
-  defp key(snapshot_id, etag), do: {snapshot_id, etag}
+  # A full-table scan filtered to one tournament, same as `reset/3`'s
+  # `match_delete`. Fine at these sizes - hundreds of rows per tournament,
+  # not the thing that would ever justify a second index just to avoid it.
+  defp count(table, slug) do
+    :ets.select_count(table, [{{{slug, :_, :_}, :_}, [], [true]}])
+  end
+
+  defp key(slug, snapshot_id, etag), do: {slug, snapshot_id, etag}
+
+  defp version_key(slug), do: {:version, slug}
 
   defp table do
     case :ets.whereis(@table) do

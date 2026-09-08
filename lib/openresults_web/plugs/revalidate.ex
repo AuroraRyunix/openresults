@@ -70,26 +70,26 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
           etag in request_etags(conn) ->
             conn |> send_resp(304, "") |> halt()
 
-          body = Page.get(id, etag) ->
+          body = Page.get(slug, id, etag) ->
             conn
             |> put_resp_content_type("text/html")
             |> send_resp(200, body)
             |> halt()
 
           true ->
-            register_before_send(conn, &keep(&1, id, etag))
+            register_before_send(conn, &keep(&1, slug, id, etag))
         end
     end
   end
 
   # Only a plain 200 of HTML. A redirect, a 404 or an error page is not this
   # document and must never be served in its place.
-  defp keep(%{status: 200} = conn, id, etag) do
-    if html?(conn), do: Page.put(id, etag, IO.iodata_to_binary(conn.resp_body))
+  defp keep(%{status: 200} = conn, slug, id, etag) do
+    if html?(conn), do: Page.put(slug, id, etag, IO.iodata_to_binary(conn.resp_body))
     conn
   end
 
-  defp keep(conn, _id, _etag), do: conn
+  defp keep(conn, _slug, _id, _etag), do: conn
 
   defp html?(conn) do
     conn
