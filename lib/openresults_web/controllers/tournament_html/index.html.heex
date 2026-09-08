@@ -13,11 +13,20 @@
       <a href={~p"/t/#{snapshot.tournament_slug}"}>
         {Tournament.name(snapshot.payload)}
       </a>
+      <%!-- The same two ticks the masthead honours on every other page. This list
+            did not consult them, so an arbiter who turned the city or the dates
+            off saw them gone from their tournament's own pages and still
+            printed here, on the one page nobody navigates away from. A display
+            rule that holds on four pages out of five is not a rule. --%>
       <span class="details">
-        <span :if={Tournament.info(snapshot.payload)["city"]}>
+        <span :if={
+          Tournament.show?(snapshot.payload, "city") && Tournament.info(snapshot.payload)["city"]
+        }>
           {Tournament.info(snapshot.payload)["city"]}
         </span>
-        <span :if={dates(Tournament.info(snapshot.payload))}>
+        <span :if={
+          Tournament.show?(snapshot.payload, "dates") && dates(Tournament.info(snapshot.payload))
+        }>
           {dates(Tournament.info(snapshot.payload))}
         </span>
       </span>

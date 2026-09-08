@@ -213,6 +213,57 @@ defmodule OpenResultsWeb.TournamentControllerTest do
              ]
     end
 
+    test "a vacated seat is named as one, with the result that explains it", %{
+      conn: conn,
+      swiss: swiss
+    } do
+      # The row OpenPairings started sending once it stopped calling every
+      # one-seated board a pairing-allocated bye. It is not a bye: the
+      # arbiter emptied the opposite seat and recorded a forfeit, so the
+      # points are the forfeit's and the label has to say so.
+      vacated =
+        update_in(swiss, ["rounds", Access.at(1), "byes"], fn byes ->
+          [
+            %{
+              "player" => 3,
+              "kind" => "vacated-seat",
+              "result" => "0-1FF",
+              "points" => 0.0
+            }
+            | byes
+          ]
+        end)
+
+      publish(vacated)
+
+      document = conn |> get(~p"/t/#{vacated["tournament"]["slug"]}/round/2") |> doc()
+
+      assert "FM Ó Súilleabháin, Séamus 2312 seat vacated ( 0-1 forfeit ) 0" in texts(
+               document,
+               "table.byes tbody tr"
+             )
+    end
+
+    test "a kind this server has never heard of is still shown", %{conn: conn, swiss: swiss} do
+      # The rule the whole contract leans on, restated for byes: a newer
+      # OpenPairings inventing a sixth kind must produce a page an arbiter
+      # can read, not a blank cell. This is also what makes the row above
+      # safe to send to a server deployed before it existed.
+      future =
+        update_in(swiss, ["rounds", Access.at(1), "byes"], fn byes ->
+          [%{"player" => 3, "kind" => "invented-in-2027", "points" => 0.25} | byes]
+        end)
+
+      publish(future)
+
+      document = conn |> get(~p"/t/#{future["tournament"]["slug"]}/round/2") |> doc()
+
+      assert "FM Ó Súilleabháin, Séamus 2312 invented-in-2027 0.25" in texts(
+               document,
+               "table.byes tbody tr"
+             )
+    end
+
     test "a round with no byes has no byes table", %{conn: conn, slug: slug} do
       document = conn |> get(~p"/t/#{slug}/round/1") |> doc()
 

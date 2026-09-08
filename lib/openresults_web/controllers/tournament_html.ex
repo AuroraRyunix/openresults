@@ -399,7 +399,13 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
             </td>
             <td :if={@show.rating} class="num">{dash(@players[bye["player"]]["rating"])}</td>
-            <td>{bye_kind(bye["kind"])}</td>
+            <%!-- The result only exists on a vacated seat, where the points
+                  alone would not explain themselves: "0" against a name reads
+                  as a zero-point bye until it says the game was forfeited. --%>
+            <td>
+              {bye_kind(bye["kind"])}
+              <span :if={bye["result"]} class="quiet">(<.result token={bye["result"]} />)</span>
+            </td>
             <td class="num">{number(bye["points"])}</td>
           </tr>
         </tbody>
@@ -445,9 +451,12 @@ defmodule OpenResultsWeb.TournamentHTML do
     <section class="projector" data-projector aria-label="Round pairings, projector view">
       <header class="projector-head">
         <h1>{Tournament.name(@payload)}</h1>
+        <%!-- Gated for the same reason as the ordinary round heading: a hall
+              screen is the most public surface this app has, and the date it
+              shows is the round's, which the "dates" tick covers. --%>
         <p class="projector-round">
           {Tournament.round_heading(@payload, @round["number"])}
-          <span :if={@round["date"]}>{@round["date"]}</span>
+          <span :if={@show.dates && @round["date"]}>{@round["date"]}</span>
         </p>
       </header>
 
@@ -1259,6 +1268,16 @@ defmodule OpenResultsWeb.TournamentHTML do
   def bye_kind("zero-point"), do: "zero-point bye"
   def bye_kind("full-point"), do: "full-point bye"
   def bye_kind("absent"), do: "absent"
+
+  # Not a bye at all, which is exactly why it has its own word. The arbiter
+  # emptied one seat of a board and recorded a result against it anyway - a
+  # forfeit, usually. Every one of these used to arrive labelled
+  # "pairing-allocated" and carrying the tournament's bye value, so a player
+  # who forfeited appeared here with a full point for the round and a running
+  # total that disagreed with the standings on the next page. The arbiter's
+  # app now sends what happened; this is where it gets a name.
+  def bye_kind("vacated-seat"), do: "seat vacated"
+
   def bye_kind(kind) when is_binary(kind), do: kind
   def bye_kind(_absent), do: "bye"
 end

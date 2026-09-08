@@ -83,6 +83,34 @@ defmodule OpenResultsWeb.DisplayRulesTest do
 
       assert conn |> get(~p"/") |> html_response(200) =~ "Gent Spring Open 2026"
     end
+
+    test "honours the city and dates ticks, like every other page", %{conn: conn} do
+      _slug = publish(hiding(["city", "dates"]))
+
+      html = conn |> get(~p"/") |> html_response(200)
+
+      # This list printed both regardless. An arbiter who unticked them saw
+      # them gone from their tournament's own pages and still here, on the
+      # page everybody arrives at - which is the one place a display rule
+      # being half-applied is most visible and least explicable.
+      refute html =~ "Ghent"
+      refute html =~ "2026-03-01"
+
+      # And the entry itself is still an entry.
+      assert html =~ "Gent Spring Open 2026"
+    end
+
+    test "still shows them when nothing is hidden", %{conn: conn} do
+      # The control. The list is mostly clubs with a city and a weekend, and
+      # a fix that dropped those details for everybody would be a worse page
+      # than the one with the bug.
+      _slug = publish(SnapshotPayloads.swiss())
+
+      html = conn |> get(~p"/") |> html_response(200)
+
+      assert html =~ "Ghent"
+      assert html =~ "2026-03-01"
+    end
   end
 
   describe "ratings" do
@@ -237,6 +265,34 @@ defmodule OpenResultsWeb.DisplayRulesTest do
       refute html =~ "2026-03-01 to 2026-03-05"
       refute html =~ "FIDE rated"
       assert html =~ "Ghent"
+    end
+
+    test "the dates tick covers a round's own date, on the page and the screen",
+         %{conn: conn} do
+      slug = publish(hiding(["dates"]))
+
+      round = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
+      projector = conn |> get(~p"/t/#{slug}/round/1?display=1") |> html_response(200)
+
+      # The masthead honoured the tick and the heading right underneath it
+      # did not, so hiding the dates hid them from one line and left them on
+      # the next. The arbiter's own settings page promises this covers "the
+      # tournament's own dates, and each round's".
+      refute round =~ "2026-03-01"
+      refute projector =~ "2026-03-01"
+
+      # Neither page loses anything else.
+      assert round =~ "Round 1"
+      assert projector =~ "Round 1"
+    end
+
+    test "and shows a round's date when the tick is on", %{conn: conn} do
+      # The control: a round page's date is the commonest thing on it after
+      # the boards, and it has to survive the fix.
+      slug = publish(SnapshotPayloads.swiss())
+
+      assert conn |> get(~p"/t/#{slug}/round/1") |> html_response(200) =~ "2026-03-01"
+      assert conn |> get(~p"/t/#{slug}/round/1?display=1") |> html_response(200) =~ "2026-03-01"
     end
   end
 

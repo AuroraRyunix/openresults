@@ -4,9 +4,17 @@
   <.masthead payload={@payload} slug={@slug} current={@current} />
 
   <section>
+    <%!-- The "dates" tick covers a round's own date as well as the
+          tournament's - that is what it says on the arbiter's settings page,
+          and it is the only reading that makes sense: a tournament whose dates
+          are hidden but whose five round pages each print one is not hiding
+          anything. The masthead above already honours it; this heading did
+          not. --%>
     <h2>
       {Tournament.round_heading(@payload, @round["number"])}
-      <span :if={@round["date"]} class="quiet">{@round["date"]}</span>
+      <span :if={Tournament.show?(@payload, "dates") && @round["date"]} class="quiet">
+        {@round["date"]}
+      </span>
     </h2>
 
     <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />

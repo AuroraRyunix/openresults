@@ -165,8 +165,24 @@ data for the single-sided forfeits. **The publish path normalises them to
 server only ever sees one vocabulary.
 
 **`byes[].kind`** - `"pairing-allocated"`, `"half-point"`, `"zero-point"`,
-`"full-point"`, `"absent"`. The kind and its point value are both carried
-because the value is configurable and the kind is what an arbiter recognises.
+`"full-point"`, `"absent"`, `"vacated-seat"`. The kind and its point value are
+both carried because the value is configurable and the kind is what an arbiter
+recognises. A kind this server does not recognise is rendered verbatim rather
+than dropped or relabelled, which is what makes the list safe to extend.
+
+**`vacated-seat` is not a bye**, and that is why it has its own word rather
+than borrowing one. The arbiter emptied one seat of a board and recorded a
+result against it anyway - usually a forfeit, and the shape a SWAR or TRF
+import can carry ready-made. Such rows travelled as `"pairing-allocated"` with
+the tournament's bye value until 2026-09-08, so a player who forfeited a round
+appeared here with a full point for it, and every later figure on their player
+card moved with it while the `standings` block in the same document said
+something else.
+
+**`byes[].result`** - present only on a `vacated-seat` row, carrying the same
+token vocabulary as `boards[].result`. The points alone do not explain
+themselves on that row: a `0` against a name reads as a zero-point bye until
+something says the game was forfeited.
 
 **`tournament.registration_open`** - whether the arbiter is accepting entries
 through this site's form. Added 2026-08-29. **Absent means open.**
