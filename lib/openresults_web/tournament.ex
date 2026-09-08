@@ -15,7 +15,15 @@ defmodule OpenResultsWeb.Tournament do
   `byes`, or a player without a rating is a tournament that has not got there
   yet rather than an error. Fields nobody here recognises are simply not
   looked at, which is the same rule the ingest side follows.
+
+  Two things here are words rather than data - a round's heading and the
+  fallback name for a tournament that published without one - and both are
+  translated. They read as data because they are built from the payload, but
+  a Dutch page whose only English left is the word above the pairings is a
+  page that looks broken rather than bilingual.
   """
+
+  use Gettext, backend: OpenResultsWeb.Gettext
 
   # Every result token the contract carries, and the points each seat scored,
   # as `{white, black}`.
@@ -130,7 +138,7 @@ defmodule OpenResultsWeb.Tournament do
   """
   def name(payload) do
     info = info(payload)
-    string(info, "name") || string(info, "slug") || "Tournament"
+    string(info, "name") || string(info, "slug") || gettext("Tournament")
   end
 
   @doc """
@@ -352,13 +360,16 @@ defmodule OpenResultsWeb.Tournament do
   @doc "Full round heading: `\"Round 3\"`, or `\"Match 2, game 1\"`."
   def round_heading(payload, number) when is_integer(number) do
     if match_format?(payload) do
-      "Match #{div(number - 1, 2) + 1}, game #{if rem(number, 2) == 1, do: 1, else: 2}"
+      gettext("Match %{match}, game %{game}",
+        match: div(number - 1, 2) + 1,
+        game: if(rem(number, 2) == 1, do: 1, else: 2)
+      )
     else
-      "Round #{number}"
+      gettext("Round %{number}", number: number)
     end
   end
 
-  def round_heading(_payload, number), do: "Round #{number}"
+  def round_heading(_payload, number), do: gettext("Round %{number}", number: number)
 
   @doc """
   The tournament facts a printed pairing sheet carries as a matter of course -

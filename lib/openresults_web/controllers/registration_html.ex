@@ -15,7 +15,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
 
   use OpenResultsWeb, :html
 
-  import OpenResultsWeb.TournamentHTML, only: [masthead: 1]
+  import OpenResultsWeb.TournamentHTML, only: [masthead: 1, anchor: 2, escaped: 1]
 
   alias OpenResults.Registrations.Entry
   alias OpenResultsWeb.Tournament
@@ -60,7 +60,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
       <p :if={@alarm} class="alarm" role="alert">{@alarm}</p>
 
       <p :if={@form.errors != []} class="alarm" role="alert">
-        Nothing has been sent. Fix what is marked below and send it again.
+        {gettext("Nothing has been sent. Fix what is marked below and send it again.")}
       </p>
 
       <%!-- The FIDE search, when this deployment can reach an arbiter's
@@ -72,26 +72,28 @@ defmodule OpenResultsWeb.RegistrationHTML do
             first thing to try, and because a player who finds themselves here
             can skip the four fields underneath. --%>
       <div :if={@fide_search?} class="fide-search" id="fide-search" data-endpoint={@fide_url}>
-        <label for="fide-query">Find yourself on the FIDE list</label>
+        <label for="fide-query">{gettext("Find yourself on the FIDE list")}</label>
         <input
           type="search"
           id="fide-query"
           autocomplete="off"
-          placeholder="Start typing your name, or paste your FIDE ID"
+          placeholder={gettext("Start typing your name, or paste your FIDE ID")}
         />
         <p class="hint">
-          Optional. It fills in the fields below - check them, and correct anything
-          that is out of date. If you are not on the FIDE list, just fill them in
-          yourself.
+          {gettext(
+            "Optional. It fills in the fields below - check them, and correct anything that is out of date. If you are not on the FIDE list, just fill them in yourself."
+          )}
         </p>
         <ul id="fide-results" class="fide-results" hidden></ul>
-        <p id="fide-none" class="hint" hidden>No match. Fill the fields in below instead.</p>
+        <p id="fide-none" class="hint" hidden>
+          {gettext("No match. Fill the fields in below instead.")}
+        </p>
       </div>
 
       <.field
         field={@form[:name]}
-        label="Name"
-        hint={~s|Surname first, as it should appear on the pairing list: "De Vos, Ilse".|}
+        label={gettext("Name")}
+        hint={gettext(~s|Surname first, as it should appear on the pairing list: "De Vos, Ilse".|)}
         required
         autocomplete="name"
       />
@@ -99,10 +101,12 @@ defmodule OpenResultsWeb.RegistrationHTML do
       <.field
         field={@form[:email]}
         type="email"
-        label="Email"
-        hint="Only the arbiter sees this. It is never shown on these pages and never
-              travels in a published tournament - it is here so they can tell you
-              whether you are in."
+        label={gettext("Email")}
+        hint={
+          gettext(
+            "Only the arbiter sees this. It is never shown on these pages and never travels in a published tournament - it is here so they can tell you whether you are in."
+          )
+        }
         required
         autocomplete="email"
         inputmode="email"
@@ -111,15 +115,15 @@ defmodule OpenResultsWeb.RegistrationHTML do
       <.field
         field={@form[:rating]}
         type="text"
-        label="Rating"
-        hint="Whichever rating you play under. Leave it empty if you have none."
+        label={gettext("Rating")}
+        hint={gettext("Whichever rating you play under. Leave it empty if you have none.")}
         inputmode="numeric"
       />
 
       <.field
         field={@form[:federation]}
-        label="Federation"
-        hint="The three-letter FIDE code, like BEL. Leave it empty if you are unsure."
+        label={gettext("Federation")}
+        hint={gettext("The three-letter FIDE code, like BEL. Leave it empty if you are unsure.")}
         maxlength="3"
         autocomplete="country"
       />
@@ -127,31 +131,34 @@ defmodule OpenResultsWeb.RegistrationHTML do
       <.field
         field={@form[:fide_id]}
         type="text"
-        label="FIDE ID"
-        hint="The number on your FIDE profile, if you have one."
+        label={gettext("FIDE ID")}
+        hint={gettext("The number on your FIDE profile, if you have one.")}
         inputmode="numeric"
       />
 
       <.field
         field={@form[:club]}
-        label="Club"
-        hint="The club you play for, if any."
+        label={gettext("Club")}
+        hint={gettext("The club you play for, if any.")}
         autocomplete="organization"
       />
 
       <.field
         field={@form[:title]}
-        label="Title"
+        label={gettext("Title")}
         options={Entry.titles()}
-        hint="Your FIDE title, if you hold one."
+        hint={gettext("Your FIDE title, if you hold one.")}
       />
 
       <.field
         field={@form[:birth_year]}
         type="text"
-        label="Birth year"
-        hint="Four digits. Some tournaments have age categories, and the arbiter cannot
-              work one out from a name. Leave it empty if you would rather not say."
+        label={gettext("Birth year")}
+        hint={
+          gettext(
+            "Four digits. Some tournaments have age categories, and the arbiter cannot work one out from a name. Leave it empty if you would rather not say."
+          )
+        }
         inputmode="numeric"
         maxlength="4"
       />
@@ -159,8 +166,8 @@ defmodule OpenResultsWeb.RegistrationHTML do
       <.byes_field :if={@rounds != []} field={@form[:requested_byes]} rounds={@rounds} />
 
       <div class="actions">
-        <button type="submit" id="registration-submit">Send to the arbiter</button>
-        <a href={~p"/t/#{@slug}"} class="cancel">Cancel</a>
+        <button type="submit" id="registration-submit">{gettext("Send to the arbiter")}</button>
+        <a href={~p"/t/#{@slug}"} class="cancel">{gettext("Cancel")}</a>
       </div>
     </.form>
     """
@@ -183,7 +190,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
     default: nil,
     doc: "renders a <select> instead of an <input>; the empty option is added for you"
 
-  attr :blank, :string, default: "None", doc: "label for the empty option of a select"
+  attr :blank, :string, default: nil, doc: "label for the empty option of a select"
 
   def field(assigns) do
     field = assigns.field
@@ -198,12 +205,16 @@ defmodule OpenResultsWeb.RegistrationHTML do
       assigns
       |> assign(:errors, errors)
       |> assign(:described_by, if(described_by == "", do: nil, else: described_by))
+      # Defaulted here rather than in the `attr`, because an attribute default
+      # is evaluated where the component is compiled and a translation has to
+      # be looked up where it is rendered.
+      |> assign(:blank, assigns.blank || gettext("None"))
 
     ~H"""
     <div class={["field", @errors != [] && "field-wrong"]}>
       <label for={@field.id}>
         {@label}
-        <span :if={@rest[:required]} class="required">required</span>
+        <span :if={@rest[:required]} class="required">{gettext("required")}</span>
       </label>
 
       <select
@@ -276,7 +287,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
 
     ~H"""
     <fieldset class={["field", @errors != [] && "field-wrong"]}>
-      <legend>Rounds you already know you cannot play</legend>
+      <legend>{gettext("Rounds you already know you cannot play")}</legend>
 
       <div class="checks">
         <label :for={round <- @rounds} class="check">
@@ -292,9 +303,9 @@ defmodule OpenResultsWeb.RegistrationHTML do
 
       <p :if={@errors != []} class="wrong">{Enum.join(@errors, ". ")}</p>
       <p class="hint">
-        Asking is not the same as getting. What a missed round is worth - a
-        half point, nothing at all - is the arbiter's decision and their
-        tournament's rules, not this form's.
+        {gettext(
+          "Asking is not the same as getting. What a missed round is worth - a half point, nothing at all - is the arbiter's decision and their tournament's rules, not this form's."
+        )}
       </p>
     </fieldset>
     """

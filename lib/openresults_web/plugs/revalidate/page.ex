@@ -4,8 +4,8 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
 
   ## Why this is safe here and would not be elsewhere
 
-  These pages are byte-identical for every reader. There is no login, no
-  session, no CSRF token in the layout and no locale on the read path - the
+  These pages are byte-identical for every reader who asks for them the same
+  way. There is no login, no session and no CSRF token in the layout - the
   standings page one spectator gets is the standings page all of them get.
   So a rendered page can be handed to the next reader verbatim rather than
   built again.
@@ -14,6 +14,22 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
   the three read routes rather than offered as a helper: the entry form, the
   registration queue and the snapshot API all vary by requester, and caching
   any of them would be a security bug rather than a speed-up.
+
+  ## The one thing that does vary
+
+  The language. It was not always in the key, and the day the pages became
+  translatable it had to be: a Dutch reader's rendered page sat under a key
+  a French request matched exactly, so whoever asked first decided what
+  everybody after them read. It failed silently, intermittently, and only
+  for the second reader - which is the worst shape a caching bug can take.
+
+  So the locale is part of the identity here AND part of the ETag, which
+  `OpenResultsWeb.Plugs.Revalidate` builds. Either alone would do the job as
+  the code stands today, since the ETag is itself part of this key; both are
+  here because the two are separate arguments. This key says "a page is a
+  tournament, a version, a language and an address"; the ETag says the same
+  thing to the reader's own browser, which must not answer 304 to a request
+  in a language it has never fetched.
 
   ## What it saves
 
@@ -62,10 +78,11 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
   @max_entries 512
 
   @doc """
-  The stored body for this exact tournament, page and version, or `nil`.
+  The stored body for this exact tournament, page, version and language, or
+  `nil`.
   """
-  def get(slug, snapshot_id, etag) do
-    case :ets.lookup(table(), key(slug, snapshot_id, etag)) do
+  def get(slug, snapshot_id, locale, etag) do
+    case :ets.lookup(table(), key(slug, snapshot_id, locale, etag)) do
       [{_key, body}] -> body
       [] -> nil
     end
@@ -76,10 +93,10 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
   end
 
   @doc """
-  Stores a rendered body against the tournament and version it was rendered
-  from.
+  Stores a rendered body against the tournament, version and language it was
+  rendered from.
   """
-  def put(slug, snapshot_id, etag, body) when is_binary(body) do
+  def put(slug, snapshot_id, locale, etag, body) when is_binary(body) do
     table = table()
 
     # A new snapshot makes every stored page of THIS tournament stale at
@@ -93,7 +110,7 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
 
     if count(table, slug) > @max_entries, do: reset(table, slug, snapshot_id)
 
-    :ets.insert(table, {key(slug, snapshot_id, etag), body})
+    :ets.insert(table, {key(slug, snapshot_id, locale, etag), body})
     :ok
   rescue
     ArgumentError -> :ok
@@ -113,7 +130,7 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
   # other tournament in the table untouched - the whole reason the key and
   # the version row both carry the tournament now.
   defp reset(table, slug, snapshot_id) do
-    :ets.match_delete(table, {{slug, :_, :_}, :_})
+    :ets.match_delete(table, {{slug, :_, :_, :_}, :_})
     :ets.insert(table, {version_key(slug), snapshot_id})
   end
 
@@ -121,10 +138,10 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
   # `match_delete`. Fine at these sizes - hundreds of rows per tournament,
   # not the thing that would ever justify a second index just to avoid it.
   defp count(table, slug) do
-    :ets.select_count(table, [{{{slug, :_, :_}, :_}, [], [true]}])
+    :ets.select_count(table, [{{{slug, :_, :_, :_}, :_}, [], [true]}])
   end
 
-  defp key(slug, snapshot_id, etag), do: {slug, snapshot_id, etag}
+  defp key(slug, snapshot_id, locale, etag), do: {slug, snapshot_id, locale, etag}
 
   defp version_key(slug), do: {:version, slug}
 

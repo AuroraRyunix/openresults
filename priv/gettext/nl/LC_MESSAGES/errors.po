@@ -1,0 +1,60 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: nl\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "is invalid"
+msgstr "is ongeldig"
+
+msgid "a rating is a whole number, digits only"
+msgstr "een rating is een geheel getal, alleen cijfers"
+
+msgid "a FIDE ID is a whole number, digits only"
+msgstr "een FIDE-ID is een geheel getal, alleen cijfers"
+
+msgid "that is not a list of round numbers"
+msgstr "dat is geen lijst van rondenummers"
+
+msgid "please give the name you want on the pairing list"
+msgstr "geef de naam op die u op de paringslijst wilt zien"
+
+msgid "the arbiter needs an address to reach you at"
+msgstr "de arbiter heeft een adres nodig om u te bereiken"
+
+msgid "a name is between 2 and 100 characters"
+msgstr "een naam telt tussen 2 en 100 tekens"
+
+msgid "that is too long to be an email address"
+msgstr "dat is te lang om een e-mailadres te zijn"
+
+msgid "that does not look like an email address - check for a missing @ or a typo"
+msgstr "dat lijkt geen e-mailadres - controleer op een ontbrekende @ of een typfout"
+
+msgid "a birth year is four digits between 1900 and 2030 - leave it empty if you would rather not say"
+msgstr "een geboortejaar is vier cijfers tussen 1900 en 2030 - laat het leeg als u het liever niet zegt"
+
+msgid "that is not a FIDE title - leave it empty if you do not have one"
+msgstr "dat is geen FIDE-titel - laat het leeg als u er geen hebt"
+
+msgid "a rating is a whole number between 0 and 3500 - leave it empty if you do not have one"
+msgstr "een rating is een geheel getal tussen 0 en 3500 - laat het leeg als u er geen hebt"
+
+msgid "a federation is a three-letter FIDE code, like BEL or NOR"
+msgstr "een federatie is een FIDE-code van drie letters, zoals BEL of NOR"
+
+msgid "a FIDE ID is the number on your FIDE profile - digits only"
+msgstr "een FIDE-ID is het nummer op uw FIDE-profiel - alleen cijfers"
+
+msgid "a club name is at most 100 characters"
+msgstr "een clubnaam telt hoogstens 100 tekens"
+
+msgid "this tournament is not taking bye requests"
+msgstr "dit toernooi neemt geen byeverzoeken aan"

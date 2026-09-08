@@ -85,6 +85,27 @@ defmodule OpenResultsWeb.RevalidateTest do
       assert again.status == 304
     end
 
+    test "a validator from one language does not answer for another", %{conn: conn, slug: slug} do
+      # The ETag is not only ours: it goes to the browser as an HTTP
+      # validator. A reader who has the Dutch page cached and then asks in
+      # French must not be told it is unchanged - the document is the same,
+      # the page is not.
+      dutch =
+        conn
+        |> put_req_header("accept-language", "nl")
+        |> get(~p"/t/#{slug}")
+        |> etag()
+
+      french =
+        build_conn()
+        |> put_req_header("accept-language", "fr")
+        |> put_req_header("if-none-match", dutch)
+        |> get(~p"/t/#{slug}")
+
+      assert french.status == 200
+      assert etag(french) != dutch
+    end
+
     test "the projector view is a different page too, not the same round again", %{
       conn: conn,
       slug: slug

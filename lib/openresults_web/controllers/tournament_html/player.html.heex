@@ -16,7 +16,7 @@
       {@player["title"]}
     </span>
     {@player["name"]}
-    <span class="quiet">no. {@player["no"]}</span>
+    <span class="quiet">{gettext("no. %{number}", number: @player["no"])}</span>
   </h2>
 
   <p class="details">
@@ -26,7 +26,7 @@
     </span>
     <span :if={Tournament.show?(@payload, "club") && @player["club"]}>{@player["club"]}</span>
     <span :if={Tournament.show?(@payload, "category") && @player["category"]}>
-      Category {@player["category"]}
+      {gettext("Category %{category}", category: @player["category"])}
     </span>
   </p>
 
@@ -35,21 +35,24 @@
   <%!-- Only in the overlay, where there is somewhere further to go. On the
         page itself the detail is already underneath. --%>
   <p class="card-more">
-    <a href={~p"/t/#{@slug}/player/#{@player["no"]}"}>Full card, round by round</a>
+    <a href={~p"/t/#{@slug}/player/#{@player["no"]}"}>{gettext("Full card, round by round")}</a>
   </p>
 </section>
 
 <section id="player-detail">
   <.score_chart payload={@payload} card={@card} no={@player["no"]} />
 
-  <h3>Round by round</h3>
+  <h3>{gettext("Round by round")}</h3>
 
   <.card_table slug={@slug} card={@card} payload={@payload} />
 
   <p :if={Enum.any?(@card, &is_nil(&1.score))} class="footnote">
-    The running score stops at the first round whose result is not public - an
-    unpublished round, a board that is not listed, or a game with no result yet.
-    The arbiter's own total is on the <a href={~p"/t/#{@slug}"}>standings</a>.
+    {raw(
+      gettext(
+        "The running score stops at the first round whose result is not public - an unpublished round, a board that is not listed, or a game with no result yet. The arbiter's own total is on the %{standings}.",
+        standings: anchor(~p"/t/#{@slug}", gettext("standings"))
+      )
+    )}
   </p>
 
   <.working_tables payload={@payload} slug={@slug} no={@player["no"]} />

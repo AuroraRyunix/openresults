@@ -865,6 +865,44 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   margin-bottom: 0;
 }
 
+.masthead-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Three plain links, and deliberately not a popover like the theme picker
+   beside it. A language switch has to work with the scripts switched off -
+   it is the one control on this site a reader might need before they can
+   read the page telling them how to use it. */
+.lang-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.lang-opt {
+  padding: 0.2rem 0.4rem;
+  border-radius: 999px;
+  color: var(--quiet);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
+.lang-opt:hover {
+  color: var(--ink);
+}
+
+/* The current language reads as a label rather than an offer: a link to the
+   page you are already on is the one thing in this row nobody should click. */
+.lang-opt.is-current {
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  padding: 0.15rem 0.35rem;
+}
+
 /* ---- a player's placing, and where their tie-breaks came from ---- */
 
 /* The overlay card is a peek: it shows this block and offers the page. On

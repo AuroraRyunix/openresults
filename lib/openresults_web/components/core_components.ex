@@ -476,20 +476,17 @@ defmodule OpenResultsWeb.CoreComponents do
 
   @doc """
   Translates an error message using gettext.
+
+  The changeset messages this reaches are the entry form's - the only place
+  on this site where a visitor is told they got something wrong - so they go
+  through the `errors` catalogue like any other string a reader sees.
   """
   def translate_error({msg, opts}) do
-    # You can make use of gettext to translate error messages by
-    # uncommenting and adjusting the following code:
-
-    # if count = opts[:count] do
-    #   Gettext.dngettext(OpenResultsWeb.Gettext, "errors", msg, msg, count, opts)
-    # else
-    #   Gettext.dgettext(OpenResultsWeb.Gettext, "errors", msg, opts)
-    # end
-
-    Enum.reduce(opts, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
-    end)
+    if count = opts[:count] do
+      Gettext.dngettext(OpenResultsWeb.Gettext, "errors", msg, msg, count, opts)
+    else
+      Gettext.dgettext(OpenResultsWeb.Gettext, "errors", msg, opts)
+    end
   end
 
   @doc """

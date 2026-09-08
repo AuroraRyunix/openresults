@@ -15,9 +15,17 @@ defmodule OpenResultsWeb.Router do
   # nobody's behalf, so there is no ambient authority for a forged request to
   # borrow. That reasoning is about THIS form. A form that ever acts for a
   # visitor brings both plugs back with it.
+  #
+  # The language picker did not bring a session back either, and the argument
+  # above is why: an explicit choice travels in the URL, and only a request
+  # that carries one leaves a cookie behind. See `OpenResultsWeb.Locale`.
   pipeline :browser do
     plug :accepts, ["html"]
     plug :put_root_layout, html: {OpenResultsWeb.Layouts, :root}
+    # Ahead of everything that renders, and - because this pipeline runs
+    # before the scope's own plugs - ahead of `Revalidate`, which cannot
+    # build an ETag or find a cached page without knowing the language.
+    plug OpenResultsWeb.Plugs.Locale
     plug :put_secure_browser_headers
     # Runs AFTER, because it rewrites the header the line above just set.
     # See `OpenResultsWeb.Framing` for why every page here is safe to embed

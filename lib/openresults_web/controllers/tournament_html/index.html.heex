@@ -1,11 +1,11 @@
 <header class="masthead">
   <h1>OpenResults</h1>
-  <p class="details"><span>Published tournaments</span></p>
+  <p class="details"><span>{gettext("Published tournaments")}</span></p>
 </header>
 
 <section>
   <p :if={@snapshots == []} class="empty">
-    Nothing has been published yet.
+    {gettext("Nothing has been published yet.")}
   </p>
 
   <ul class="tournaments">

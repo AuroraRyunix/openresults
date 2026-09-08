@@ -2,9 +2,9 @@
 
 <section>
   <h2>
-    Standings
+    {gettext("Standings")}
     <span :if={Tournament.standings(@payload)["after_round"]} class="quiet">
-      after round {Tournament.standings(@payload)["after_round"]}
+      {gettext("after round %{number}", number: Tournament.standings(@payload)["after_round"])}
     </span>
   </h2>
 
@@ -14,7 +14,8 @@
         one if nobody says so: the points move for reasons that are not in the
         results column. --%>
   <p :if={Tournament.keizer?(@payload)} class="footnote">
-    These are Keizer points, not FIDE tiebreaks - the whole ladder is
-    recalculated from results, byes and absences every time.
+    {gettext(
+      "These are Keizer points, not FIDE tiebreaks - the whole ladder is recalculated from results, byes and absences every time."
+    )}
   </p>
 </section>

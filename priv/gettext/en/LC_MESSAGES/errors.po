@@ -1,0 +1,60 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "is invalid"
+msgstr ""
+
+msgid "a rating is a whole number, digits only"
+msgstr ""
+
+msgid "a FIDE ID is a whole number, digits only"
+msgstr ""
+
+msgid "that is not a list of round numbers"
+msgstr ""
+
+msgid "please give the name you want on the pairing list"
+msgstr ""
+
+msgid "the arbiter needs an address to reach you at"
+msgstr ""
+
+msgid "a name is between 2 and 100 characters"
+msgstr ""
+
+msgid "that is too long to be an email address"
+msgstr ""
+
+msgid "that does not look like an email address - check for a missing @ or a typo"
+msgstr ""
+
+msgid "a birth year is four digits between 1900 and 2030 - leave it empty if you would rather not say"
+msgstr ""
+
+msgid "that is not a FIDE title - leave it empty if you do not have one"
+msgstr ""
+
+msgid "a rating is a whole number between 0 and 3500 - leave it empty if you do not have one"
+msgstr ""
+
+msgid "a federation is a three-letter FIDE code, like BEL or NOR"
+msgstr ""
+
+msgid "a FIDE ID is the number on your FIDE profile - digits only"
+msgstr ""
+
+msgid "a club name is at most 100 characters"
+msgstr ""
+
+msgid "this tournament is not taking bye requests"
+msgstr ""

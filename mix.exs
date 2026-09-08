@@ -66,6 +66,7 @@ defmodule OpenResults.MixProject do
        depth: 1},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
+      {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       # The only outbound HTTP this site makes: lending the entry form a
       # search of the arbiter's FIDE list. Deliberately the same client the

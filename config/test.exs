@@ -11,7 +11,7 @@ config :openresults, :ingest_token, "test-ingest-token"
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 config :openresults, OpenResults.Repo,
-  database: Path.expand("../openresults_test.db", __DIR__),
+  database: Path.expand("../openresults_test#{System.get_env("MIX_TEST_PARTITION")}.db", __DIR__),
   pool_size: 5,
   pool: Ecto.Adapters.SQL.Sandbox
 

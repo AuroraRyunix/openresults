@@ -1,11 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale(assigns)}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>
-      {[assigns[:page_title], "OpenResults"] |> Enum.reject(&is_nil/1) |> Enum.join(" - ")}
-    </title>
+    <title>{title(assigns)}</title>
+    <%!--
+      What a link to this page says when it is pasted into a club's WhatsApp
+      group, which is how most people arrive here. Before this it said
+      nothing: the URL, and a browser tab reading "OpenResults".
+
+      Every value comes from `OpenResultsWeb.Meta`, which builds it out of
+      the snapshot and honours the arbiter's display switches while doing it
+      - a city or a set of dates they turned off must not leak out through a
+      preview card, where nobody who could notice would ever see it.
+
+      No image. A share card without one is a small card rather than a broken
+      one, and inventing a picture of a tournament this server has never seen
+      would be this site making something up.
+    --%>
+    <meta :if={description(assigns)} name="description" content={description(assigns)} />
+    <meta property="og:title" content={title(assigns)} />
+    <meta :if={description(assigns)} property="og:description" content={description(assigns)} />
+    <meta property="og:type" content="website" />
+    <meta :if={canonical_url(assigns)} property="og:url" content={canonical_url(assigns)} />
+    <meta property="og:site_name" content="OpenResults" />
+    <meta property="og:locale" content={OpenResultsWeb.Locale.og_locale(locale(assigns))} />
+    <meta name="twitter:card" content="summary" />
     <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
     <link rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!--
@@ -98,36 +118,62 @@
         <a class="brand" href={~p"/"}>
           <.logo /> OpenResults
         </a>
-        <%!-- The same popover the arbiter's app uses, so the two feel like
-              one system. The active option is highlighted purely from CSS,
-              keyed off the `data-theme` / `data-theme-source` attributes the
-              inline script maintains on <html> - no server state, and it
-              reflects the choice instantly. --%>
-        <details class="theme-picker">
-          <summary class="theme-picker-trigger" title="Colour theme" aria-label="Colour theme">
-            <span class="theme-picker-swatch" aria-hidden="true"></span> Theme
-          </summary>
-          <div class="theme-picker-panel" role="group" aria-label="Colour theme">
-            <button
-              :for={
-                {key, label} <- [
-                  {"system", "Match device"},
-                  {"paper", "Paper"},
-                  {"night", "Night"},
-                  {"board", "Board"},
-                  {"slate", "Slate"},
-                  {"contrast", "High contrast"}
-                ]
-              }
-              type="button"
-              class="theme-picker-item"
-              data-theme-opt={key}
+        <div class="masthead-tools">
+          <%!-- Three links, not a menu. A reader whose browser already asks
+                for Dutch never needs this, so it is here for the minority
+                whose browser says one thing and whose eyes want another - and
+                for anyone pasting a link to the version somebody else can
+                read. Plain anchors, so it works with the scripts switched
+                off, which the theme picker beside it cannot claim. --%>
+          <nav class="lang-picker" aria-label={gettext("Language")}>
+            <a
+              :for={{code, name} <- OpenResultsWeb.Locale.locales()}
+              href={OpenResultsWeb.Locale.switch_path(@conn, code)}
+              hreflang={code}
+              lang={code}
+              title={name}
+              class={["lang-opt", code == locale(assigns) && "is-current"]}
+              aria-current={code == locale(assigns) && "true"}
             >
-              <span class={"theme-dot theme-dot-#{key}"} aria-hidden="true"></span>
-              {label}
-            </button>
-          </div>
-        </details>
+              <span aria-hidden="true">{String.upcase(code)}</span>
+              <span class="visually-hidden">{name}</span>
+            </a>
+          </nav>
+          <%!-- The same popover the arbiter's app uses, so the two feel like
+                one system. The active option is highlighted purely from CSS,
+                keyed off the `data-theme` / `data-theme-source` attributes the
+                inline script maintains on <html> - no server state, and it
+                reflects the choice instantly. --%>
+          <details class="theme-picker">
+            <summary
+              class="theme-picker-trigger"
+              title={gettext("Colour theme")}
+              aria-label={gettext("Colour theme")}
+            >
+              <span class="theme-picker-swatch" aria-hidden="true"></span> {gettext("Theme")}
+            </summary>
+            <div class="theme-picker-panel" role="group" aria-label={gettext("Colour theme")}>
+              <button
+                :for={
+                  {key, label} <- [
+                    {"system", gettext("Match device")},
+                    {"paper", gettext("Paper")},
+                    {"night", gettext("Night")},
+                    {"board", gettext("Board")},
+                    {"slate", gettext("Slate")},
+                    {"contrast", gettext("High contrast")}
+                  ]
+                }
+                type="button"
+                class="theme-picker-item"
+                data-theme-opt={key}
+              >
+                <span class={"theme-dot theme-dot-#{key}"} aria-hidden="true"></span>
+                {label}
+              </button>
+            </div>
+          </details>
+        </div>
       </div>
       <%!-- `data-live` marks the region the refresher replaces. Everything
             outside it - the theme, the scroll position, an open card - is
@@ -135,8 +181,18 @@
       <div id="live-region" data-live>{@inner_content}</div>
 
       <footer class="site-foot">
-        <span>Published by the arbiter. Results are theirs, not this site's.</span>
-        <span id="live-status" class="live-status" hidden aria-live="polite"></span>
+        <span>{gettext("Published by the arbiter. Results are theirs, not this site's.")}</span>
+        <%!-- The two things the refresher can say, carried as attributes
+              because the script writes them and a string built in JavaScript
+              is a string outside the catalogue. --%>
+        <span
+          id="live-status"
+          class="live-status"
+          data-updated={gettext("updated just now")}
+          data-offline={gettext("not updating - connection lost")}
+          hidden
+          aria-live="polite"
+        ></span>
         <span class="spacer"></span>
         <%!-- In the footer of a site with no login, because the person asking
               "did my deploy land" is looking at this from outside. A version
@@ -157,11 +213,13 @@
       open one. Left-click still navigates to that page, which is what
       happens with no JavaScript, on a phone, and whenever the fetch fails.
     --%>
-    <div id="card-overlay" class="card-overlay" hidden>
-      <div class="card-dialog" role="dialog" aria-modal="true" aria-label="Player card">
-        <button type="button" class="card-close" aria-label="Close">Close</button>
+    <div id="card-overlay" class="card-overlay" data-loading={gettext("Loading…")} hidden>
+      <div class="card-dialog" role="dialog" aria-modal="true" aria-label={gettext("Player card")}>
+        <button type="button" class="card-close" aria-label={gettext("Close")}>
+          {gettext("Close")}
+        </button>
         <div id="card-body">
-          <p class="card-loading">Loading…</p>
+          <p class="card-loading">{gettext("Loading…")}</p>
         </div>
       </div>
     </div>
@@ -206,7 +264,13 @@
 
         const close = () => {
           overlay.hidden = true;
-          body.innerHTML = '<p class="card-loading">Loading…</p>';
+          const loading = document.createElement("p");
+          loading.className = "card-loading";
+          // From the server, in the reader's language, and set as TEXT - the
+          // one place this script writes a whole element rather than moving
+          // one the server already sent.
+          loading.textContent = overlay.dataset.loading || "";
+          body.replaceChildren(loading);
         };
 
         overlay.addEventListener("click", (e) => { if (e.target === overlay) { close(); } });
@@ -267,7 +331,7 @@
                   // Said quietly and only when something actually changed, so
                   // a spectator knows the page is live rather than stuck.
                   if (status) {
-                    status.textContent = "updated just now";
+                    status.textContent = status.dataset.updated || "";
                     status.hidden = false;
                   }
                 }
@@ -278,7 +342,7 @@
                 // is not an error worth ending the session over.
                 failures += 1;
                 if (failures >= 2 && status) {
-                  status.textContent = "not updating - connection lost";
+                  status.textContent = status.dataset.offline || "";
                   status.hidden = false;
                 }
               });

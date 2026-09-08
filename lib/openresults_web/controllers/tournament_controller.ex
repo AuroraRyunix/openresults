@@ -16,6 +16,7 @@ defmodule OpenResultsWeb.TournamentController do
   use OpenResultsWeb, :controller
 
   alias OpenResults.Snapshots
+  alias OpenResultsWeb.Meta
   alias OpenResultsWeb.Tournament
 
   @doc """
@@ -29,7 +30,11 @@ defmodule OpenResultsWeb.TournamentController do
     # quietly skip every unlisted tournament and give no reason.
     listed = Enum.filter(Snapshots.list_current(), &Tournament.listed?(&1.payload))
 
-    render(conn, :index, page_title: "Tournaments", snapshots: listed)
+    render(conn, :index,
+      page_title: gettext("Tournaments"),
+      page_description: Meta.index(),
+      snapshots: listed
+    )
   end
 
   @doc """
@@ -40,7 +45,7 @@ defmodule OpenResultsWeb.TournamentController do
       if Tournament.show?(payload, "standings") do
         render_standings(conn, payload, slug)
       else
-        withheld(conn, payload, slug, "standings")
+        withheld(conn, payload, slug, :standings)
       end
     end)
   end
@@ -48,6 +53,7 @@ defmodule OpenResultsWeb.TournamentController do
   defp render_standings(conn, payload, slug) do
     render(conn, :standings,
       page_title: Tournament.name(payload),
+      page_description: Meta.standings(payload),
       payload: payload,
       slug: slug,
       current: :standings
@@ -67,7 +73,7 @@ defmodule OpenResultsWeb.TournamentController do
       if Tournament.show?(payload, "pairings") do
         render_round(conn, payload, slug, n, display?(params))
       else
-        withheld(conn, payload, slug, "round pairings")
+        withheld(conn, payload, slug, :pairings)
       end
     end)
   end
@@ -79,13 +85,18 @@ defmodule OpenResultsWeb.TournamentController do
       nil ->
         not_found(
           conn,
-          "Round #{n} of #{Tournament.name(payload)} has not been published.",
+          gettext("Round %{number} of %{tournament} has not been published.",
+            number: n,
+            tournament: Tournament.name(payload)
+          ),
           back: ~p"/t/#{slug}"
         )
 
       round ->
         render(conn, :round,
-          page_title: "#{Tournament.name(payload)} - round #{number}",
+          page_title:
+            "#{Tournament.name(payload)} - #{Tournament.round_heading(payload, number)}",
+          page_description: Meta.round(payload, number),
           payload: payload,
           slug: slug,
           round: round,
@@ -118,7 +129,7 @@ defmodule OpenResultsWeb.TournamentController do
       if Tournament.show?(payload, "player_cards") do
         render_player(conn, payload, slug, no, integer(no))
       else
-        withheld(conn, payload, slug, "player cards")
+        withheld(conn, payload, slug, :player_cards)
       end
     end)
   end
@@ -127,29 +138,47 @@ defmodule OpenResultsWeb.TournamentController do
   # exist sends them hunting for a link that was never broken. The arbiter has
   # chosen not to publish this part of it, which is a different thing and worth
   # saying.
-  defp withheld(conn, payload, slug, what) do
+  defp withheld(conn, payload, slug, page) do
     conn
     |> put_status(:not_found)
     |> put_view(html: OpenResultsWeb.TournamentHTML)
     |> render(:not_found,
       page_title: Tournament.name(payload),
-      message: "#{Tournament.name(payload)} does not publish #{what}.",
+      page_description: Meta.withheld(payload),
+      message: withheld_message(page, Tournament.name(payload)),
       back: ~p"/t/#{slug}"
     )
   end
+
+  # Three whole sentences rather than one sentence and a noun slot. The noun
+  # is what moves: Dutch puts the negation after it and French needs an
+  # article that changes with the word, so a translator handed "standings" on
+  # its own could not produce a correct sentence in either language.
+  defp withheld_message(:standings, name),
+    do: gettext("%{tournament} does not publish standings.", tournament: name)
+
+  defp withheld_message(:pairings, name),
+    do: gettext("%{tournament} does not publish round pairings.", tournament: name)
+
+  defp withheld_message(:player_cards, name),
+    do: gettext("%{tournament} does not publish player cards.", tournament: name)
 
   defp render_player(conn, payload, slug, no, number) do
     case number && Tournament.player(payload, number) do
       nil ->
         not_found(
           conn,
-          "#{Tournament.name(payload)} has no player #{no}.",
+          gettext("%{tournament} has no player %{number}.",
+            tournament: Tournament.name(payload),
+            number: no
+          ),
           back: ~p"/t/#{slug}"
         )
 
       player ->
         render(conn, :player,
           page_title: "#{Map.get(player, "name")} - #{Tournament.name(payload)}",
+          page_description: Meta.player(payload, player),
           payload: payload,
           slug: slug,
           player: player,
@@ -162,7 +191,9 @@ defmodule OpenResultsWeb.TournamentController do
   defp with_payload(conn, slug, render_fun) do
     case Snapshots.latest(slug) do
       nil ->
-        not_found(conn, "No tournament has published under #{slug}.", back: ~p"/")
+        not_found(conn, gettext("No tournament has published under %{slug}.", slug: slug),
+          back: ~p"/"
+        )
 
       snapshot ->
         render_fun.(snapshot.payload)
@@ -172,7 +203,12 @@ defmodule OpenResultsWeb.TournamentController do
   defp not_found(conn, message, back: back) do
     conn
     |> put_status(:not_found)
-    |> render(:not_found, page_title: "Not found", message: message, back: back)
+    |> render(:not_found,
+      page_title: gettext("Not found"),
+      page_description: Meta.not_found(),
+      message: message,
+      back: back
+    )
   end
 
   # A pairing number or a round number, or `nil` for anything else. Whole

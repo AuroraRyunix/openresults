@@ -27,6 +27,7 @@ defmodule OpenResultsWeb.RegistrationController do
   alias OpenResults.Registrations.Entry
   alias OpenResults.Snapshots
   alias OpenResults.TournamentKeys
+  alias OpenResultsWeb.Meta
   alias OpenResultsWeb.Tournament
 
   # Five entries per ten minutes from one address. Chosen to be invisible to
@@ -111,7 +112,9 @@ defmodule OpenResultsWeb.RegistrationController do
                ) do
             {:ok, _registration} ->
               render(conn, :received,
-                page_title: "Entry sent - #{Tournament.name(payload)}",
+                page_title:
+                  gettext("Entry sent - %{tournament}", tournament: Tournament.name(payload)),
+                page_description: Meta.received(payload),
                 payload: payload,
                 slug: slug,
                 # The name only. The email is the one thing this server holds
@@ -129,8 +132,9 @@ defmodule OpenResultsWeb.RegistrationController do
               |> put_status(:internal_server_error)
               |> render_form(slug, payload, Entry.changeset(attrs, rounds),
                 alarm:
-                  "Something went wrong at our end and your entry was not stored. " <>
-                    "Your answers are still below - please send it again."
+                  gettext(
+                    "Something went wrong at our end and your entry was not stored. Your answers are still below - please send it again."
+                  )
               )
           end
 
@@ -154,7 +158,8 @@ defmodule OpenResultsWeb.RegistrationController do
 
   defp render_form(conn, slug, payload, changeset, opts \\ []) do
     render(conn, :new,
-      page_title: "Enter #{Tournament.name(payload)}",
+      page_title: gettext("Enter %{tournament}", tournament: Tournament.name(payload)),
+      page_description: Meta.register(payload),
       payload: payload,
       slug: slug,
       rounds: Tournament.round_slots(payload),
@@ -172,7 +177,9 @@ defmodule OpenResultsWeb.RegistrationController do
       nil ->
         not_found(
           conn,
-          "No tournament has published under #{slug}, so there is nothing to enter.",
+          gettext("No tournament has published under %{slug}, so there is nothing to enter.",
+            slug: slug
+          ),
           back: ~p"/"
         )
 
@@ -195,7 +202,11 @@ defmodule OpenResultsWeb.RegistrationController do
   defp closed(conn, slug) do
     conn
     |> put_status(:forbidden)
-    |> render(:closed, page_title: "Entries are closed", back: ~p"/t/#{slug}")
+    |> render(:closed,
+      page_title: gettext("Entries are closed"),
+      page_description: Meta.entries_closed(),
+      back: ~p"/t/#{slug}"
+    )
   end
 
   defp too_many(conn, slug, retry_in_ms) do
@@ -203,7 +214,8 @@ defmodule OpenResultsWeb.RegistrationController do
     |> put_status(:too_many_requests)
     |> put_resp_header("retry-after", Integer.to_string(ceil(retry_in_ms / 1000)))
     |> render(:too_many,
-      page_title: "Too many entries",
+      page_title: gettext("Too many entries"),
+      page_description: Meta.too_many(),
       minutes: max(1, ceil(retry_in_ms / 60_000)),
       back: ~p"/t/#{slug}"
     )
@@ -215,7 +227,12 @@ defmodule OpenResultsWeb.RegistrationController do
     conn
     |> put_status(:not_found)
     |> put_view(html: OpenResultsWeb.TournamentHTML)
-    |> render(:not_found, page_title: "Not found", message: message, back: back)
+    |> render(:not_found,
+      page_title: gettext("Not found"),
+      page_description: Meta.not_found(),
+      message: message,
+      back: back
+    )
   end
 
   @doc """

@@ -59,7 +59,8 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
         conn
 
       id ->
-        etag = etag_for(conn, id)
+        locale = locale(conn)
+        etag = etag_for(conn, id, locale)
 
         conn =
           conn
@@ -70,26 +71,31 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
           etag in request_etags(conn) ->
             conn |> send_resp(304, "") |> halt()
 
-          body = Page.get(slug, id, etag) ->
+          body = Page.get(slug, id, locale, etag) ->
             conn
             |> put_resp_content_type("text/html")
             |> send_resp(200, body)
             |> halt()
 
           true ->
-            register_before_send(conn, &keep(&1, slug, id, etag))
+            register_before_send(conn, &keep(&1, slug, id, locale, etag))
         end
     end
   end
 
+  # Set by `OpenResultsWeb.Plugs.Locale`, which the browser pipeline runs
+  # before this one. The fallback is not decoration: this plug must not be
+  # the thing that breaks if it is ever mounted somewhere that one is not.
+  defp locale(conn), do: conn.assigns[:locale] || OpenResultsWeb.Locale.default()
+
   # Only a plain 200 of HTML. A redirect, a 404 or an error page is not this
   # document and must never be served in its place.
-  defp keep(%{status: 200} = conn, slug, id, etag) do
-    if html?(conn), do: Page.put(slug, id, etag, IO.iodata_to_binary(conn.resp_body))
+  defp keep(%{status: 200} = conn, slug, id, locale, etag) do
+    if html?(conn), do: Page.put(slug, id, locale, etag, IO.iodata_to_binary(conn.resp_body))
     conn
   end
 
-  defp keep(conn, _slug, _id, _etag), do: conn
+  defp keep(conn, _slug, _id, _locale, _etag), do: conn
 
   defp html?(conn) do
     conn
@@ -105,8 +111,15 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   # view), and without this a reader's `?display=1` request and somebody
   # else's plain one would share one ETag and shadow each other's page in
   # `Page` - whichever variant rendered first would be served to both.
-  defp etag_for(conn, id),
-    do: ~s("#{id}-#{:erlang.phash2({conn.request_path, conn.query_string})}")
+  #
+  # And the LOCALE, which is the one of the three that does not appear in the
+  # URL at all: a reader whose browser asks for Dutch and a reader whose
+  # browser asks for French request the same address and must not be handed
+  # the same document. That matters here beyond the page cache - this string
+  # goes to the browser as an HTTP validator, and a browser holding the Dutch
+  # page must get a 200 rather than a 304 when it next asks in French.
+  defp etag_for(conn, id, locale),
+    do: ~s("#{id}-#{locale}-#{:erlang.phash2({conn.request_path, conn.query_string})}")
 
   # `If-None-Match` may carry several, comma separated, and a cache is
   # allowed to return a weak validator (`W/"..."`) for one we sent strong.

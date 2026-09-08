@@ -2,17 +2,17 @@
 
 <section>
   <h2>
-    Enter this tournament
+    {gettext("Enter this tournament")}
     <span :if={Tournament.info(@payload)["start_date"]} class="quiet">
-      starts {Tournament.info(@payload)["start_date"]}
+      {gettext("starts %{date}", date: Tournament.info(@payload)["start_date"])}
     </span>
   </h2>
 
   <p class="footnote">
-    This form sends your details to the arbiter of {Tournament.name(@payload)}. It does
-    not enter you. The tournament is run on the arbiter's own machine; this
-    page only holds what you send until they collect it, and they decide who
-    plays. Nothing here will change until they enter you and publish a round.
+    {gettext(
+      "This form sends your details to the arbiter of %{tournament}. It does not enter you. The tournament is run on the arbiter's own machine; this page only holds what you send until they collect it, and they decide who plays. Nothing here will change until they enter you and publish a round.",
+      tournament: Tournament.name(@payload)
+    )}
   </p>
 
   <.entry_form

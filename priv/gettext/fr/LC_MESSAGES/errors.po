@@ -1,0 +1,60 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+msgid "is invalid"
+msgstr "est invalide"
+
+msgid "a rating is a whole number, digits only"
+msgstr "un classement Elo est un nombre entier, chiffres uniquement"
+
+msgid "a FIDE ID is a whole number, digits only"
+msgstr "un ID FIDE est un nombre entier, chiffres uniquement"
+
+msgid "that is not a list of round numbers"
+msgstr "ce n'est pas une liste de numéros de ronde"
+
+msgid "please give the name you want on the pairing list"
+msgstr "indiquez le nom que vous voulez voir sur la liste d'appariement"
+
+msgid "the arbiter needs an address to reach you at"
+msgstr "l'arbitre a besoin d'une adresse pour vous joindre"
+
+msgid "a name is between 2 and 100 characters"
+msgstr "un nom compte entre 2 et 100 caractères"
+
+msgid "that is too long to be an email address"
+msgstr "c'est trop long pour une adresse e-mail"
+
+msgid "that does not look like an email address - check for a missing @ or a typo"
+msgstr "cela ne ressemble pas à une adresse e-mail - vérifiez s'il manque un @ ou s'il y a une faute de frappe"
+
+msgid "a birth year is four digits between 1900 and 2030 - leave it empty if you would rather not say"
+msgstr "une année de naissance compte quatre chiffres entre 1900 et 2030 - laissez vide si vous préférez ne pas le dire"
+
+msgid "that is not a FIDE title - leave it empty if you do not have one"
+msgstr "ce n'est pas un titre FIDE - laissez vide si vous n'en avez pas"
+
+msgid "a rating is a whole number between 0 and 3500 - leave it empty if you do not have one"
+msgstr "un classement Elo est un nombre entier entre 0 et 3500 - laissez vide si vous n'en avez pas"
+
+msgid "a federation is a three-letter FIDE code, like BEL or NOR"
+msgstr "une fédération est un code FIDE à trois lettres, comme BEL ou NOR"
+
+msgid "a FIDE ID is the number on your FIDE profile - digits only"
+msgstr "un ID FIDE est le numéro figurant sur votre profil FIDE - chiffres uniquement"
+
+msgid "a club name is at most 100 characters"
+msgstr "un nom de club compte au maximum 100 caractères"
+
+msgid "this tournament is not taking bye requests"
+msgstr "ce tournoi n'accepte pas de demandes de bye"

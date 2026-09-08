@@ -58,23 +58,27 @@ defmodule OpenResultsWeb.TournamentHTML do
         <span :if={@show.city && @info["city"]}>{@info["city"]}</span>
         <span :if={@show.federation && @info["federation"]}>{@info["federation"]}</span>
         <span :if={@show.dates && dates(@info)}>{dates(@info)}</span>
-        <span :if={@show.arbiter && @info["arbiter"]}>Arbiter: {@info["arbiter"]}</span>
-        <span :if={@show.deputy && @info["deputy"]}>Deputy: {@info["deputy"]}</span>
-        <span :if={@show.time_control && @info["time_control"]}>
-          Tempo: {@info["time_control"]}
+        <span :if={@show.arbiter && @info["arbiter"]}>
+          {gettext("Arbiter: %{name}", name: @info["arbiter"])}
         </span>
-        <span :if={@show.fide_badge && @info["fide_rated"] == true}>FIDE rated</span>
+        <span :if={@show.deputy && @info["deputy"]}>
+          {gettext("Deputy: %{name}", name: @info["deputy"])}
+        </span>
+        <span :if={@show.time_control && @info["time_control"]}>
+          {gettext("Tempo: %{time_control}", time_control: @info["time_control"])}
+        </span>
+        <span :if={@show.fide_badge && @info["fide_rated"] == true}>{gettext("FIDE rated")}</span>
       </p>
 
       <%!-- A navigation strip with nothing to navigate to is furniture, so it
             goes entirely when both pages behind it are off. --%>
-      <nav :if={@show.standings or @show.pairings} class="rounds" aria-label="Rounds">
+      <nav :if={@show.standings or @show.pairings} class="rounds" aria-label={gettext("Rounds")}>
         <a
           :if={@show.standings}
           href={~p"/t/#{@slug}"}
           class={["chip", @current == :standings && "current"]}
         >
-          Standings
+          {gettext("Standings")}
         </a>
         <%= for {n, published?} <- @slots, @show.pairings do %>
           <a
@@ -84,8 +88,10 @@ defmodule OpenResultsWeb.TournamentHTML do
           >
             {Tournament.round_label(@payload, n)}
           </a>
-          <span :if={not published?} class="chip withheld" title="not published">
-            {Tournament.round_label(@payload, n)}<span class="visually-hidden">, not published</span>
+          <span :if={not published?} class="chip withheld" title={gettext("not published")}>
+            {Tournament.round_label(@payload, n)}<span class="visually-hidden">{gettext(
+              ", not published"
+            )}</span>
           </span>
         <% end %>
       </nav>
@@ -114,9 +120,31 @@ defmodule OpenResultsWeb.TournamentHTML do
       {start, nil} -> start
       {nil, finish} -> finish
       {same, same} -> same
-      {start, finish} -> "#{start} to #{finish}"
+      {start, finish} -> gettext("%{start} to %{finish}", start: start, finish: finish)
     end
   end
+
+  @doc """
+  An anchor as one gettext binding, for a sentence with a link inside it.
+
+  A translator moving the link to the other end of a Dutch sentence must not
+  have to move a tag with it, and chopping the sentence into fragments around
+  the tag would leave them ordering words they cannot see together. So the
+  sentence stays whole in the catalogue and the anchor arrives as `%{...}`.
+
+  The result is raw HTML and its caller has to `raw/1` it, which is the whole
+  reason this escapes both halves itself. Never hand it anything from a
+  payload: it is for this app's own routes and its own strings.
+  """
+  def anchor(href, text) do
+    ~s(<a href="#{escaped(href)}">#{escaped(text)}</a>)
+  end
+
+  @doc """
+  One value, escaped and back to a string, for interpolating into a gettext
+  binding that will be rendered raw.
+  """
+  def escaped(value), do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   @doc """
   The standings, in the order they arrived.
@@ -157,18 +185,19 @@ defmodule OpenResultsWeb.TournamentHTML do
 
     ~H"""
     <p :if={@manual_order?} class="footnote manual-order">
-      The order below was set by the arbiter, not computed from the tiebreaks.
-      The points and tiebreak columns are unchanged; the rank column is their
-      decision.
+      {gettext(
+        "The order below was set by the arbiter, not computed from the tiebreaks. The points and tiebreak columns are unchanged; the rank column is their decision."
+      )}
       <span :if={@manual_incomplete?}>
-        A player was added after that order was set and has not been placed in it yet.
+        {gettext("A player was added after that order was set and has not been placed in it yet.")}
       </span>
       <%!-- The one that matters. "The arbiter chose this order" and "the
             arbiter chose this order and it is now out of date" are different
             statements, and only the first was travelling. --%>
       <strong :if={@manual_stale?}>
-        A result has changed since the order was last set, so it may no longer match the
-        real standings.
+        {gettext(
+          "A result has changed since the order was last set, so it may no longer match the real standings."
+        )}
       </strong>
     </p>
 
@@ -176,28 +205,29 @@ defmodule OpenResultsWeb.TournamentHTML do
           question it answers is about the table: why is that person above
           me when every number I can see is the same? --%>
     <p :if={@withheld? and @rows != []} class="footnote">
-      The order also uses tie-breaks this tournament does not publish, so two
-      players can appear one above the other with every column here identical.
+      {gettext(
+        "The order also uses tie-breaks this tournament does not publish, so two players can appear one above the other with every column here identical."
+      )}
     </p>
 
     <p :if={@rows == []} class="empty">
-      No standings have been published for this tournament yet.
+      {gettext("No standings have been published for this tournament yet.")}
     </p>
 
     <div :if={@rows != []} class="scroller">
       <table class="standings">
         <thead>
           <tr>
-            <th class="num" scope="col">#</th>
-            <th scope="col">Player</th>
-            <th :if={@show.rating} class="num" scope="col">Rating</th>
-            <th :if={@categories? and @show.category} scope="col">Cat</th>
+            <th class="num" scope="col">{gettext("#")}</th>
+            <th scope="col">{gettext("Player")}</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Rating")}</th>
+            <th :if={@categories? and @show.category} scope="col">{gettext("Cat")}</th>
             <%= if @keizer? do %>
-              <th class="num" scope="col">Value</th>
-              <th class="num" scope="col">Keizer points</th>
-              <th class="num" scope="col">Score</th>
+              <th class="num" scope="col">{gettext("Value")}</th>
+              <th class="num" scope="col">{gettext("Keizer points")}</th>
+              <th class="num" scope="col">{gettext("Score")}</th>
             <% else %>
-              <th class="num" scope="col">Points</th>
+              <th class="num" scope="col">{gettext("Points")}</th>
               <%!-- The placings are unaffected by hiding these. The arbiter
                     is hiding the arithmetic, not the result - the order is
                     still exactly the one they computed. --%>
@@ -268,34 +298,34 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:scores, Tournament.scores_before(assigns.payload, assigns.round["number"]))
 
     ~H"""
-    <p :if={@boards == []} class="empty">No boards were published for this round.</p>
+    <p :if={@boards == []} class="empty">{gettext("No boards were published for this round.")}</p>
 
     <div :if={@boards != []} class="scroller">
       <table class="pairings">
         <thead>
           <tr>
-            <th class="num" scope="col">Bd</th>
-            <th :if={@show.rating} class="num" scope="col">Elo</th>
+            <th class="num" scope="col">{gettext("Bd")}</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
             <th
               :if={@show.pairing_scores}
               class="num"
               scope="col"
-              title="Points going into this round"
+              title={gettext("Points going into this round")}
             >
-              Pts
+              {gettext("Pts")}
             </th>
-            <th scope="col">White</th>
-            <th class="num" scope="col">Result</th>
-            <th scope="col">Black</th>
+            <th scope="col">{gettext("White")}</th>
+            <th class="num" scope="col">{gettext("Result")}</th>
+            <th scope="col">{gettext("Black")}</th>
             <th
               :if={@show.pairing_scores}
               class="num"
               scope="col"
-              title="Points going into this round"
+              title={gettext("Points going into this round")}
             >
-              Pts
+              {gettext("Pts")}
             </th>
-            <th :if={@show.rating} class="num" scope="col">Elo</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
           </tr>
         </thead>
         <tbody>
@@ -349,7 +379,9 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   def score(assigns) do
     ~H"""
-    <span :if={is_nil(@points)} class="unreported" title="an earlier round is not public">-</span>
+    <span :if={is_nil(@points)} class="unreported" title={gettext("an earlier round is not public")}>
+      -
+    </span>
     <span :if={not is_nil(@points)}>{number(@points)}</span>
     """
   end
@@ -377,10 +409,10 @@ defmodule OpenResultsWeb.TournamentHTML do
       <table class="byes">
         <thead>
           <tr>
-            <th scope="col">Player</th>
-            <th :if={@show.rating} class="num" scope="col">Elo</th>
-            <th scope="col">Bye</th>
-            <th class="num" scope="col">Points</th>
+            <th scope="col">{gettext("Player")}</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
+            <th scope="col">{gettext("Bye")}</th>
+            <th class="num" scope="col">{gettext("Points")}</th>
           </tr>
         </thead>
         <tbody>
@@ -448,7 +480,11 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:show, display_rules(assigns.payload))
 
     ~H"""
-    <section class="projector" data-projector aria-label="Round pairings, projector view">
+    <section
+      class="projector"
+      data-projector
+      aria-label={gettext("Round pairings, projector view")}
+    >
       <header class="projector-head">
         <h1>{Tournament.name(@payload)}</h1>
         <%!-- Gated for the same reason as the ordinary round heading: a hall
@@ -460,16 +496,16 @@ defmodule OpenResultsWeb.TournamentHTML do
         </p>
       </header>
 
-      <p :if={@boards == []} class="empty">No boards were published for this round.</p>
+      <p :if={@boards == []} class="empty">{gettext("No boards were published for this round.")}</p>
 
       <div :if={@boards != []} class="projector-table-wrap" id="projector-boards">
         <table class="pairings projector-pairings">
           <thead>
             <tr>
-              <th class="num" scope="col">Bd</th>
-              <th scope="col">White</th>
-              <th class="num" scope="col">Result</th>
-              <th scope="col">Black</th>
+              <th class="num" scope="col">{gettext("Bd")}</th>
+              <th scope="col">{gettext("White")}</th>
+              <th class="num" scope="col">{gettext("Result")}</th>
+              <th scope="col">{gettext("Black")}</th>
             </tr>
           </thead>
           <tbody>
@@ -504,10 +540,19 @@ defmodule OpenResultsWeb.TournamentHTML do
       <%!-- Hidden until the script decides otherwise. A counter reading "1 of
             1" only tells a viewer that nobody checked, so this stays out of
             the accessibility tree entirely whenever every board already fits. --%>
-      <div :if={@boards != []} class="projector-foot" id="projector-foot" hidden>
+      <%!-- The counter's wording is an attribute rather than text because the
+            script rewrites it on every turn of the cycle, and a string built
+            in JavaScript is a string outside the catalogue. --%>
+      <div
+        :if={@boards != []}
+        class="projector-foot"
+        id="projector-foot"
+        data-page-label={gettext("Page %{page} of %{count}", page: "{page}", count: "{count}")}
+        hidden
+      >
         <span class="projector-page" id="projector-page"></span>
         <span class="projector-paused" id="projector-paused" hidden>
-          Paused - tap or press space to resume
+          {gettext("Paused - tap or press space to resume")}
         </span>
         <%!-- Not decoration: someone looking for board 47 needs to know their
               page is coming and roughly when, or a rotating screen is worse
@@ -521,7 +566,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         :if={Tournament.show?(@payload, "byes") and Tournament.byes(@round) != []}
         class="projector-byes"
       >
-        <h2>Byes</h2>
+        <h2>{gettext("Byes")}</h2>
         <.byes_table slug={@slug} round={@round} players={@players} payload={@payload} />
       </section>
     </section>
@@ -592,7 +637,11 @@ defmodule OpenResultsWeb.TournamentHTML do
 
           if (count > 1) {
             foot.hidden = false;
-            pageLabel.textContent = `Page ${page + 1} of ${count}`;
+            // The sentence comes from the server, already in the reader's
+            // language, with the two numbers left as placeholders.
+            pageLabel.textContent = (foot.dataset.pageLabel || "{page} / {count}")
+              .replace("{page}", page + 1)
+              .replace("{count}", count);
             pausedLabel.hidden = !paused;
             bar.hidden = paused;
           } else {
@@ -738,16 +787,18 @@ defmodule OpenResultsWeb.TournamentHTML do
       <table class="card">
         <thead>
           <tr>
-            <th class="num" scope="col">Rd</th>
-            <th scope="col">Colour</th>
-            <th class="num" scope="col" title="Opponent's pairing number">No</th>
-            <th :if={@show.federation} scope="col">Nat</th>
-            <th :if={@show.title} scope="col">Tit</th>
-            <th scope="col">Opponent</th>
-            <th :if={@show.rating} class="num" scope="col">Elo</th>
-            <th class="num" scope="col" title="Opponent's total">Pts</th>
-            <th class="num" scope="col">Result</th>
-            <th class="num" scope="col">Score</th>
+            <th class="num" scope="col">{gettext("Rd")}</th>
+            <th scope="col">{gettext("Colour")}</th>
+            <th class="num" scope="col" title={gettext("Opponent's pairing number")}>
+              {gettext("No")}
+            </th>
+            <th :if={@show.federation} scope="col">{gettext("Nat")}</th>
+            <th :if={@show.title} scope="col">{gettext("Tit")}</th>
+            <th scope="col">{gettext("Opponent")}</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
+            <th class="num" scope="col" title={gettext("Opponent's total")}>{gettext("Pts")}</th>
+            <th class="num" scope="col">{gettext("Result")}</th>
+            <th class="num" scope="col">{gettext("Score")}</th>
           </tr>
         </thead>
         <tbody>
@@ -755,7 +806,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             <td class="num">{entry.round}</td>
             <%= case entry.kind do %>
               <% :game -> %>
-                <td>{if(entry.colour == :white, do: "White", else: "Black")}</td>
+                <td>{if(entry.colour == :white, do: gettext("White"), else: gettext("Black"))}</td>
                 <td class="num">{entry.opponent_no}</td>
                 <td :if={@show.federation}>{dash(entry.opponent && entry.opponent["federation"])}</td>
                 <td :if={@show.title}>{dash(entry.opponent && entry.opponent["title"])}</td>
@@ -787,9 +838,11 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <td colspan={2 + count_if([@show.rating])} class="quiet">{bye_kind(entry.bye)}</td>
                 <td class="num">{number(entry.points)}</td>
               <% :unpublished -> %>
-                <td colspan={@game_span + 2} class="quiet">not published</td>
+                <td colspan={@game_span + 2} class="quiet">{gettext("not published")}</td>
               <% _no_game -> %>
-                <td colspan={@game_span + 2} class="quiet">no game published for this round</td>
+                <td colspan={@game_span + 2} class="quiet">
+                  {gettext("no game published for this round")}
+                </td>
             <% end %>
             <td class="num strong">{number(entry.score)}</td>
           </tr>
@@ -856,13 +909,17 @@ defmodule OpenResultsWeb.TournamentHTML do
       <span :if={@detail && shown?(@show, :title) && @player && @player["title"]} class="title">
         {@player["title"]}
       </span>
-      <span class="name">{(@player && @player["name"]) || "Player #{@no}"}</span>
+      <span class="name">
+        {(@player && @player["name"]) || gettext("Player %{number}", number: @no)}
+      </span>
     </a>
     <span :if={@no && not @cards?} class="player">
       <span :if={@detail && shown?(@show, :title) && @player && @player["title"]} class="title">
         {@player["title"]}
       </span>
-      <span class="name">{(@player && @player["name"]) || "Player #{@no}"}</span>
+      <span class="name">
+        {(@player && @player["name"]) || gettext("Player %{number}", number: @no)}
+      </span>
     </span>
     <span :if={is_nil(@no)} class="player">-</span>
     """
@@ -900,7 +957,10 @@ defmodule OpenResultsWeb.TournamentHTML do
     <p :if={@row} class="placing">
       <span class="placing-rank">{@row["rank"]}</span>
       <span class="placing-of">
-        of {length(Tournament.standings_rows(@payload))}, on {number(@row["points"])}
+        {gettext("of %{total}, on %{points}",
+          total: length(Tournament.standings_rows(@payload)),
+          points: number(@row["points"])
+        )}
       </span>
     </p>
 
@@ -915,13 +975,13 @@ defmodule OpenResultsWeb.TournamentHTML do
     </table>
 
     <p :if={@codes == [] and @show.tiebreaks} class="footnote">
-      This tournament publishes no breakdown of its tie-breaks.
+      {gettext("This tournament publishes no breakdown of its tie-breaks.")}
     </p>
 
     <%!-- The placing above is a claim, so the same caveat belongs here: what
           is listed may not be everything that put them there. --%>
     <p :if={Tournament.tiebreaks_withheld?(@payload)} class="footnote">
-      The order also uses tie-breaks this tournament does not publish.
+      {gettext("The order also uses tie-breaks this tournament does not publish.")}
     </p>
     """
   end
@@ -936,17 +996,14 @@ defmodule OpenResultsWeb.TournamentHTML do
     virtual = Enum.count(parts, &(Tournament.part_kind(&1) == "virtual"))
 
     [
-      "from #{counted} #{pluralise(counted, "round", "rounds")}",
-      virtual > 0 && "#{virtual} unplayed",
-      cut > 0 && "#{cut} discarded",
-      excluded > 0 && "#{excluded} not counted"
+      ngettext("from %{count} round", "from %{count} rounds", counted),
+      virtual > 0 && ngettext("%{count} unplayed", "%{count} unplayed", virtual),
+      cut > 0 && ngettext("%{count} discarded", "%{count} discarded", cut),
+      excluded > 0 && ngettext("%{count} not counted", "%{count} not counted", excluded)
     ]
     |> Enum.filter(& &1)
     |> Enum.join(", ")
   end
-
-  defp pluralise(1, one, _many), do: one
-  defp pluralise(_n, _one, many), do: many
 
   @doc """
   Every tiebreak's working in full: one row per round, with the opponent it
@@ -974,7 +1031,7 @@ defmodule OpenResultsWeb.TournamentHTML do
 
     ~H"""
     <section :if={@codes != [] and @show.tiebreaks} class="working">
-      <h3>Where the tie-breaks come from</h3>
+      <h3>{gettext("Where the tie-breaks come from")}</h3>
 
       <div :for={code <- @codes} class="working-block">
         <h4>
@@ -986,9 +1043,9 @@ defmodule OpenResultsWeb.TournamentHTML do
           <table class="working-table">
             <thead>
               <tr>
-                <th class="num" scope="col">Rd</th>
-                <th scope="col">From</th>
-                <th class="num" scope="col">Value</th>
+                <th class="num" scope="col">{gettext("Rd")}</th>
+                <th scope="col">{gettext("From")}</th>
+                <th class="num" scope="col">{gettext("Value")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1013,10 +1070,9 @@ defmodule OpenResultsWeb.TournamentHTML do
       </div>
 
       <p class="footnote">
-        These are the arbiter's numbers, published with the results - this page
-        does not calculate them. An unplayed round contributes a notional
-        opponent under FIDE Article 16 rather than a real one, which is why
-        some rows name nobody.
+        {gettext(
+          "These are the arbiter's numbers, published with the results - this page does not calculate them. An unplayed round contributes a notional opponent under FIDE Article 16 rather than a real one, which is why some rows name nobody."
+        )}
       </p>
     </section>
     """
@@ -1041,9 +1097,9 @@ defmodule OpenResultsWeb.TournamentHTML do
     <span :if={is_nil(@part["opponent"])} class="quiet">
       {source_label(@part)}
     </span>
-    <span :if={Tournament.part_kind(@part) == "cut"} class="tag">discarded</span>
+    <span :if={Tournament.part_kind(@part) == "cut"} class="tag">{gettext("discarded")}</span>
     <span :if={Tournament.part_kind(@part) == "excluded" and @part["opponent"]} class="tag">
-      not counted
+      {gettext("not counted")}
     </span>
     """
   end
@@ -1055,8 +1111,8 @@ defmodule OpenResultsWeb.TournamentHTML do
   # this says the rest.
   defp source_label(part) do
     case Tournament.part_kind(part) do
-      "excluded" -> "not counted"
-      _virtual_or_cut -> "unplayed round"
+      "excluded" -> gettext("not counted")
+      _virtual_or_cut -> gettext("unplayed round")
     end
   end
 
@@ -1167,19 +1223,24 @@ defmodule OpenResultsWeb.TournamentHTML do
 
       <figcaption>
         <span class="chart-key chart-key-line"></span>
-        running score
+        {gettext("running score")}
         <span :if={@label}>
-          <span class="chart-key chart-key-bar"></span> what each round gave to {@label}
+          <span class="chart-key chart-key-bar"></span>
+          {gettext("what each round gave to %{tiebreak}", tiebreak: @label)}
         </span>
       </figcaption>
     </figure>
     """
   end
 
-  defp chart_title(nil), do: "The player's running score by round."
+  defp chart_title(nil), do: gettext("The player's running score by round.")
 
-  defp chart_title(label),
-    do: "The player's running score by round, and each round's contribution to #{label}."
+  defp chart_title(label) do
+    gettext(
+      "The player's running score by round, and each round's contribution to %{tiebreak}.",
+      tiebreak: label
+    )
+  end
 
   # A FIXED 640x190 viewBox, with the rounds distributed across it rather
   # than a width that grows per round. The first version sized the box by
@@ -1229,16 +1290,23 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   def result(assigns) do
     {base, note} = Tournament.result_parts(assigns.token)
-    assigns = assigns |> assign(:base, base) |> assign(:note, note)
+    assigns = assigns |> assign(:base, base) |> assign(:note, note_label(note))
 
     ~H"""
     <span class="result">
       <span :if={@base} class="token">{@base}</span>
-      <span :if={is_nil(@base)} class="unreported" title="not yet reported">-</span>
+      <span :if={is_nil(@base)} class="unreported" title={gettext("not yet reported")}>-</span>
       <span :if={@note} class="note">{@note}</span>
     </span>
     """
   end
+
+  # `Tournament.result_parts/1` names the marker; the wording is this
+  # module's, the same division of labour the moduledoc sets out. A marker
+  # from a newer client passes through as it arrived rather than vanishing.
+  defp note_label("forfeit"), do: gettext("forfeit")
+  defp note_label("unrated"), do: gettext("unrated")
+  defp note_label(other), do: other
 
   @doc """
   A number as a scoreboard prints it: `2.5`, `17`, `22.25`.
@@ -1263,11 +1331,11 @@ defmodule OpenResultsWeb.TournamentHTML do
   Unrecognised kinds pass through: the contract lists five, and a sixth from a
   newer client is still something to show.
   """
-  def bye_kind("pairing-allocated"), do: "pairing-allocated bye"
-  def bye_kind("half-point"), do: "half-point bye"
-  def bye_kind("zero-point"), do: "zero-point bye"
-  def bye_kind("full-point"), do: "full-point bye"
-  def bye_kind("absent"), do: "absent"
+  def bye_kind("pairing-allocated"), do: gettext("pairing-allocated bye")
+  def bye_kind("half-point"), do: gettext("half-point bye")
+  def bye_kind("zero-point"), do: gettext("zero-point bye")
+  def bye_kind("full-point"), do: gettext("full-point bye")
+  def bye_kind("absent"), do: gettext("absent")
 
   # Not a bye at all, which is exactly why it has its own word. The arbiter
   # emptied one seat of a board and recorded a result against it anyway - a
@@ -1276,8 +1344,8 @@ defmodule OpenResultsWeb.TournamentHTML do
   # who forfeited appeared here with a full point for the round and a running
   # total that disagreed with the standings on the next page. The arbiter's
   # app now sends what happened; this is where it gets a name.
-  def bye_kind("vacated-seat"), do: "seat vacated"
+  def bye_kind("vacated-seat"), do: gettext("seat vacated")
 
   def bye_kind(kind) when is_binary(kind), do: kind
-  def bye_kind(_absent), do: "bye"
+  def bye_kind(_absent), do: gettext("bye")
 end

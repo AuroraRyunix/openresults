@@ -1,0 +1,72 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+## The entry form's validation messages.
+##
+## These are NOT extracted: they are `:message` options on the changeset in
+## `OpenResults.Registrations.Entry`, which Ecto carries and
+## `OpenResultsWeb.CoreComponents.translate_error/1` looks up here. So they
+## are maintained by hand, and a message reworded over there has to be
+## reworded here too or it falls back to English.
+##
+## The one message deliberately absent is the bye-request subset error: it
+## names the tournament's own round list, so there is a different sentence
+## per tournament and no msgid to key on. It is unreachable from the
+## rendered form, where the boxes only offer rounds that exist.
+msgid ""
+msgstr ""
+
+msgid "is invalid"
+msgstr ""
+
+msgid "a rating is a whole number, digits only"
+msgstr ""
+
+msgid "a FIDE ID is a whole number, digits only"
+msgstr ""
+
+msgid "that is not a list of round numbers"
+msgstr ""
+
+msgid "please give the name you want on the pairing list"
+msgstr ""
+
+msgid "the arbiter needs an address to reach you at"
+msgstr ""
+
+msgid "a name is between 2 and 100 characters"
+msgstr ""
+
+msgid "that is too long to be an email address"
+msgstr ""
+
+msgid "that does not look like an email address - check for a missing @ or a typo"
+msgstr ""
+
+msgid "a birth year is four digits between 1900 and 2030 - leave it empty if you would rather not say"
+msgstr ""
+
+msgid "that is not a FIDE title - leave it empty if you do not have one"
+msgstr ""
+
+msgid "a rating is a whole number between 0 and 3500 - leave it empty if you do not have one"
+msgstr ""
+
+msgid "a federation is a three-letter FIDE code, like BEL or NOR"
+msgstr ""
+
+msgid "a FIDE ID is the number on your FIDE profile - digits only"
+msgstr ""
+
+msgid "a club name is at most 100 characters"
+msgstr ""
+
+msgid "this tournament is not taking bye requests"
+msgstr ""

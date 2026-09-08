@@ -24,13 +24,13 @@
           up the screen in the hall is on this page already. --%>
     <p class="quiet">
       <a href={~p"/t/#{@slug}/round/#{@round["number"]}?display=1"}>
-        Projector view - large boards, cycling automatically
+        {gettext("Projector view - large boards, cycling automatically")}
       </a>
     </p>
   </section>
 
   <section :if={Tournament.show?(@payload, "byes") and Tournament.byes(@round) != []}>
-    <h2>Byes</h2>
+    <h2>{gettext("Byes")}</h2>
 
     <.byes_table slug={@slug} round={@round} players={@players} payload={@payload} />
   </section>

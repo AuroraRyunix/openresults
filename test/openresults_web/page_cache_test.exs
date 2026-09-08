@@ -2,11 +2,12 @@ defmodule OpenResultsWeb.PageCacheTest do
   @moduledoc """
   A publish costs one render and then N sends, rather than N renders.
 
-  Safe only because these pages are byte-identical for every reader: no
-  login, no session, no CSRF token in the layout, no locale on the read
-  path. The tests that matter are the ones proving a stale page can never
-  be served - that is the property CDN caching was rejected to protect, and
-  this must not reintroduce it by the back door.
+  Safe only because these pages are byte-identical for every reader who
+  asks for them the same way: no login, no session, no CSRF token in the
+  layout. The tests that matter are the ones proving a page can never be
+  served to somebody it was not rendered for - a stale one, which is the
+  property CDN caching was rejected to protect, or one in the wrong
+  language, which is what translating the site put at risk.
   """
   use OpenResultsWeb.ConnCase, async: false
 
@@ -67,6 +68,40 @@ defmodule OpenResultsWeb.PageCacheTest do
     assert build_conn() |> get(~p"/t/#{slug}/player/1") |> html_response(200) == player
   end
 
+  test "one reader's language is never served to a reader who asked for another", %{slug: slug} do
+    # The precondition this whole cache rests on used to be "every reader
+    # gets byte-identical HTML". Translating the pages made that false, and
+    # nothing about the store would have noticed: the Dutch body would sit
+    # under a key the French request matched, and the French reader would be
+    # handed Dutch - silently, and only when they happened to be second.
+    dutch =
+      build_conn()
+      |> put_req_header("accept-language", "nl-BE,nl;q=0.9")
+      |> get(~p"/t/#{slug}")
+      |> html_response(200)
+
+    assert dutch =~ "De uitslagen zijn van hen"
+
+    french =
+      build_conn()
+      |> put_req_header("accept-language", "fr-BE,fr;q=0.9")
+      |> get(~p"/t/#{slug}")
+      |> html_response(200)
+
+    assert french =~ "Les résultats sont les siens"
+    refute french =~ "De uitslagen zijn van hen"
+
+    # And the Dutch reader who comes back still gets Dutch rather than the
+    # French page that was stored after theirs.
+    again =
+      build_conn()
+      |> put_req_header("accept-language", "nl-BE,nl;q=0.9")
+      |> get(~p"/t/#{slug}")
+      |> html_response(200)
+
+    assert again == dutch
+  end
+
   test "the projector view and the ordinary round page are stored separately", %{
     conn: conn,
     slug: slug
@@ -120,7 +155,7 @@ defmodule OpenResultsWeb.PageCacheTest do
 
   describe "the store itself" do
     test "answers nil for a version it does not hold" do
-      assert Page.get("nobody", 999, ~s("999-1")) == nil
+      assert Page.get("nobody", 999, "en", ~s("999-1")) == nil
     end
 
     test "a get before the table exists returns nil rather than raising" do
@@ -130,17 +165,17 @@ defmodule OpenResultsWeb.PageCacheTest do
       if :ets.whereis(:openresults_page_cache) != :undefined,
         do: :ets.delete(:openresults_page_cache)
 
-      assert Page.get("nobody", 999, ~s("999-1")) == nil
+      assert Page.get("nobody", 999, "en", ~s("999-1")) == nil
     end
 
     test "a new snapshot for the same tournament drops that tournament's old entries" do
-      Page.put("alpha", 1, ~s("1-a"), "old")
-      assert Page.get("alpha", 1, ~s("1-a")) == "old"
+      Page.put("alpha", 1, "en", ~s("1-a"), "old")
+      assert Page.get("alpha", 1, "en", ~s("1-a")) == "old"
 
-      Page.put("alpha", 2, ~s("2-a"), "new")
+      Page.put("alpha", 2, "en", ~s("2-a"), "new")
 
-      refute Page.get("alpha", 1, ~s("1-a"))
-      assert Page.get("alpha", 2, ~s("2-a")) == "new"
+      refute Page.get("alpha", 1, "en", ~s("1-a"))
+      assert Page.get("alpha", 2, "en", ~s("2-a")) == "new"
     end
 
     test "one tournament's publish does not evict another tournament's pages" do
@@ -150,36 +185,36 @@ defmodule OpenResultsWeb.PageCacheTest do
       # distinct per tournament here on purpose - they come from one shared,
       # globally auto-incrementing table in real use, so this is what two
       # tournaments publishing independently actually looks like.
-      Page.put("alpha", 1, ~s("1-a"), "alpha's page")
-      Page.put("bravo", 2, ~s("2-a"), "bravo's page")
+      Page.put("alpha", 1, "en", ~s("1-a"), "alpha's page")
+      Page.put("bravo", 2, "en", ~s("2-a"), "bravo's page")
 
       # Bravo publishes again - a new snapshot id, but only for bravo.
-      Page.put("bravo", 3, ~s("3-a"), "bravo's new page")
+      Page.put("bravo", 3, "en", ~s("3-a"), "bravo's new page")
 
-      assert Page.get("alpha", 1, ~s("1-a")) == "alpha's page"
-      assert Page.get("bravo", 3, ~s("3-a")) == "bravo's new page"
-      refute Page.get("bravo", 2, ~s("2-a"))
+      assert Page.get("alpha", 1, "en", ~s("1-a")) == "alpha's page"
+      assert Page.get("bravo", 3, "en", ~s("3-a")) == "bravo's new page"
+      refute Page.get("bravo", 2, "en", ~s("2-a"))
     end
 
     test "the per-tournament cap drops only that tournament's entries" do
       # Bravo's one page sits untouched on either side of alpha walking
       # itself past its own cap (512) - the flood is alpha's problem alone.
-      Page.put("bravo", 1, ~s("1-a"), "bravo's page")
-      for n <- 1..514, do: Page.put("alpha", 1, ~s("1-#{n}"), "alpha page #{n}")
+      Page.put("bravo", 1, "en", ~s("1-a"), "bravo's page")
+      for n <- 1..514, do: Page.put("alpha", 1, "en", ~s("1-#{n}"), "alpha page #{n}")
 
-      refute Page.get("alpha", 1, ~s("1-1"))
-      assert Page.get("alpha", 1, ~s("1-514")) == "alpha page 514"
-      assert Page.get("bravo", 1, ~s("1-a")) == "bravo's page"
+      refute Page.get("alpha", 1, "en", ~s("1-1"))
+      assert Page.get("alpha", 1, "en", ~s("1-514")) == "alpha page 514"
+      assert Page.get("bravo", 1, "en", ~s("1-a")) == "bravo's page"
     end
 
     test "clear/0 empties everything, every tournament included" do
-      Page.put("alpha", 1, ~s("1-a"), "alpha's page")
-      Page.put("bravo", 1, ~s("1-a"), "bravo's page")
+      Page.put("alpha", 1, "en", ~s("1-a"), "alpha's page")
+      Page.put("bravo", 1, "en", ~s("1-a"), "bravo's page")
 
       Page.clear()
 
-      refute Page.get("alpha", 1, ~s("1-a"))
-      refute Page.get("bravo", 1, ~s("1-a"))
+      refute Page.get("alpha", 1, "en", ~s("1-a"))
+      refute Page.get("bravo", 1, "en", ~s("1-a"))
     end
   end
 end
