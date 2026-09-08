@@ -1,0 +1,29 @@
+version: 2
+
+# The workflow pins every third-party action to a commit SHA, with the
+# version tag as a trailing comment. That is the safe way to use somebody
+# else's action - a tag can be moved, a commit cannot - but a pin nobody
+# updates is a pin that rots, and the trailing comment is the only thing
+# telling a reader which version they are on.
+#
+# Dependabot understands exactly this convention: it opens a pull request
+# that moves the SHA and rewrites the comment together, so the pair stays
+# honest without anyone looking a SHA up by hand.
+#
+# Weekly, and github-actions only. Hex dependencies are deliberately not
+# managed here: this site renders published results and a dependency bump
+# is a decision about what it serves, taken against its own suite, not
+# hygiene to be applied on a schedule.
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # Majors are a decision, not hygiene: a major version can change how an
+    # action behaves in ways a green check will not catch. Patch and minor
+    # bumps keep the pins honest without anyone reading release notes; a
+    # major gets raised by hand, when somebody has read them.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
