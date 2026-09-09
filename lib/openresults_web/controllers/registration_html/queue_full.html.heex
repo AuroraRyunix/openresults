@@ -1,0 +1,19 @@
+<header class="masthead">
+  <h1>{gettext("Too many entries are waiting")}</h1>
+</header>
+
+<section>
+  <p class="empty">
+    {gettext(
+      "More entries are already waiting for the organisers of this tournament than this form can hold, so this one was not sent and nothing has been stored."
+    )}
+  </p>
+
+  <p class="footnote">
+    {gettext(
+      "This is about the form, not about the tournament: nobody here has decided the field is full. Contact the organisers directly - they can still add you by hand, and they are the only ones who can."
+    )}
+  </p>
+
+  <p><a href={@back}>{gettext("Back to the tournament")}</a></p>
+</section>

@@ -3,6 +3,8 @@ defmodule OpenResultsWeb.RegistrationControllerTest do
 
   alias OpenResults.RateLimit
   alias OpenResults.Registrations
+  alias OpenResults.Registrations.Registration
+  alias OpenResults.Repo
   alias OpenResults.SnapshotPayloads
   alias OpenResults.Snapshots
 
@@ -48,6 +50,36 @@ defmodule OpenResultsWeb.RegistrationControllerTest do
 
   defp submit(conn, slug, attrs \\ nil) do
     post(conn, ~p"/t/#{slug}/register", registration: attrs || entry())
+  end
+
+  # One person, arriving the way everybody arrives: through the tunnel, which
+  # reaches this app over loopback and names them in the header. A fresh conn
+  # per request because recycling a dispatched one carries only `accept`,
+  # `accept-language` and `authorization` over, and this would quietly become
+  # a test of the loopback fallback instead.
+  defp visitor(address), do: build_conn() |> put_req_header("cf-connecting-ip", address)
+
+  # A tournament's queue at its cap, without the thousand posts that would
+  # take - and which the rate limit would stop at five anyway. Nothing reads
+  # these rows; they only have to exist and belong to this tournament.
+  defp fill_queue(slug, rows) do
+    received_at = DateTime.utc_now()
+
+    for n <- 1..rows do
+      %{
+        tournament_slug: slug,
+        version: 1,
+        received_at: received_at,
+        payload: %{
+          "schema" => Registrations.schema_id(),
+          "version" => 1,
+          "tournament_slug" => slug,
+          "player" => %{"name" => "Filler, Number #{n}"}
+        }
+      }
+    end
+    |> Enum.chunk_every(100)
+    |> Enum.each(&Repo.insert_all(Registration, &1))
   end
 
   describe "GET /t/:slug/register" do
@@ -353,6 +385,88 @@ defmodule OpenResultsWeb.RegistrationControllerTest do
 
       assert html =~ "Try again in about"
       assert html =~ "A shared connection counts as one"
+    end
+
+    test "counts visitors behind the tunnel one by one, not all as one", %{slug: slug} do
+      # The bug this replaces: the tunnel dials this app over loopback, so
+      # every request in the world arrived as 127.0.0.1 and the limit was a
+      # single bucket for the whole internet. One person could spend it, and
+      # the sixth entry of the day - from anybody, anywhere - was refused.
+      for n <- 1..5 do
+        assert visitor("203.0.113.7")
+               |> submit(slug, entry(%{"name" => "Flood, Number #{n}"}))
+               |> response(200)
+      end
+
+      assert visitor("203.0.113.7") |> submit(slug) |> html_response(429)
+
+      assert visitor("198.51.100.2")
+             |> submit(slug, entry(%{"name" => "Elsewhere, Entirely"}))
+             |> response(200)
+    end
+
+    test "does not let a caller that bypassed the tunnel pick its own bucket", %{slug: slug} do
+      # A header is only worth reading when the request came through the
+      # thing that sets it. From any other peer it is a stranger's sentence,
+      # and believing it would hand a flooder an unlimited supply of buckets.
+      direct = fn claimed ->
+        %{build_conn() | remote_ip: {203, 0, 113, 9}}
+        |> put_req_header("cf-connecting-ip", claimed)
+      end
+
+      for n <- 1..5 do
+        assert direct.("198.51.100.#{n}")
+               |> submit(slug, entry(%{"name" => "Spoof, Number #{n}"}))
+               |> response(200)
+      end
+
+      assert direct.("198.51.100.6") |> submit(slug) |> html_response(429)
+    end
+  end
+
+  describe "POST /t/:slug/register - a tournament whose queue is full" do
+    test "refuses cleanly, and stores nothing on the way", %{conn: conn, slug: slug} do
+      fill_queue(slug, 1000)
+
+      document = conn |> submit(slug) |> doc(503)
+
+      assert texts(document, "h1") == ["Too many entries are waiting"]
+      assert Registrations.list_for_tournament(slug) |> length() == 1000
+    end
+
+    test "and tells a player what to do about it without blaming them", %{
+      conn: conn,
+      slug: slug
+    } do
+      fill_queue(slug, 1000)
+
+      html = conn |> submit(slug) |> html_response(503)
+
+      assert html =~ "nothing has been stored"
+      assert html =~ "nobody here has decided the field is full"
+      assert html =~ "Contact the organisers directly"
+    end
+
+    test "is one tournament's problem and not the next tournament's", %{
+      conn: conn,
+      slug: slug,
+      swiss: swiss
+    } do
+      # The bound has to be per tournament for the reason the page cache's
+      # did: several events run at once, and one of them being flooded must
+      # not shut the others' entries off.
+      next_door = put_in(swiss, ["tournament", "slug"], "leuven-autumn-open-2026")
+      {:ok, _snapshot} = Snapshots.ingest(next_door)
+
+      fill_queue(slug, 1000)
+
+      assert conn |> submit(slug) |> html_response(503)
+
+      assert conn
+             |> submit("leuven-autumn-open-2026", entry(%{"name" => "Elsewhere, Entirely"}))
+             |> response(200)
+
+      assert Registrations.list_for_tournament("leuven-autumn-open-2026") |> length() == 1
     end
   end
 

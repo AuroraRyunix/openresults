@@ -11,6 +11,7 @@ defmodule OpenResultsWeb.RevalidateTest do
   use OpenResultsWeb.ConnCase, async: false
 
   alias OpenResults.{SnapshotPayloads, Snapshots}
+  alias OpenResultsWeb.Plugs.Revalidate
 
   setup do
     swiss = SnapshotPayloads.swiss()
@@ -123,6 +124,37 @@ defmodule OpenResultsWeb.RevalidateTest do
 
       assert projector.status == 200
       assert etag(projector) != round
+    end
+  end
+
+  describe "the tag cannot be worked out from the URL" do
+    test "is not the unkeyed hash of the address it names", %{conn: conn, slug: slug} do
+      # What it used to be: `phash2({request_path, query_string})` - public,
+      # deterministic, unkeyed and 27 bits wide, so a query string colliding
+      # with a target page's tag could be computed offline in seconds, and
+      # the collision then served one page's body under the URL a legitimate
+      # reader asks for.
+      tag = conn |> get(~p"/t/#{slug}") |> etag()
+
+      assert [_id, _locale, digest] = tag |> String.trim(~s(")) |> String.split("-", parts: 3)
+
+      refute digest == Integer.to_string(:erlang.phash2({"/t/#{slug}", ""}))
+    end
+
+    test "moves with the node's secret, and only with it", %{conn: conn, slug: slug} do
+      first = conn |> get(~p"/t/#{slug}") |> etag()
+
+      # Stable across requests, or the 304 further up this file could not
+      # happen: this string is an HTTP validator before it is anything else,
+      # and one that moved per request would switch revalidation off.
+      assert build_conn() |> get(~p"/t/#{slug}") |> etag() == first
+
+      # And derived from something a stranger does not hold. Same path, same
+      # query string, same snapshot, same language - a different tag, which
+      # is only possible because the input is not all public.
+      Revalidate.new_secret()
+
+      assert build_conn() |> get(~p"/t/#{slug}") |> etag() != first
     end
   end
 

@@ -284,6 +284,17 @@ the app trusts the forwarded-proto header the tunnel sets rather than
 terminating TLS itself. `localhost` and `127.0.0.1` are excluded from it,
 which is what lets the deploy's health check speak plain HTTP over loopback.
 
+**The entry form's rate limit depends on this topology.** Every visitor
+reaches the app as 127.0.0.1, so `OpenResultsWeb.ClientAddress` reads
+`cf-connecting-ip` to tell one visitor from another - and it believes that
+header only when the request arrived from a loopback address, because on this
+host nothing but the tunnel can. Two changes would break that reasoning and
+both need a visit to that module first: exposing 4004 to anything but the
+tunnel, which would let a caller name its own address and hand a flooder an
+unlimited supply of rate-limit buckets, and moving the proxy to another host,
+where its requests would no longer arrive from loopback and every visitor
+would collapse back into one bucket.
+
 ## Manual steps a script cannot do
 
 Two, both one-time.

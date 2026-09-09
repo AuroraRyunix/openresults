@@ -7,6 +7,13 @@ defmodule OpenResults.Application do
 
   @impl true
   def start(_type, _args) do
+    # The value every page's ETag is keyed with. Drawn here rather than
+    # lazily, so it is one value for the whole node from before the first
+    # request instead of whichever of two racing requests got there first -
+    # and a tag that changed under a reader would answer 200 to every
+    # revalidation. See `OpenResultsWeb.Plugs.Revalidate`.
+    OpenResultsWeb.Plugs.Revalidate.new_secret()
+
     children = [
       OpenResultsWeb.Telemetry,
       OpenResults.Repo,

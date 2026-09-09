@@ -21,13 +21,17 @@ defmodule OpenResults.RateLimit do
 
   ## What "one client" means
 
-  The caller chooses the key. The controller keys on `conn.remote_ip`, which
-  is the honest answer only when this server is the thing the browser talks
-  to. Behind a CDN or a reverse proxy every visitor arrives as the proxy's
-  address and shares one bucket, so a deployment that puts something in front
-  of this app must terminate `x-forwarded-for` into `remote_ip` (`RemoteIp`,
-  or the proxy's own header handling) or the limit becomes a global one.
-  Nothing here can detect that, which is why it is written down.
+  The caller chooses the key, and choosing it badly is how a limit becomes a
+  denial of service rather than a defence against one. The entry form keys on
+  `OpenResultsWeb.ClientAddress.of/1`, not on `conn.remote_ip`: something on
+  this box dials the app over loopback, so the peer address is 127.0.0.1 for
+  every visitor on earth, and a limit keyed on it would be a single bucket
+  that one person could spend for everybody. That module decides which
+  forwarded header may be believed and when.
+
+  Whatever a caller keys on must be a stable term, and the same shape every
+  time. Two paths through one caller keying on a string and a tuple for the
+  same client is two buckets where there should be one.
   """
 
   use GenServer

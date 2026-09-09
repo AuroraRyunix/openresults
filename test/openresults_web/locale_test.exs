@@ -207,6 +207,35 @@ defmodule OpenResultsWeb.LocaleTest do
     end
   end
 
+  describe "the catalogues" do
+    test "every message the site ships is translated, not merely marked for translation" do
+      # `mix gettext.extract --merge` leaves a new message with an empty
+      # msgstr, and an empty msgstr is not a missing feature: it is an
+      # English sentence in the middle of a Dutch page, shipped, with nothing
+      # to announce it but a reader noticing. English is exempt because there
+      # the msgid IS the translation.
+      for locale <- ~w(nl fr), domain <- ~w(default errors) do
+        path = "priv/gettext/#{locale}/LC_MESSAGES/#{domain}.po"
+
+        untranslated =
+          path
+          |> Expo.PO.parse_file!()
+          |> Map.fetch!(:messages)
+          |> Enum.filter(&untranslated?/1)
+          |> Enum.map(&IO.iodata_to_binary(&1.msgid))
+
+        assert untranslated == [], "#{path} still says these in English: #{inspect(untranslated)}"
+      end
+    end
+  end
+
+  defp untranslated?(%Expo.Message.Singular{msgstr: msgstr}), do: blank?(msgstr)
+
+  defp untranslated?(%Expo.Message.Plural{msgstr: forms}),
+    do: forms |> Map.values() |> Enum.any?(&blank?/1)
+
+  defp blank?(strings), do: strings |> IO.iodata_to_binary() |> String.trim() == ""
+
   describe "resolving, on its own" do
     test "the parameter wins, then the cookie, then the header" do
       assert Locale.resolve("fr", "nl", "en") == "fr"

@@ -88,8 +88,8 @@
 
 | ID | Severity | Category | Title | Location | Status |
 | :--- | :---: | :---: | :--- | :--- | :---: |
-| **OR-SEC-01** | **High** | Rate Limiting / DoS | Registration rate limit collapses into global limit behind Cloudflare | `registration_controller.ex:68` | Action Required |
-| **OR-SEC-02** | **Medium** | Resource Exhaustion | Unbounded player registration queue depth | `registrations.ex` | Recommended Fix |
+| **OR-SEC-01** | **High** | Rate Limiting / DoS | Registration rate limit collapses into global limit behind Cloudflare | `registration_controller.ex:68` | **FIXED 2026-09-09** |
+| **OR-SEC-02** | **Medium** | Resource Exhaustion | Unbounded player registration queue depth | `registrations.ex` | **FIXED 2026-09-09** |
 | **OR-SEC-03** | **Low** | Configuration | Explicit body length limit on snapshot JSON payloads | `endpoint.ex` | Recommended Fix |
 | **OR-SEC-04** | **Low** | Cache Coherence | Edge CDN cache invalidation on tournament takedown | `takedown.ex` | Informational |
 

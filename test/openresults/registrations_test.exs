@@ -54,6 +54,45 @@ defmodule OpenResults.RegistrationsTest do
     end
   end
 
+  describe "the queue's bound" do
+    test "refuses once a tournament holds as many entries as it may" do
+      # Unbounded until this existed: entries could be piled into one
+      # tournament's queue until the list the arbiter pulls was too long to
+      # open, with the entries of the people who wanted to play in there
+      # somewhere.
+      base = SnapshotPayloads.registration()
+
+      assert {:ok, _} = Registrations.ingest(base, max_queue: 2)
+      assert {:ok, _} = Registrations.ingest(base, max_queue: 2)
+      assert {:error, :queue_full} = Registrations.ingest(base, max_queue: 2)
+
+      assert Registrations.list_for_tournament(base["tournament_slug"]) |> length() == 2
+    end
+
+    test "counts one tournament's queue and not the table" do
+      # The bound is per tournament for the reason
+      # `OpenResultsWeb.Plugs.Revalidate.Page`'s is: several events run at
+      # once, and one of them being flooded must not shut the others out.
+      base = SnapshotPayloads.registration()
+      next_door = Map.put(base, "tournament_slug", "leuven-autumn-open-2026")
+
+      for _ <- 1..2, do: {:ok, _} = Registrations.ingest(base, max_queue: 2)
+      assert {:error, :queue_full} = Registrations.ingest(base, max_queue: 2)
+
+      assert {:ok, _} = Registrations.ingest(next_door, max_queue: 2)
+      assert Registrations.list_for_tournament("leuven-autumn-open-2026") |> length() == 1
+    end
+
+    test "refuses before it writes, so a full queue costs an insert nothing" do
+      base = SnapshotPayloads.registration()
+
+      {:ok, _} = Registrations.ingest(base, max_queue: 1)
+
+      assert {:error, :queue_full} = Registrations.ingest(base, max_queue: 1)
+      assert Registrations.list_for_tournament(base["tournament_slug"]) |> length() == 1
+    end
+  end
+
   describe "list_for_tournament/1" do
     test "returns entries oldest first, because entry order decides a capped field" do
       base = SnapshotPayloads.registration()

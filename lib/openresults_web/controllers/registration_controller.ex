@@ -27,6 +27,7 @@ defmodule OpenResultsWeb.RegistrationController do
   alias OpenResults.Registrations.Entry
   alias OpenResults.Snapshots
   alias OpenResults.TournamentKeys
+  alias OpenResultsWeb.ClientAddress
   alias OpenResultsWeb.Meta
   alias OpenResultsWeb.Tournament
 
@@ -66,7 +67,11 @@ defmodule OpenResultsWeb.RegistrationController do
   def create(conn, %{"slug" => slug} = params) do
     # Before the database is touched, so a flood costs a lookup in ETS rather
     # than a query per request.
-    case RateLimit.take({:registration, conn.remote_ip},
+    #
+    # `ClientAddress` rather than `conn.remote_ip`: the tunnel dials this app
+    # over loopback, so the peer address is 127.0.0.1 for every visitor on
+    # earth and keying on it made this one bucket for the whole internet.
+    case RateLimit.take({:registration, ClientAddress.of(conn)},
            limit: @rate_limit,
            window_ms: @rate_window_ms
          ) do
@@ -122,6 +127,9 @@ defmodule OpenResultsWeb.RegistrationController do
                 # still a rendered page.
                 name: entry.name
               )
+
+            {:error, :queue_full} ->
+              queue_full(conn, slug)
 
             {:error, _unstorable} ->
               # Unreachable in practice - the payload was built from the
@@ -205,6 +213,25 @@ defmodule OpenResultsWeb.RegistrationController do
     |> render(:closed,
       page_title: gettext("Entries are closed"),
       page_description: Meta.entries_closed(),
+      back: ~p"/t/#{slug}"
+    )
+  end
+
+  # The tournament's queue is full - see `OpenResults.Registrations` for what
+  # it is bounded at and why per tournament. Nothing to do with this person:
+  # it is the first thing the page says, because a refusal that reads like an
+  # accusation sends somebody looking for a mistake they did not make.
+  #
+  # `503` rather than `403`: the door is shut by pressure rather than by the
+  # arbiter, and it opens again. No `retry-after` goes with it, unlike the
+  # rate limit's - that one knows when its window ends, and this one would be
+  # guessing at when an arbiter will next clear a queue.
+  defp queue_full(conn, slug) do
+    conn
+    |> put_status(:service_unavailable)
+    |> render(:queue_full,
+      page_title: gettext("Too many entries are waiting"),
+      page_description: Meta.queue_full(),
       back: ~p"/t/#{slug}"
     )
   end

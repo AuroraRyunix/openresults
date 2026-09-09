@@ -30,6 +30,22 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   instant it exists, while an unchanged one costs a primary-key lookup
   instead of half a megabyte of JSON.
 
+  ## Why the tag is keyed
+
+  The ETag is also the page cache's key, so two URLs that produce the same
+  tag are one page as far as this site is concerned. It used to be a bare
+  `phash2` of the path and query string - public, deterministic, unkeyed and
+  27 bits wide - which meant a query string colliding with a target page's
+  tag could be worked out offline in seconds, and the collision would then
+  serve one page's body under the URL a legitimate reader asks for.
+
+  It is now an HMAC under a value drawn once per boot, so there is nothing
+  to compute against: the input nobody outside this node holds is the secret.
+  Bounded even when it did collide - the tournament, the snapshot id and the
+  locale are separate parts of the cache key, so a collision could never
+  cross tournaments, outlive a publish or surface a 404 or a withheld page.
+  Defacement inside one tournament, not disclosure.
+
   ## What is not covered
 
   Only the read routes for a published tournament. The entry form is a form,
@@ -42,7 +58,23 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   alias OpenResults.Snapshots
   alias OpenResultsWeb.Plugs.Revalidate.Page
 
+  @secret {__MODULE__, :etag_secret}
+
   def init(opts), do: opts
+
+  @doc """
+  Draws this node's ETag secret. Called once, at boot, by
+  `OpenResults.Application`.
+
+  Once per boot and not once per request, because the tag is an HTTP
+  validator as well as a cache key: a value that moved under a reader would
+  answer 200 to every revalidation and switch this plug off. Stable for the
+  life of a snapshot is the property that matters, and a restart changing it
+  costs one fetch per reader - the page cache does not survive a restart
+  either.
+  """
+  @spec new_secret() :: :ok
+  def new_secret, do: :persistent_term.put(@secret, :crypto.strong_rand_bytes(32))
 
   def call(conn, _opts) do
     case conn.params["slug"] do
@@ -118,8 +150,42 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   # the same document. That matters here beyond the page cache - this string
   # goes to the browser as an HTTP validator, and a browser holding the Dutch
   # page must get a 200 rather than a 304 when it next asks in French.
-  defp etag_for(conn, id, locale),
-    do: ~s("#{id}-#{locale}-#{:erlang.phash2({conn.request_path, conn.query_string})}")
+  #
+  # The path and the query string are the two an outsider chooses, so they go
+  # through the MAC rather than a plain hash - see "Why the tag is keyed". The
+  # id and the locale stay readable in front of it: they are already separate
+  # parts of the cache key, and a tag one can read at a glance is worth
+  # keeping for the afternoon somebody is reading a header dump.
+  defp etag_for(conn, id, locale), do: ~s("#{id}-#{locale}-#{digest(conn)}")
+
+  # `term_to_binary` rather than joining with a separator, because a separator
+  # has to be a character that can appear in neither half, and this settles
+  # that by construction. 16 bytes of a SHA-256 MAC: 128 bits is beyond any
+  # collision search, and the rest would only make a header longer.
+  defp digest(conn) do
+    :hmac
+    |> :crypto.mac(
+      :sha256,
+      secret(),
+      :erlang.term_to_binary({conn.request_path, conn.query_string})
+    )
+    |> binary_part(0, 16)
+    |> Base.url_encode64(padding: false)
+  end
+
+  defp secret do
+    case :persistent_term.get(@secret, nil) do
+      nil ->
+        # Only reachable if this plug runs without the application having
+        # started - a unit test, in practice. Drawing one here keeps that
+        # case working; the boot path is what makes it one value per node.
+        new_secret()
+        :persistent_term.get(@secret)
+
+      secret ->
+        secret
+    end
+  end
 
   # `If-None-Match` may carry several, comma separated, and a cache is
   # allowed to return a weak validator (`W/"..."`) for one we sent strong.

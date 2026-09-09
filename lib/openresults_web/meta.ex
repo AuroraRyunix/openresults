@@ -123,6 +123,10 @@ defmodule OpenResultsWeb.Meta do
   @doc "The rate limiter's page."
   def too_many, do: gettext("Too many entries have arrived from this connection.")
 
+  @doc "The page for a tournament whose queue is full."
+  def queue_full,
+    do: gettext("This form is holding as many entries as it can and is not taking more just now.")
+
   @doc "Anything that is not here."
   def not_found, do: gettext("This page is not published here.")
 
