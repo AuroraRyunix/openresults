@@ -1,6 +1,9 @@
 {
   "players": [
     {
+      "categories": [
+        "A"
+      ],
       "category": "A",
       "club": "SF Berlin",
       "federation": "GER",
@@ -11,6 +14,9 @@
       "title": "GM"
     },
     {
+      "categories": [
+        "A"
+      ],
       "category": "A",
       "club": "ŠK Beograd",
       "federation": "SRB",
@@ -21,6 +27,9 @@
       "title": "IM"
     },
     {
+      "categories": [
+        "A"
+      ],
       "category": "A",
       "club": "Gonzaga CC",
       "federation": "IRL",
@@ -31,6 +40,9 @@
       "title": "FM"
     },
     {
+      "categories": [
+        "A"
+      ],
       "category": "A",
       "club": "KSz Polonia",
       "federation": "POL",
@@ -41,6 +53,9 @@
       "title": null
     },
     {
+      "categories": [
+        "A"
+      ],
       "category": "A",
       "club": "KGSRL",
       "federation": "BEL",
@@ -51,6 +66,9 @@
       "title": "WFM"
     },
     {
+      "categories": [
+        "B"
+      ],
       "category": "B",
       "club": "CS Universitatea",
       "federation": "ROU",
@@ -61,6 +79,9 @@
       "title": "WIM"
     },
     {
+      "categories": [
+        "B"
+      ],
       "category": "B",
       "club": "Wasa SK",
       "federation": "SWE",
@@ -71,6 +92,9 @@
       "title": null
     },
     {
+      "categories": [
+        "B"
+      ],
       "category": "B",
       "club": "TR Reykjavík",
       "federation": "ISL",
@@ -81,6 +105,9 @@
       "title": null
     },
     {
+      "categories": [
+        "B"
+      ],
       "category": "B",
       "club": "Cercle d'Échecs",
       "federation": "BEL",
@@ -91,6 +118,9 @@
       "title": null
     },
     {
+      "categories": [
+        "B"
+      ],
       "category": "B",
       "club": null,
       "federation": "VIE",
@@ -276,7 +306,7 @@
   "schema": "openresults/snapshot",
   "source": {
     "app": "openpairings",
-    "version": "0.51.0-dev"
+    "version": "0.53.1-dev"
   },
   "standings": {
     "after_round": 3,

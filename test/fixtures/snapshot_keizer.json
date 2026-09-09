@@ -1,6 +1,7 @@
 {
   "players": [
     {
+      "categories": [],
       "category": null,
       "club": "Cercle d'Échecs Gent",
       "federation": "BEL",
@@ -11,6 +12,7 @@
       "title": null
     },
     {
+      "categories": [],
       "category": null,
       "club": "Cercle d'Échecs Gent",
       "federation": "SRB",
@@ -21,6 +23,7 @@
       "title": null
     },
     {
+      "categories": [],
       "category": null,
       "club": "Cercle d'Échecs Gent",
       "federation": "ESP",
@@ -31,6 +34,7 @@
       "title": null
     },
     {
+      "categories": [],
       "category": null,
       "club": "Cercle d'Échecs Gent",
       "federation": "NED",
@@ -41,6 +45,7 @@
       "title": null
     },
     {
+      "categories": [],
       "category": null,
       "club": "Cercle d'Échecs Gent",
       "federation": "POL",
@@ -51,6 +56,7 @@
       "title": null
     },
     {
+      "categories": [],
       "category": null,
       "club": "Cercle d'Échecs Gent",
       "federation": "IRL",
@@ -123,7 +129,7 @@
   "schema": "openresults/snapshot",
   "source": {
     "app": "openpairings",
-    "version": "0.51.0-dev"
+    "version": "0.53.1-dev"
   },
   "standings": {
     "after_round": 2,
