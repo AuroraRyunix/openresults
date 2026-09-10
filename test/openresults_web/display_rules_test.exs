@@ -29,6 +29,50 @@ defmodule OpenResultsWeb.DisplayRulesTest do
     put_in(SnapshotPayloads.swiss(), ["tournament", "display"], display)
   end
 
+  describe "withholding the standings" do
+    # The tick's own hint in OpenPairings says what it is for: "some arbiters
+    # withhold standings until the last round is in". That is a decision about
+    # who may know the placings yet, not about which pages exist - so a
+    # surface that leaks the placings back defeats it whether or not the
+    # standings PAGE is gone.
+    #
+    # The player card carried each opponent's running total, straight out of
+    # `standings.rows`. Twelve cards is twelve rows of the table the arbiter
+    # is withholding, assembled by anybody willing to click twelve times.
+    test "takes the opponents' totals off the player cards too" do
+      slug = publish(hiding(["standings"]))
+
+      html = build_conn() |> get(~p"/t/#{slug}/player/1") |> html_response(200)
+
+      # The column's title attribute, not its label: the label sits on its
+      # own line in the template, so whitespace makes ">Pts<" a brittle way
+      # to ask the question.
+      refute html =~ "Opponent&#39;s total"
+    end
+
+    test "and the cards still work - this hides a column, not the page" do
+      # The other half of the rule this file exists for. Hiding the totals
+      # must not take the card, the opponents or the results with it.
+      slug = publish(hiding(["standings"]))
+
+      html = build_conn() |> get(~p"/t/#{slug}/player/1") |> html_response(200)
+
+      assert html =~ "Opponent"
+      assert html =~ "Result"
+      assert html =~ "Rd"
+    end
+
+    test "showing the standings shows the totals, as it always did" do
+      # The control. A gate that hid the column unconditionally would pass
+      # both tests above.
+      slug = publish(SnapshotPayloads.swiss())
+
+      html = build_conn() |> get(~p"/t/#{slug}/player/1") |> html_response(200)
+
+      assert html =~ "Opponent&#39;s total"
+    end
+  end
+
   describe "absent means shown" do
     test "a payload with no display map shows everything" do
       payload = update_in(SnapshotPayloads.swiss(), ["tournament"], &Map.delete(&1, "display"))

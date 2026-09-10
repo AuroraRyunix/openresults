@@ -1009,7 +1009,10 @@ defmodule OpenResultsWeb.TournamentHTML do
       # `:game` rows span the same columns as the placeholders below them, so
       # the two have to agree. Counted rather than written out, because they
       # move with the arbiter's ticks.
-      |> assign(:game_span, 3 + count_if([show.federation, show.title, show.rating]))
+      |> assign(
+        :game_span,
+        3 + count_if([show.federation, show.title, show.rating, show.standings])
+      )
 
     ~H"""
     <div class="scroller">
@@ -1025,7 +1028,17 @@ defmodule OpenResultsWeb.TournamentHTML do
             <th :if={@show.title} scope="col">{gettext("Tit")}</th>
             <th scope="col">{gettext("Opponent")}</th>
             <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
-            <th class="num" scope="col" title={gettext("Opponent's total")}>{gettext("Pts")}</th>
+            <%!-- Gated on the STANDINGS tick, which the rest of this table is
+                  not. The tick's own hint says why: "some arbiters withhold
+                  standings until the last round is in". These are each
+                  opponent's running total, read out of `standings.rows` - so
+                  a reader who walks the cards reconstructs exactly the league
+                  table the arbiter is withholding, one player at a time.
+                  The cross-table hides its rank and points columns on the
+                  same tick, and the two have to agree. --%>
+            <th :if={@show.standings} class="num" scope="col" title={gettext("Opponent's total")}>
+              {gettext("Pts")}
+            </th>
             <th class="num" scope="col">{gettext("Result")}</th>
             <th class="num" scope="col">{gettext("Score")}</th>
           </tr>
@@ -1051,7 +1064,9 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <td :if={@show.rating} class="num">
                   {dash(entry.opponent && entry.opponent["rating"])}
                 </td>
-                <td class="num"><.score points={@totals[entry.opponent_no]} /></td>
+                <td :if={@show.standings} class="num">
+                  <.score points={@totals[entry.opponent_no]} />
+                </td>
                 <td class="num"><.result token={entry.result} /></td>
               <% :bye -> %>
                 <%!-- The bye's label sits where the opponent's NAME sits, under
@@ -1064,7 +1079,12 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <td></td>
                 <td :if={@show.federation}></td>
                 <td :if={@show.title}></td>
-                <td colspan={2 + count_if([@show.rating])} class="quiet">{bye_kind(entry.bye)}</td>
+                <td
+                  colspan={1 + count_if([@show.rating, @show.standings])}
+                  class="quiet"
+                >
+                  {bye_kind(entry.bye)}
+                </td>
                 <td class="num">{number(entry.points)}</td>
               <% :unpublished -> %>
                 <td colspan={@game_span + 2} class="quiet">{gettext("not published")}</td>

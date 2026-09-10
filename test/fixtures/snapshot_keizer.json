@@ -129,7 +129,7 @@
   "schema": "openresults/snapshot",
   "source": {
     "app": "openpairings",
-    "version": "0.53.1-dev"
+    "version": "0.54.0-dev"
   },
   "standings": {
     "after_round": 2,
