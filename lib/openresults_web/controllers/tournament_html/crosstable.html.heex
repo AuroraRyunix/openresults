@@ -1,0 +1,11 @@
+<.masthead payload={@payload} slug={@slug} current={@current} />
+
+<section>
+  <%!-- No "after round N" beside this heading, unlike the standings. The
+        published rounds can have gaps, so the highest one does not describe
+        the grid, and `standings.after_round` describes the placings rather
+        than the results. The round headings say which rounds are here. --%>
+  <h2>{gettext("Cross-table")}</h2>
+
+  <.crosstable_table payload={@payload} slug={@slug} />
+</section>

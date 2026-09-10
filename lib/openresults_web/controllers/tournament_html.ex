@@ -29,7 +29,7 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   attr :current, :any,
     required: true,
-    doc: ":standings, :register, {:round, n} or {:player, no}"
+    doc: ":standings, :crosstable, :register, {:round, n} or {:player, no}"
 
   def masthead(assigns) do
     payload = assigns.payload
@@ -79,6 +79,16 @@ defmodule OpenResultsWeb.TournamentHTML do
           class={["chip", @current == :standings && "current"]}
         >
           {gettext("Standings")}
+        </a>
+        <%!-- The grid, beside the pages it is made of. Behind the pairings
+              tick as well as its own, because it IS the pairings - see
+              `Tournament.crosstable?/1`. --%>
+        <a
+          :if={@show.pairings and @show.crosstable}
+          href={~p"/t/#{@slug}/crosstable"}
+          class={["chip", @current == :crosstable && "current"]}
+        >
+          {gettext("Cross-table")}
         </a>
         <%= for {n, published?} <- @slots, @show.pairings do %>
           <a
@@ -272,6 +282,225 @@ defmodule OpenResultsWeb.TournamentHTML do
     </div>
     """
   end
+
+  @doc """
+  The cross-table: a row per player, a column per published round.
+
+  What every other results site has and this one did not. It answers the
+  question the standings and the round pages between them make a reader
+  assemble by hand - who did this player actually play, and what happened -
+  and it is the first thing an arbiter looks for.
+
+  ## The columns
+
+  Only PUBLISHED rounds, so an arbiter who has posted 1, 2, 3 and 5 gets four
+  columns and no gap where 4 would be. That is the opposite of the round
+  strip in the masthead, which shows the gap on purpose: a strip is a list of
+  what exists, and this is a table of results, where an empty column would
+  read as a round nobody turned up to.
+
+  Each heading links to that round's own page, which is where the boards,
+  the ratings and the scores going in are.
+
+  ## The two columns that stay put
+
+  The pairing number and the name are pinned to the left edge while the
+  rounds scroll under them. A 450-player, eleven-round grid is wider than
+  any screen, and a reader who has scrolled to round 9 without them is
+  looking at a wall of numbers belonging to nobody. Everything else about
+  the width is `.scroller`'s job - the table scrolls inside its own box and
+  the page body never moves sideways.
+
+  ## What a cell is not
+
+  Not the board's result token. `1-0` is a win for one seat and a loss for
+  the other, so each cell carries the score of the player whose ROW it is -
+  see `OpenResultsWeb.Tournament.crosstable/1`, where the split happens.
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+
+  def crosstable_table(assigns) do
+    payload = assigns.payload
+    rows = Tournament.crosstable(payload)
+
+    assigns =
+      assigns
+      |> assign(:rows, rows)
+      |> assign(:rounds, Tournament.round_numbers(payload))
+      |> assign(:show, display_rules(payload))
+      # A Keizer ladder's "points" are the ladder's own currency and not the
+      # sum of the row they would sit beside: player 1 of the fixture has two
+      # wins and 17 points. The game score is the number that belongs at the
+      # end of a row of results, and Keizer standings carry it separately.
+      |> assign(:keizer?, Tournament.keizer?(payload))
+      # Only when the arbiter has actually published placings. Two columns of
+      # blanks on a tournament that has not ranked anybody yet is noise, and
+      # this page is deliberately readable without a standings block at all.
+      |> assign(:placings?, Enum.any?(rows, &(&1.rank || &1.points || &1.score)))
+
+    ~H"""
+    <p :if={@rows == [] or @rounds == []} class="empty">
+      {gettext("No rounds have been published for this tournament yet.")}
+    </p>
+
+    <div :if={@rows != [] and @rounds != []} class="scroller">
+      <table class="crosstable">
+        <thead>
+          <tr>
+            <th class="num xt-no" scope="col" title={gettext("Starting number")}>{gettext("No")}</th>
+            <th class="xt-name" scope="col">{gettext("Player")}</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
+            <th :for={n <- @rounds} class="xt-round" scope="col">
+              <a href={~p"/t/#{@slug}/round/#{n}"} title={Tournament.round_heading(@payload, n)}>
+                {Tournament.round_label(@payload, n)}
+              </a>
+            </th>
+            <th :if={@show.standings and @placings?} class="num" scope="col">
+              {if(@keizer?, do: gettext("Score"), else: gettext("Points"))}
+            </th>
+            <th :if={@show.standings and @placings?} class="num" scope="col">{gettext("Rank")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={row <- @rows}>
+            <td class="num xt-no">{row.no}</td>
+            <td class="xt-name">
+              <.player_link
+                slug={@slug}
+                no={row.no}
+                player={row.player}
+                show={@show}
+                cards?={@show.player_cards}
+                detail
+              />
+            </td>
+            <td :if={@show.rating} class="num">{dash(row.player["rating"])}</td>
+            <.crosstable_cell :for={cell <- row.cells} cell={cell} slug={@slug} show={@show} />
+            <td :if={@show.standings and @placings?} class="num strong">
+              {number(if(@keizer?, do: row.score, else: row.points))}
+            </td>
+            <td :if={@show.standings and @placings?} class="num rank">{row.rank}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <%!-- The key. A cross-table is notation before it is a table, and a
+          reader who has not seen one before is owed the sentence that turns
+          `6w1` into words - in their own language, which is why the two
+          letters are spelled out here rather than only sitting in a tooltip
+          nobody on a phone can open. --%>
+    <p :if={@rows != [] and @rounds != []} class="footnote">
+      {gettext(
+        "Each cell is one round: the opponent's pairing number, the colour this player had - w for White, b for Black - and the score from this player's own side."
+      )}
+      {gettext(
+        "A bye or a forfeit is named under the score, because neither is an ordinary result. An empty cell is a round this player is not listed in."
+      )}
+    </p>
+    """
+  end
+
+  # One player's round: who they played, which colour they had and what they
+  # scored - or the bye, or the token this server could not read, or nothing.
+  attr :cell, :map, required: true
+  attr :slug, :string, required: true
+  attr :show, :map, default: %{}
+
+  def crosstable_cell(assigns) do
+    {token, note} = Tournament.result_parts(assigns.cell.result)
+
+    assigns =
+      assigns
+      # `token` is only ever rendered for a result this server cannot read -
+      # see the score below. A known one is shown as the row player's own
+      # points instead, because the token belongs to the board and the cell
+      # belongs to one seat of it.
+      |> assign(:token, token)
+      |> assign(:note, note_label(note))
+      |> assign(:cards?, shown?(assigns.show, :player_cards))
+
+    ~H"""
+    <td
+      class={["xt-cell", @cell.kind == :none && "xt-empty"]}
+      title={@cell.kind == :none && gettext("no game published for this round")}
+    >
+      <%= case @cell.kind do %>
+        <% :game -> %>
+          <span class="xt-game">
+            <a
+              :if={@cards? && @cell.opponent_no}
+              href={~p"/t/#{@slug}/player/#{@cell.opponent_no}"}
+              class="player xt-opp"
+              data-player={@cell.opponent_no}
+            >{@cell.opponent_no}</a>
+            <span :if={not @cards? and @cell.opponent_no} class="xt-opp">{@cell.opponent_no}</span>
+            <abbr
+              :if={@cell.colour}
+              class={["xt-colour", colour_class(@cell.colour)]}
+              title={colour_word(@cell.colour)}
+            >{colour_mark(@cell.colour)}</abbr>
+            <span :if={not is_nil(@cell.points)} class="xt-score">{number(@cell.points)}</span>
+            <%!-- A token from a newer client, shown as it arrived. Neither
+                  seat gets a score from it: guessing which half of
+                  `1-0ADJ` belongs to whom would be inventing a result, and
+                  printing the whole token in both rows would tell the loser
+                  they won. --%>
+            <span :if={is_nil(@cell.points) and @token} class="xt-score xt-token">{@token}</span>
+            <span
+              :if={is_nil(@cell.points) and is_nil(@token)}
+              class="unreported"
+              title={gettext("not yet reported")}
+            >-</span>
+          </span>
+          <%!-- Forfeit and unrated, said in words under the score. A forfeit
+                is worth its point and is still not a game that was played,
+                and this is the one place on the site where the difference has
+                to survive being one character wide. --%>
+          <span :if={@note} class="xt-note">{@note}</span>
+        <% :bye -> %>
+          <span class="xt-game">
+            <span class="xt-score">{number(@cell.points)}</span>
+          </span>
+          <%!-- The arbiter's own word for it, and their own value beside it.
+                A bare `1` in this column would be indistinguishable from a
+                win. The vacated seat's result token is deliberately not
+                repeated here - "seat vacated" already says the game was not
+                played, which is the only thing the token was carrying. --%>
+          <span class="xt-note">{bye_kind(@cell.bye)}</span>
+        <% _nothing -> %>
+          <%!-- A published round this player is not listed in: unpaired, or a
+                board the arbiter hid. The payload cannot tell the two apart -
+                a hidden board is absent rather than flagged - so the cell
+                says nothing rather than choosing. Empty and not a zero: a
+                zero is a game somebody lost. --%>
+      <% end %>
+    </td>
+    """
+  end
+
+  # The colour mark, and the word behind it.
+  #
+  # `w` and `b` are NOT translated, which is a decision rather than an
+  # oversight. They are the notation a TRF file, a printed pairing sheet and
+  # every other results site already use, so an arbiter checking this page
+  # against their own file reads the same two letters in every language.
+  # Translating them would also collide across languages rather than merely
+  # differ: French `b` is blancs and English `b` is black, so the same letter
+  # would mean opposite things on two versions of one page.
+  #
+  # The word itself is on the mark as an `<abbr title>`, and the footnote
+  # under the table spells both letters out in the reader's own language -
+  # because a tooltip is not available to somebody reading this on a phone.
+  defp colour_mark(:white), do: "w"
+  defp colour_mark(:black), do: "b"
+
+  defp colour_word(:white), do: gettext("White")
+  defp colour_word(:black), do: gettext("Black")
+
+  defp colour_class(:white), do: "xt-white"
+  defp colour_class(:black), do: "xt-black"
 
   @doc """
   One round's boards.
@@ -866,7 +1095,7 @@ defmodule OpenResultsWeb.TournamentHTML do
   # that direction is the safe one.
   defp display_rules(payload) do
     Map.new(
-      ~w(standings pairings player_cards byes rating title federation club category
+      ~w(standings crosstable pairings player_cards byes rating title federation club category
          city dates arbiter deputy time_control fide_badge tiebreaks pairing_scores),
       &{String.to_atom(&1), Tournament.show?(payload, &1)}
     )

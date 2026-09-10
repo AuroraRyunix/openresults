@@ -986,6 +986,162 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   white-space: nowrap;
 }
 
+/* ---- the cross-table ----
+
+   A row per player and a column per published round, which on a real event
+   is wider than any screen. Two things make that readable: `.scroller`,
+   shared with every other table here, keeps the sideways scrolling inside
+   the table's own box so the page body never moves; and the two columns
+   that say WHO a row is stay put while the rounds slide under them. */
+
+.crosstable .xt-cell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  /* So a round most players sat out does not collapse into a hairline
+     column that is hard to hit and harder to read across. */
+  min-width: 2.75rem;
+}
+
+/* The three parts of a cell - opponent, colour, score - sit tight against
+   one another, the way the notation is written and printed everywhere else.
+   The flex container is what does that: the newlines between those elements
+   in the template would otherwise render as spaces, and "6 w 1" reads as
+   three things where "6w1" reads as one. */
+.xt-game {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.05rem;
+}
+
+.xt-opp {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.xt-opp:hover {
+  text-decoration: underline;
+}
+
+/* The colour the ROW player had, never the opponent's. Two channels on
+   purpose: the letter says it outright for anyone reading, and the light or
+   dark chip repeats it for anyone scanning. `text-decoration: none` because
+   browsers underline `abbr[title]` by default, which at this size reads as
+   a smudge. */
+.xt-colour {
+  padding: 0 0.15rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-size: 0.6875rem;
+  text-decoration: none;
+  cursor: help;
+}
+
+.xt-white {
+  background: var(--panel);
+  color: var(--quiet);
+}
+
+.xt-black {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+.xt-score {
+  margin-left: 0.15rem;
+  font-weight: 600;
+}
+
+/* A token this server could not read, shown as it arrived. Set back, because
+   it is the board's result and not this player's score - the one cell in the
+   grid that is not written from the row's own side. */
+.xt-token {
+  font-weight: 400;
+  color: var(--quiet);
+}
+
+/* Why this cell is not an ordinary result: a forfeit, an unrated game, or
+   the arbiter's own word for a bye. Under the score and never instead of it
+   - a forfeit is still worth its point. Wrapping, because "pairing-allocated
+   bye" on one line would set the width of that whole column. */
+.xt-note {
+  display: block;
+  max-width: 7rem;
+  margin: 0 auto;
+  color: var(--quiet);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+/* The headings link to each round's own page, where the boards, the ratings
+   and the scores going in are. Quiet: a row of accent-coloured numbers
+   across the top would be the loudest thing on the page. */
+.crosstable .xt-round {
+  text-align: center;
+}
+
+.crosstable .xt-round a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.crosstable .xt-round a:hover {
+  text-decoration: underline;
+}
+
+/* The pinned columns.
+
+   `--xt-key` is the first column's width AND the second column's offset, so
+   the two cannot drift apart into an overlap. It holds four digits, which is
+   more players than any tournament has ever had.
+
+   Three of these are load-bearing rather than decorative:
+
+     * `background`, because a sticky cell with a transparent one has the
+       scrolling cells drawn straight through it;
+     * `z-index`, because a sticky cell paints in DOM order and every round
+       cell comes after it - without this the numbers scroll OVER the names;
+     * the inset shadows, because a border on a sticky cell does not travel
+       with it under `border-collapse: collapse`. It stays behind with the
+       row, so the column would lose its rules exactly while being scrolled. */
+.crosstable {
+  --xt-key: 3.25rem;
+}
+
+.crosstable .xt-no,
+.crosstable .xt-name {
+  position: sticky;
+  z-index: 1;
+  background: var(--bg);
+  box-shadow:
+    inset -1px 0 var(--rule),
+    inset 0 -1px var(--rule);
+}
+
+/* Matching the heavier rule `thead th` draws under itself. */
+.crosstable thead .xt-no,
+.crosstable thead .xt-name {
+  box-shadow:
+    inset -1px 0 var(--rule),
+    inset 0 -2px var(--rule);
+}
+
+.crosstable .xt-no {
+  left: 0;
+  width: var(--xt-key);
+}
+
+/* Capped rather than left to grow: one long name would otherwise take half a
+   phone's screen and leave two rounds beside it. The whole name is one tap
+   away, on that player's own page. */
+.crosstable .xt-name {
+  left: var(--xt-key);
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---- the chart ---- */
 
 .chart {

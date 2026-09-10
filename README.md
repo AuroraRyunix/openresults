@@ -29,9 +29,10 @@ stopping anybody's chess.
 ## What it does
 
 1. **Publish.** Accepts a snapshot of a tournament and serves it: standings
-   with the arbiter's chosen tiebreaks, a page per round, and a card per
-   player showing every game they have played. A published round is
-   immutable, so it caches for a long time.
+   with the arbiter's chosen tiebreaks, a page per round, a cross-table of
+   every published result, and a card per player showing every game they
+   have played. A published round is immutable, so it caches for a long
+   time.
 2. **Registration.** Takes entries from a public form and holds them in a
    queue. It never writes to a tournament - the arbiter's machine pulls the
    queue, and the arbiter decides who is in.

@@ -227,6 +227,50 @@ defmodule OpenResultsWeb.LocaleTest do
         assert untranslated == [], "#{path} still says these in English: #{inspect(untranslated)}"
       end
     end
+
+    test "and no message is left carrying gettext's guess" do
+      # An empty msgstr is not the only way a wrong sentence ships, and it is
+      # not the dangerous one. `mix gettext.extract --merge` also FILLS a new
+      # message from an old one it thinks is similar and flags it `fuzzy` -
+      # which is gettext saying "I made this up, check it".
+      #
+      # It happened here on 2026-09-10: the cross-table's "No rounds have
+      # been published yet" was matched to the standings sentence and
+      # pre-filled as "nog geen STAND gepubliceerd" / "Aucun CLASSEMENT". Both
+      # are fluent, neither is empty, and both are about a different page.
+      # The test above passes on all of them, which is exactly why this one
+      # exists: the check for silence does not catch confident nonsense.
+      #
+      # The fix when this fails is to correct the translation and remove the
+      # flag - never to remove the flag alone.
+      for locale <- ~w(en nl fr), domain <- ~w(default errors) do
+        path = "priv/gettext/#{locale}/LC_MESSAGES/#{domain}.po"
+
+        guessed =
+          path
+          |> Expo.PO.parse_file!()
+          |> Map.fetch!(:messages)
+          # `flags` is a list of flag LINES, each a list - `[["fuzzy"]]` - so
+          # a bare `in` is always false and the check silently passes
+          # everything. Caught by flagging a message on purpose and watching
+          # this test not care.
+          |> Enum.filter(&guessed?/1)
+          |> Enum.map(&IO.iodata_to_binary(&1.msgid))
+
+        assert guessed == [],
+               "#{path} carries gettext's own guess for: #{inspect(guessed)} - " <>
+                 "check each against the page it belongs to, then drop the fuzzy flag"
+      end
+    end
+  end
+
+  # Fuzzy AND actually saying something. A fuzzy flag on an EMPTY msgstr is
+  # not a risk: nothing is rendered from it, the msgid is what shows, and in
+  # the English catalogue that combination is ordinary - three entries had it
+  # already. The danger is a guess that reads fluently and is about a
+  # different page, which by definition is not blank.
+  defp guessed?(message) do
+    "fuzzy" in List.flatten(message.flags) and not untranslated?(message)
   end
 
   defp untranslated?(%Expo.Message.Singular{msgstr: msgstr}), do: blank?(msgstr)

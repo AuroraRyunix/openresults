@@ -1,6 +1,6 @@
 defmodule OpenResultsWeb.TournamentController do
   @moduledoc """
-  The public pages: standings, one round, one player.
+  The public pages: standings, the cross-table, one round, one player.
 
   Each action does the same three things - fetch the current snapshot, refuse
   what is not in it, hand the payload to a template. There is no query beyond
@@ -57,6 +57,33 @@ defmodule OpenResultsWeb.TournamentController do
       payload: payload,
       slug: slug,
       current: :standings
+    )
+  end
+
+  @doc """
+  `GET /t/:slug/crosstable` - every published result as one grid.
+
+  Refused with the pairings message rather than one of its own, and that is
+  the honest wording: what is withheld here is the boards, whichever of the
+  two ticks did it. See `Tournament.crosstable?/1`.
+  """
+  def crosstable(conn, %{"slug" => slug}) do
+    with_payload(conn, slug, fn payload ->
+      if Tournament.crosstable?(payload) do
+        render_crosstable(conn, payload, slug)
+      else
+        withheld(conn, payload, slug, :pairings)
+      end
+    end)
+  end
+
+  defp render_crosstable(conn, payload, slug) do
+    render(conn, :crosstable,
+      page_title: "#{Tournament.name(payload)} - #{gettext("Cross-table")}",
+      page_description: Meta.crosstable(payload),
+      payload: payload,
+      slug: slug,
+      current: :crosstable
     )
   end
 

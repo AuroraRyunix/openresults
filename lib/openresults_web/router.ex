@@ -44,7 +44,7 @@ defmodule OpenResultsWeb.Router do
   # The public pages. A tournament is addressed by its slug and a player by
   # `no`, the tournament pairing number - the same two handles the payload
   # uses, so no database id appears in a URL either.
-  # The three read pages get their own scope so they can carry the
+  # The read pages get their own scope so they can carry the
   # revalidation plug, which the entry form below deliberately must not: a
   # form is not a document, and a browser deciding it already has the answer
   # is exactly wrong there.
@@ -52,6 +52,12 @@ defmodule OpenResultsWeb.Router do
     pipe_through [:browser, OpenResultsWeb.Plugs.Revalidate]
 
     get "/t/:slug", TournamentController, :standings
+    # The grid. In this scope and not the one below, because it is the
+    # heaviest document this app renders - a row per player, a column per
+    # round - and it is exactly the kind of page a hall full of phones asks
+    # for repeatedly between two publishes. A read page that misses this plug
+    # is not cached and nothing says so.
+    get "/t/:slug/crosstable", TournamentController, :crosstable
     get "/t/:slug/round/:n", TournamentController, :round
     get "/t/:slug/player/:no", TournamentController, :player
   end

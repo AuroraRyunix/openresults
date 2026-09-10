@@ -289,7 +289,9 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     test "the round strip shows the withheld round without linking it", %{conn: conn, slug: slug} do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
-      assert texts(document, "nav.rounds a.chip") == ["Standings", "1", "2", "3", "5"]
+      assert texts(document, "nav.rounds a.chip") ==
+               ["Standings", "Cross-table", "1", "2", "3", "5"]
+
       assert texts(document, "nav.rounds span.chip.withheld") == ["4, not published"]
     end
   end

@@ -58,6 +58,22 @@ defmodule OpenResultsWeb.Meta do
   end
 
   @doc """
+  The cross-table.
+
+  No round number in it, deliberately. The published rounds can have gaps -
+  an arbiter who has posted 1, 2, 3 and 5 is the fixture this repo tests
+  against - so "after round 5" would be a claim the grid does not make.
+  `standings.after_round` is not the answer either: it is about the placings,
+  and this page has none.
+  """
+  def crosstable(payload) do
+    gettext("Every published result of %{tournament}, round by round, as one cross-table.",
+      tournament: Tournament.name(payload)
+    )
+    |> with_where(payload)
+  end
+
+  @doc """
   One round.
 
   `Tournament.round_heading/2` rather than the bare number, so a match-format

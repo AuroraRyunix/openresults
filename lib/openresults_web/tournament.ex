@@ -108,6 +108,24 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  Whether the cross-table page is offered at all.
+
+  Two ticks, and both have to be on.
+
+  `crosstable` is the page's own switch, and it does not exist in any
+  snapshot published before the page did - so absent means shown, like every
+  other key here, and an arbiter whose app has never heard of it gets the
+  page.
+
+  `pairings` is the one that is not obvious. The cross-table is the round
+  pages transposed: every board, every result, every colour, all of it read
+  out of the same `rounds[]` the round pages read. An arbiter who withheld
+  their pairings and then found all of them on a grid one click away would
+  have been handed a page that quietly undoes their own setting.
+  """
+  def crosstable?(payload), do: show?(payload, "pairings") and show?(payload, "crosstable")
+
+  @doc """
   Whether the arbiter is accepting entries for this tournament.
 
   **An absent field means open**, which is the one place in this module where
@@ -625,6 +643,170 @@ defmodule OpenResultsWeb.Tournament do
     %{
       entry
       | kind: :bye,
+        bye: string(bye, "kind"),
+        points: if(is_number(points), do: points)
+    }
+  end
+
+  # What a cell holds before anything is known about it. One shape for all
+  # four kinds, so the template reads `cell.points` without asking first -
+  # the same trick `card_entry/4` plays a few lines up.
+  # The opponent is named by NUMBER and nothing else, which is the one place
+  # this differs from `card/2`'s entries. A grid cell has room for a pairing
+  # number and not for "Ó Súilleabháin, Séamus", and the number is what the
+  # row a reader then goes looking for is keyed by.
+  @empty_cell %{
+    round: nil,
+    kind: :none,
+    colour: nil,
+    opponent_no: nil,
+    result: nil,
+    bye: nil,
+    points: nil
+  }
+
+  @doc """
+  The whole tournament as one grid: a row per player, a column per PUBLISHED
+  round, and in each cell the game that player had that round, read from
+  their own side.
+
+  Each row is `%{no:, player:, rank:, points:, cells: [cell]}`, and `cells`
+  is positional against `round_numbers/1` - the same discipline
+  `rows[].tiebreaks` uses against `standings.tiebreaks`, and for the same
+  reason: the caller renders columns without knowing what a round is.
+
+  ## Why the columns are rounds
+
+  The other cross-table is the all-play-all square, one column per player,
+  and for a round-robin of twelve it is the better document. It is not the
+  one to build here. It has no cell for a bye, a forfeit against an empty
+  seat or a round somebody sat out - all three simply vanish, and the row
+  stops adding up to the score printed beside it. And it is quadratic: a
+  450-player open is 202,500 cells, which is not a page. Rounds are what
+  every result actually belongs to, and one column per round reads the same
+  for a swiss, a round-robin and a keizer ladder.
+
+  ## Why the rows are in starting-number order
+
+  Not the standings' order, though that order is right there and this app
+  renders it faithfully everywhere else. Every cell names its opponent by
+  `no` and nothing else, so a reader who has just read `6w1` wants row 6 -
+  and finds it, by counting, instead of hunting through a ranking. It also
+  means the grid says something the standings page does not, and that it
+  renders identically for a tournament whose arbiter publishes no standings
+  at all.
+
+  `rank`, `points` and `score` are the arbiter's own, lifted from the
+  standings row when there is one and `nil` when there is not - a player
+  entered and not yet placed, which is every player before round one.
+
+  All three travel because a Keizer ladder's `points` are not the sum of the
+  row beside them: they are the ladder's own currency, and `score` is the
+  game score. Which of the two belongs at the end of a row of results is a
+  question about presentation, so it is answered where the columns are
+  chosen rather than here.
+  """
+  def crosstable(payload) do
+    numbers = round_numbers(payload)
+    placings = Map.new(standings_rows(payload), &{Map.get(&1, "player"), &1})
+
+    # One pass over every board and bye in the tournament, and then a lookup
+    # per cell. `card/2` searches each round's boards for one player, which
+    # is right for one card and quadratic for a page of them: a round's
+    # boards are half its players, so the obvious loop costs players x rounds
+    # x players/2 - about 1.1 million comparisons on a 450-player, 11-round
+    # event, per render.
+    cells = Map.new(rounds(payload), &{number_of(&1), round_cells(&1)})
+
+    for player <- Enum.sort_by(players(payload), &Map.get(&1, "no")),
+        no = Map.get(player, "no"),
+        not is_nil(no) do
+      placing = Map.get(placings, no, %{})
+
+      %{
+        no: no,
+        player: player,
+        # `placing` is `%{}` for a player the standings do not carry, and
+        # `Map.get/2` on it is `nil` three times over - which is what the
+        # renderer prints as an empty cell rather than as a zero.
+        rank: Map.get(placing, "rank"),
+        points: Map.get(placing, "points"),
+        score: Map.get(placing, "score"),
+        cells: Enum.map(numbers, &cell_for(cells, &1, no))
+      }
+    end
+  end
+
+  defp cell_for(cells, number, no) do
+    cells |> Map.get(number, %{}) |> Map.get(no, %{@empty_cell | round: number})
+  end
+
+  # Every seat in one round, keyed by the player sitting in it.
+  #
+  # Byes first and boards over them, so a player who is somehow in both is
+  # shown their game - which is what `card_entry/4` decides too. The two
+  # pages must not disagree about the same round.
+  defp round_cells(round) do
+    number = number_of(round)
+
+    from_byes =
+      for bye <- byes(round),
+          no = Map.get(bye, "player"),
+          not is_nil(no),
+          into: %{},
+          do: {no, bye_cell(bye, number)}
+
+    for board <- boards(round),
+        {no, cell} <- board_cells(board, number),
+        not is_nil(no),
+        into: from_byes,
+        do: {no, cell}
+  end
+
+  # The two halves of one board, each handed to the seat it belongs to.
+  #
+  # This is the line a cross-table gets wrong. `1-0` is a win for the seat on
+  # the left of the token and a LOSS for the seat on the right, so a cell
+  # showing the board's token in both players' rows tells the loser they won,
+  # and it is invisible unless somebody checks both halves. The token is
+  # split once, here, by the same `result_points/1` the player card and the
+  # running scores already use - so the three cannot drift into different
+  # answers about one game.
+  defp board_cells(board, number) do
+    white = Map.get(board, "white")
+    black = Map.get(board, "black")
+    result = Map.get(board, "result")
+
+    # A token this server cannot read leaves BOTH seats without a score
+    # rather than one of them with a guess. The renderer shows the token as
+    # it arrived and says nothing about who won.
+    {white_points, black_points} = result_points(result) || {nil, nil}
+
+    [
+      {white, game_cell(number, :white, black, result, white_points)},
+      {black, game_cell(number, :black, white, result, black_points)}
+    ]
+  end
+
+  defp game_cell(number, colour, opponent_no, result, points) do
+    %{
+      @empty_cell
+      | round: number,
+        kind: :game,
+        colour: colour,
+        opponent_no: opponent_no,
+        result: result,
+        points: points
+    }
+  end
+
+  defp bye_cell(bye, number) do
+    points = Map.get(bye, "points")
+
+    %{
+      @empty_cell
+      | round: number,
+        kind: :bye,
         bye: string(bye, "kind"),
         points: if(is_number(points), do: points)
     }
