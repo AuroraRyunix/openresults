@@ -122,3 +122,23 @@ machine, because that is the copy they actually pair from.
 In production. Publishing, registration, tournament keys, takedown, themes,
 per-tournament display rules and the FIDE search are all live and covered by
 the test suite.
+
+## Licence
+
+OpenResults is source-available under the **Elastic License 2.0** (see
+[LICENSE](LICENSE)), (c) 2026 Jorian Burssens - the same licence
+[OpenPairings](https://github.com/AuroraRyunix/openpairings) uses.
+Self-hosting and modifying the software are both permitted; the one thing
+the licence withholds is offering it to someone else as a hosted or managed
+service - selling access to a copy of this app, rather than running it for
+your own tournaments.
+
+A federation, league, association or club publishing its own members' and
+affiliated clubs' tournaments is exactly what this app exists for, and the
+licence says so explicitly: [LICENSE](LICENSE) carries an additional
+permission stating that this kind of hosting is not the "hosted or managed
+service" the base licence restricts.
+
+GitHub labels the repository's licence "Other" in its sidebar, because the
+Elastic License 2.0 is not an OSI-approved open-source licence - expected,
+not a bug, so nobody needs to file an issue about it.
