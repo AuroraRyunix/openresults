@@ -178,6 +178,50 @@ defmodule OpenResultsWeb.PageCacheTest do
       assert Page.get("alpha", 2, "en", ~s("2-a")) == "new"
     end
 
+    test "one page in two languages is two entries, not one" do
+      # The locale is in the key, and this is the unit-level statement of
+      # why. Without it the second language to be rendered would either
+      # overwrite the first or - worse - be served the first's body, because
+      # everything else about the two requests is identical: same tournament,
+      # same snapshot, same path.
+      #
+      # There is an end-to-end test for this in revalidate_test.exs, over the
+      # ETag. This one is about the store, which is the other half: the ETag
+      # stops a BROWSER being told nothing changed, the key stops the SERVER
+      # handing over the wrong body in the first place.
+      Page.put("alpha", 1, "nl", ~s("1-nl"), "de stand")
+      Page.put("alpha", 1, "fr", ~s("1-fr"), "le classement")
+
+      assert Page.get("alpha", 1, "nl", ~s("1-nl")) == "de stand"
+      assert Page.get("alpha", 1, "fr", ~s("1-fr")) == "le classement"
+    end
+
+    test "and a language this tournament has never served is a miss, not a guess" do
+      # The failure that would look like success: falling back to whatever
+      # body is stored for the same slug and snapshot. A miss costs a
+      # re-render; a fallback serves Dutch to somebody who asked in French.
+      Page.put("alpha", 1, "nl", ~s("1-nl"), "de stand")
+
+      refute Page.get("alpha", 1, "fr", ~s("1-nl"))
+      refute Page.get("alpha", 1, "en", ~s("1-nl"))
+    end
+
+    test "a publish clears the tournament's pages in every language" do
+      # The other direction, and the one that would rot quietly: if eviction
+      # were keyed by locale as well, a new snapshot would drop the Dutch
+      # copy and leave the French one, so a French reader would keep being
+      # served last publish's standings. Scoping is per TOURNAMENT; the
+      # locale belongs in the key, not in the sweep.
+      Page.put("alpha", 1, "nl", ~s("1-nl"), "oude stand")
+      Page.put("alpha", 1, "fr", ~s("1-fr"), "ancien classement")
+
+      Page.put("alpha", 2, "nl", ~s("2-nl"), "nieuwe stand")
+
+      refute Page.get("alpha", 1, "nl", ~s("1-nl"))
+      refute Page.get("alpha", 1, "fr", ~s("1-fr"))
+      assert Page.get("alpha", 2, "nl", ~s("2-nl")) == "nieuwe stand"
+    end
+
     test "one tournament's publish does not evict another tournament's pages" do
       # This is the defect this store used to have: one global version row
       # meant ANY tournament publishing discarded the whole table, so every
