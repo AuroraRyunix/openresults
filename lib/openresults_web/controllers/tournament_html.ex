@@ -458,7 +458,12 @@ defmodule OpenResultsWeb.TournamentHTML do
               wanted[name] = select ? select.value : "";
             }
 
-            const rows = Array.from(tbody.querySelectorAll("tr"));
+            // The table's OWN rows only. Every tiebreak cell carries a
+            // closed <details> with a small working table inside it, and
+            // `querySelectorAll("tr")` finds those rows too - 320 of them on
+            // a 20-player field. Counted, they inflated "shown of total";
+            // sorted, they were appended to the standings one by one.
+            const rows = Array.from(tbody.children);
             let shown = 0;
 
             rows.forEach((row) => {
@@ -521,7 +526,7 @@ defmodule OpenResultsWeb.TournamentHTML do
           const applySort = () => {
             if (!sortKey) { return; }
 
-            const rows = Array.from(tbody.querySelectorAll("tr"));
+            const rows = Array.from(tbody.children); // own rows only - see applyFilters
             rows.sort((a, b) => {
               const av = valueFor(a, sortKey);
               const bv = valueFor(b, sortKey);
@@ -706,6 +711,10 @@ defmodule OpenResultsWeb.TournamentHTML do
   # against nothing, and indistinguishable in the DOM from a real empty
   # value nobody would ever choose from the dropdown, but worth closing
   # rather than relying on that.
+  # Ratings arrive as integers; club, federation and category as strings.
+  # Without this clause a number fell through and `data-rating` was never
+  # written, so the Rating column's sort button reordered nothing.
+  defp data_value(value) when is_number(value), do: to_string(value)
   defp data_value(value) when is_binary(value) and value != "", do: value
   defp data_value(_absent_or_blank), do: nil
 

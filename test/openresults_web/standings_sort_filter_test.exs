@@ -50,6 +50,19 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
       assert Enum.count(attr(rows, "data-points")) == 10
     end
 
+    test "a row carries its rating, which arrives as a number", %{document: document} do
+      # The Rating column's sort button reads `data-rating`. Ratings arrive in
+      # the snapshot as integers, and `data_value/1` used to pass only
+      # strings, so the attribute was never written and the button reordered
+      # nothing. No test asserted the attribute, so none saw it; found by
+      # clicking the button in a browser.
+      rows = LazyHTML.query(document, "table.standings > tbody > tr")
+      ratings = attr(rows, "data-rating")
+
+      assert ratings != []
+      assert Enum.all?(ratings, &(&1 =~ ~r/^\d+$/))
+    end
+
     test "each tiebreak cell carries its own raw value", %{document: document} do
       first = document |> LazyHTML.query("table.standings > tbody > tr") |> Enum.at(0)
       cells = LazyHTML.query(first, "td.tb-cell")
