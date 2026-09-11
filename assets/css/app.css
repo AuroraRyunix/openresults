@@ -374,6 +374,111 @@ tr.withheld td {
   display: block;
 }
 
+/* ---- the standings table: sorting and filtering ----
+
+   Client-side, entirely - see `OpenResultsWeb.TournamentHTML.standings_table/1`
+   for why. Set to `none` here and only laid out once `html.has-js` says the
+   script that drives it actually ran, the same rule the theme picker already
+   follows: a control that filters nothing without JavaScript is worse than
+   no control at all. */
+.standings-controls {
+  display: none;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+html.has-js .standings-controls {
+  display: flex;
+}
+
+.standings-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--quiet);
+}
+
+.standings-filter select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.standings-reset {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--quiet);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.standings-reset:hover {
+  color: var(--ink);
+}
+
+.standings-count {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--quiet);
+}
+
+.standings-count[hidden] {
+  display: none;
+}
+
+/* A sortable header is plain text - and looks exactly like the ones beside
+   it - until `has-js` says clicking it will do something. `all` is not
+   reset here: a `<button>` inside `thead th` still has to inherit that
+   cell's own uppercase, letter-spacing and size, which resetting would
+   throw away along with the browser's own button chrome. */
+.sort-btn {
+  padding: 0;
+  border: none;
+  margin: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: default;
+}
+
+html.has-js .sort-btn {
+  cursor: pointer;
+}
+
+html.has-js .sort-btn:hover,
+html.has-js .sort-btn:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* The arrow is added by the state the script sets, not drawn until a column
+   actually has an order - an arrow on every header would just be sixteen
+   identical hints. */
+th[aria-sort] .sort-btn::after {
+  margin-left: 0.3em;
+  font-size: 0.7em;
+}
+
+th[aria-sort="ascending"] .sort-btn::after {
+  content: "\25B2";
+}
+
+th[aria-sort="descending"] .sort-btn::after {
+  content: "\25BC";
+}
+
 /* The entry form: the one page here with a control on it, and the only one
    that writes anything. Hand written like the tables, because the scaffold's
    input component is styled for the daisyUI this app dropped. */

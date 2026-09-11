@@ -128,6 +128,13 @@ id, is also live: linked from a player's card when they have one, honouring
 the same display rules, takedown and unlisting as everywhere else. See
 `OpenResultsWeb.PlayerHistory`.
 
+The standings table can be sorted by any column and filtered by club,
+federation or category, entirely in the browser - the server renders one
+table regardless of how it is later sorted or filtered, so the page cache
+stays exactly as valid as it always was. A club or federation filter is
+reflected in the URL and can be copied and shared. See
+`OpenResultsWeb.TournamentHTML.standings_table/1`.
+
 ## Licence
 
 OpenResults is source-available under the **Elastic License 2.0** (see

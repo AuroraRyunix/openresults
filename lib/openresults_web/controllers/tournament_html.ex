@@ -162,6 +162,8 @@ defmodule OpenResultsWeb.TournamentHTML do
   `rows` is rendered as given. Nothing here sorts, and nothing recomputes a
   placing: `rank` is the arbiter's answer after their tiebreaks ran, and this
   page exists to agree with the printed crosstable rather than to check it.
+  Clicking a header re-orders the ROWS ON THE SCREEN; it never touches
+  `rank`, which stays printed in its own column throughout.
 
   The tiebreak columns are driven entirely by `standings.tiebreaks` - one
   column per declared tiebreak, headed with the label the payload carries, in
@@ -169,18 +171,55 @@ defmodule OpenResultsWeb.TournamentHTML do
   This module has never heard of Buchholz and does not need to; an arbiter who
   reorders their tiebreaks, or a client that adds a fifth, changes this page
   without changing this code.
+
+  ## Sorting, filtering, and why both happen in the browser
+
+  The whole table is rendered once, in full, exactly as it always was; a
+  script re-orders and hides `<tr>`s already on the page rather than asking
+  the server for a different one. Two things ride on that:
+
+    * **the cache stays valid.** `OpenResultsWeb.Plugs.Revalidate` and
+      `OpenResultsWeb.Plugs.Revalidate.Page` both rest on every reader of one
+      URL getting byte-identical HTML. A server-side sort or filter would
+      make that false the moment two readers picked different columns.
+    * **it still works with the script switched off.** The full, unsorted,
+      unfiltered table - the only version that has ever existed here - is
+      what renders with no JavaScript at all, on a phone, or the instant the
+      page's HTML lands and before the script has run.
+
+  The filters ARE reflected in the URL (`?club=...&federation=...`), so a
+  link to "this club's players" can be copied and shared - see the script
+  below. That reflection is `history.replaceState`, a browser-local rewrite
+  with no request behind it, so it creates nothing for the cache to hold. A
+  reader who then opens that URL fresh gets the ordinary, unfiltered page
+  from the server, and the same script reads the query string back out on
+  load and reapplies the filter - the server never has to know the filter
+  exists.
+
+  Sort order is deliberately NOT in the URL. It resets after a genuine
+  content refresh - the 20-second poll in the root layout replaces this
+  table's HTML outright when the tournament has actually published again,
+  the same moment an open tiebreak `<details>` (see `tiebreak_cell/1`)
+  already resets - and re-deriving "third click on Buchholz, descending"
+  from a link would be considerably more machinery than a second click back.
   """
   attr :payload, :map, required: true
   attr :slug, :string, required: true
 
   def standings_table(assigns) do
     payload = assigns.payload
+    rows = Tournament.standings_rows(payload)
+    players = Tournament.players_by_no(payload)
+    show = display_rules(payload)
+    # Only when the tournament actually groups its players. A column of
+    # dashes on every ordinary open is noise.
+    categories? = Enum.any?(rows, & &1["category"])
 
     assigns =
       assigns
-      |> assign(:rows, Tournament.standings_rows(payload))
+      |> assign(:rows, rows)
       |> assign(:tiebreaks, Tournament.tiebreaks(payload))
-      |> assign(:players, Tournament.players_by_no(payload))
+      |> assign(:players, players)
       # Keizer standings carry value, Keizer points and score where a swiss
       # carries points and tiebreaks. Keyed off `system`, as the contract says.
       |> assign(:keizer?, Tournament.keizer?(payload))
@@ -188,10 +227,18 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:withheld?, Tournament.tiebreaks_withheld?(payload))
       |> assign(:manual_stale?, Tournament.manual_warning?(payload, :stale))
       |> assign(:manual_incomplete?, Tournament.manual_warning?(payload, :incomplete))
-      |> assign(:show, display_rules(payload))
-      # Only when the tournament actually groups its players. A column of
-      # dashes on every ordinary open is noise.
-      |> assign(:categories?, Enum.any?(Tournament.standings_rows(payload), & &1["category"]))
+      |> assign(:show, show)
+      |> assign(:categories?, categories?)
+      # Each filter is offered only behind its own display tick - a club or
+      # federation an arbiter has hidden from this table must not resurface
+      # in a dropdown - and only when there is more than one value to split
+      # on, or the control would filter nothing.
+      |> assign(:clubs, filter_values(show.club, rows, players, "club"))
+      |> assign(:federations, filter_values(show.federation, rows, players, "federation"))
+      |> assign(
+        :filter_categories,
+        filter_values(categories? and show.category, rows, "category")
+      )
 
     ~H"""
     <p :if={@manual_order?} class="footnote manual-order">
@@ -224,64 +271,347 @@ defmodule OpenResultsWeb.TournamentHTML do
       {gettext("No standings have been published for this tournament yet.")}
     </p>
 
-    <div :if={@rows != []} class="scroller">
-      <table class="standings">
-        <thead>
-          <tr>
-            <th class="num" scope="col">{gettext("#")}</th>
-            <th scope="col">{gettext("Player")}</th>
-            <th :if={@show.rating} class="num" scope="col">{gettext("Rating")}</th>
-            <th :if={@categories? and @show.category} scope="col">{gettext("Cat")}</th>
-            <%= if @keizer? do %>
-              <th class="num" scope="col">{gettext("Value")}</th>
-              <th class="num" scope="col">{gettext("Keizer points")}</th>
-              <th class="num" scope="col">{gettext("Score")}</th>
-            <% else %>
-              <th class="num" scope="col">{gettext("Points")}</th>
-              <%!-- The placings are unaffected by hiding these. The arbiter
-                    is hiding the arithmetic, not the result - the order is
-                    still exactly the one they computed. --%>
-              <th :for={tiebreak <- @tiebreaks} :if={@show.tiebreaks} class="num" scope="col">
-                {Tournament.tiebreak_label(tiebreak)}
-              </th>
-            <% end %>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :for={row <- @rows}>
-            <td class="num rank">{row["rank"]}</td>
-            <td>
-              <.player_link
-                slug={@slug}
-                no={row["player"]}
-                player={@players[row["player"]]}
-                show={@show}
-                cards?={@show.player_cards}
-                detail
-              />
-            </td>
-            <td :if={@show.rating} class="num">{dash(@players[row["player"]]["rating"])}</td>
-            <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
-            <%= if @keizer? do %>
-              <td class="num">{number(row["value"])}</td>
-              <td class="num strong">{number(row["points"])}</td>
-              <td class="num">{number(row["score"])}</td>
-            <% else %>
-              <td class="num strong">{number(row["points"])}</td>
-              <td
-                :for={{_tiebreak, at} <- Enum.with_index(@tiebreaks)}
-                :if={@show.tiebreaks}
-                class="num"
-              >
-                {number(Tournament.tiebreak_value(row, at))}
+    <div :if={@rows != []} data-standings-panel>
+      <%!-- Hidden until the script runs - see the moduledoc above. A select
+            that filters nothing without JavaScript is worse than no control
+            at all. --%>
+      <div
+        :if={@clubs != [] or @federations != [] or @filter_categories != []}
+        class="standings-controls"
+        data-standings-controls
+      >
+        <label :if={@clubs != []} class="standings-filter">
+          {gettext("Club")}
+          <select data-filter="club">
+            <option value="">{gettext("All clubs")}</option>
+            <option :for={club <- @clubs} value={club}>{club}</option>
+          </select>
+        </label>
+        <label :if={@federations != []} class="standings-filter">
+          {gettext("Federation")}
+          <select data-filter="federation">
+            <option value="">{gettext("All federations")}</option>
+            <option :for={federation <- @federations} value={federation}>{federation}</option>
+          </select>
+        </label>
+        <label :if={@filter_categories != []} class="standings-filter">
+          {gettext("Category")}
+          <select data-filter="category">
+            <option value="">{gettext("All categories")}</option>
+            <option :for={category <- @filter_categories} value={category}>{category}</option>
+          </select>
+        </label>
+        <button type="button" class="standings-reset" data-standings-reset>
+          {gettext("Reset")}
+        </button>
+        <p
+          class="standings-count"
+          data-standings-count
+          data-count-label={
+            gettext("Showing %{shown} of %{total}", shown: "{shown}", total: "{total}")
+          }
+          aria-live="polite"
+          hidden
+        >
+        </p>
+      </div>
+
+      <div class="scroller">
+        <table class="standings" data-standings-table>
+          <thead>
+            <tr>
+              <.sort_th sort_key="rank" class="num">{gettext("#")}</.sort_th>
+              <.sort_th sort_key="name">{gettext("Player")}</.sort_th>
+              <.sort_th :if={@show.rating} sort_key="rating" class="num">
+                {gettext("Rating")}
+              </.sort_th>
+              <.sort_th :if={@categories? and @show.category} sort_key="category">
+                {gettext("Cat")}
+              </.sort_th>
+              <%= if @keizer? do %>
+                <.sort_th sort_key="value" class="num">{gettext("Value")}</.sort_th>
+                <.sort_th sort_key="points" class="num">{gettext("Keizer points")}</.sort_th>
+                <.sort_th sort_key="score" class="num">{gettext("Score")}</.sort_th>
+              <% else %>
+                <.sort_th sort_key="points" class="num">{gettext("Points")}</.sort_th>
+                <%!-- The placings are unaffected by hiding these. The arbiter
+                      is hiding the arithmetic, not the result - the order is
+                      still exactly the one they computed. --%>
+                <.sort_th
+                  :for={{tiebreak, at} <- Enum.with_index(@tiebreaks)}
+                  :if={@show.tiebreaks}
+                  sort_key={"tb#{at}"}
+                  class="num"
+                >
+                  {Tournament.tiebreak_label(tiebreak)}
+                </.sort_th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              :for={row <- @rows}
+              data-rank={row["rank"]}
+              data-name={@players[row["player"]]["name"]}
+              data-rating={@show.rating && data_value(@players[row["player"]]["rating"])}
+              data-category={(@categories? and @show.category) && data_value(row["category"])}
+              data-club={@show.club && data_value(@players[row["player"]]["club"])}
+              data-federation={@show.federation && data_value(@players[row["player"]]["federation"])}
+              data-points={row["points"]}
+              data-value={@keizer? && row["value"]}
+              data-score={@keizer? && row["score"]}
+            >
+              <td class="num rank">{row["rank"]}</td>
+              <td>
+                <.player_link
+                  slug={@slug}
+                  no={row["player"]}
+                  player={@players[row["player"]]}
+                  show={@show}
+                  cards?={@show.player_cards}
+                  detail
+                />
               </td>
-            <% end %>
-          </tr>
-        </tbody>
-      </table>
+              <td :if={@show.rating} class="num">{dash(@players[row["player"]]["rating"])}</td>
+              <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
+              <%= if @keizer? do %>
+                <td class="num">{number(row["value"])}</td>
+                <td class="num strong">{number(row["points"])}</td>
+                <td class="num">{number(row["score"])}</td>
+              <% else %>
+                <td class="num strong">{number(row["points"])}</td>
+                <td
+                  :for={{_tiebreak, at} <- Enum.with_index(@tiebreaks)}
+                  :if={@show.tiebreaks}
+                  class="num tb-cell"
+                  data-value={Tournament.tiebreak_value(row, at)}
+                >
+                  {number(Tournament.tiebreak_value(row, at))}
+                </td>
+              <% end %>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <script>
+      (() => {
+        // Runs once, from the very first render of THIS page - a script
+        // embedded in HTML that arrives later, via the 20-second refresher's
+        // innerHTML swap, never executes on its own. `init` re-queries the
+        // live DOM every time it runs rather than closing over elements from
+        // one render, which is what lets the SAME registration below survive
+        // that swap - see the root layout's own comment on the event it
+        // dispatches.
+        const init = () => {
+          const panel = document.querySelector("[data-standings-panel]");
+          const table = panel && panel.querySelector("[data-standings-table]");
+          const tbody = table && table.querySelector("tbody");
+          if (!tbody) { return; }
+
+          const controls = panel.querySelector("[data-standings-controls]");
+          const selects = controls
+            ? {
+                club: controls.querySelector('[data-filter="club"]'),
+                federation: controls.querySelector('[data-filter="federation"]'),
+                category: controls.querySelector('[data-filter="category"]'),
+              }
+            : {};
+          const countEl = controls && controls.querySelector("[data-standings-count]");
+          const resetBtn = controls && controls.querySelector("[data-standings-reset]");
+
+          // ---- filtering, and the URL it can be shared through ----
+          const params = new URLSearchParams(location.search);
+          for (const [name, select] of Object.entries(selects)) {
+            if (!select) { continue; }
+            const wanted = params.get(name);
+            if (wanted && Array.from(select.options).some((o) => o.value === wanted)) {
+              select.value = wanted;
+            }
+          }
+
+          const applyFilters = () => {
+            const wanted = {};
+            for (const [name, select] of Object.entries(selects)) {
+              wanted[name] = select ? select.value : "";
+            }
+
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            let shown = 0;
+
+            rows.forEach((row) => {
+              const ok = Object.entries(wanted).every(
+                ([name, value]) => !value || row.dataset[name] === value
+              );
+              row.hidden = !ok;
+              if (ok) { shown += 1; }
+            });
+
+            const active = Object.values(wanted).some(Boolean);
+            if (countEl) {
+              countEl.hidden = !active;
+              if (active) {
+                countEl.textContent = (countEl.dataset.countLabel || "")
+                  .replace("{shown}", shown)
+                  .replace("{total}", rows.length);
+              }
+            }
+
+            // A local rewrite, not a request - see the moduledoc above for
+            // why that is what keeps this safe for the page cache.
+            const next = new URLSearchParams(location.search);
+            for (const [name, value] of Object.entries(wanted)) {
+              if (value) { next.set(name, value); } else { next.delete(name); }
+            }
+            const query = next.toString();
+            history.replaceState(null, "", location.pathname + (query ? `?${query}` : "") + location.hash);
+          };
+
+          for (const select of Object.values(selects)) {
+            select && select.addEventListener("change", applyFilters);
+          }
+
+          if (resetBtn) {
+            resetBtn.addEventListener("click", () => {
+              for (const select of Object.values(selects)) { if (select) { select.value = ""; } }
+              applyFilters();
+            });
+          }
+
+          applyFilters();
+
+          // ---- sorting ----
+          let sortKey = null;
+          let sortDir = 1;
+
+          // A tiebreak column's value lives on its `<td>`, not the `<tr>` -
+          // there can be several, and they are not fixed columns the way
+          // rank or rating are. Reached by position, the same discipline
+          // `rows[].tiebreaks` itself is read with against `standings.tiebreaks`.
+          const valueFor = (row, key) => {
+            if (key.slice(0, 2) === "tb") {
+              const cell = row.querySelectorAll(".tb-cell")[parseInt(key.slice(2), 10)];
+              return cell ? cell.dataset.value : undefined;
+            }
+            return row.dataset[key];
+          };
+
+          const applySort = () => {
+            if (!sortKey) { return; }
+
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            rows.sort((a, b) => {
+              const av = valueFor(a, sortKey);
+              const bv = valueFor(b, sortKey);
+              const blankA = av === undefined || av === "";
+              const blankB = bv === undefined || bv === "";
+              // A player with nothing in this column sinks to the bottom of
+              // either direction - not the top of a descending sort, which
+              // would put "unknown" above every real value.
+              if (blankA || blankB) {
+                return blankA === blankB ? 0 : (blankA ? 1 : -1);
+              }
+
+              const an = parseFloat(av);
+              const bn = parseFloat(bv);
+              const cmp =
+                !Number.isNaN(an) && !Number.isNaN(bn)
+                  ? an - bn
+                  : String(av).localeCompare(String(bv), undefined, { sensitivity: "base" });
+
+              return cmp * sortDir;
+            });
+
+            rows.forEach((row) => tbody.appendChild(row));
+          };
+
+          const buttons = Array.from(table.querySelectorAll("thead [data-sort-key]"));
+          buttons.forEach((button) => {
+            button.addEventListener("click", () => {
+              const key = button.dataset.sortKey;
+              sortDir = sortKey === key ? -sortDir : 1;
+              sortKey = key;
+
+              buttons.forEach((b) => b.closest("th").removeAttribute("aria-sort"));
+              button
+                .closest("th")
+                .setAttribute("aria-sort", sortDir === 1 ? "ascending" : "descending");
+
+              applySort();
+            });
+          });
+        };
+
+        init();
+        document.addEventListener("openresults:updated", init);
+      })();
+    </script>
     """
   end
+
+  # The column header for a sortable value: a real, focusable button rather
+  # than a click handler on the `<th>` itself, so this works by keyboard and
+  # by tap and never only by a mouse hovering over it. Plain text with no JS -
+  # see the moduledoc on `standings_table/1` for why the table underneath it
+  # already works perfectly well without one.
+  attr :sort_key, :string, required: true
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  defp sort_th(assigns) do
+    ~H"""
+    <th class={@class} scope="col">
+      <button type="button" class="sort-btn" data-sort-key={@sort_key}>
+        {render_slot(@inner_block)}
+      </button>
+    </th>
+    """
+  end
+
+  # The values a filter dropdown offers, from the PLAYER side of a row -
+  # club and federation are not standings fields, they are the player's own.
+  # `nil` when the column is switched off (so nothing an arbiter hid can
+  # resurface in a dropdown) or when every value is the same or absent (so a
+  # control that would filter nothing is not offered at all).
+  defp filter_values(false, _rows, _players, _key), do: []
+
+  defp filter_values(true, rows, players, key) do
+    rows
+    |> Enum.map(&Map.get(players[&1["player"]] || %{}, key))
+    |> distinct_values()
+  end
+
+  # The one filter that reads off the STANDINGS row rather than the player -
+  # `category` travels on both, and the row's own copy is what the visible
+  # column already renders, so the filter has to agree with what is on
+  # screen rather than with a value the arbiter may since have changed on
+  # the player record and not republished.
+  defp filter_values(false, _rows, _key), do: []
+
+  defp filter_values(true, rows, key) do
+    rows |> Enum.map(&Map.get(&1, key)) |> distinct_values()
+  end
+
+  defp distinct_values(values) do
+    values
+    |> Enum.filter(&(is_binary(&1) and &1 != ""))
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> case do
+      # One value splits nothing; the control would just be furniture.
+      [_only_one] -> []
+      several -> several
+    end
+  end
+
+  # `nil` and `false` are the two values a HEEx attribute omits outright; an
+  # empty string is not, so it would print `data-club=""` - filterable
+  # against nothing, and indistinguishable in the DOM from a real empty
+  # value nobody would ever choose from the dropdown, but worth closing
+  # rather than relying on that.
+  defp data_value(value) when is_binary(value) and value != "", do: value
+  defp data_value(_absent_or_blank), do: nil
 
   @doc """
   The cross-table: a row per player, a column per published round.

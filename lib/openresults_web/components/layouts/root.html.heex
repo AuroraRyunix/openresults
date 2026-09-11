@@ -314,6 +314,17 @@
             if (fresh.innerHTML === live.innerHTML) { return false; }
 
             live.innerHTML = fresh.innerHTML;
+
+            // A script embedded in that HTML does NOT run - innerHTML never
+            // executes a <script> it inserts - so anything inside
+            // #live-region that wires itself up on load (the standings
+            // table's sort and filter, currently) would otherwise work once
+            // and then go quiet after the first real update. This is the
+            // hook: it fires on the region that is always still `live`
+            // itself, so code registered against `document` from the page's
+            // FIRST render - which does run - can re-query the fresh DOM and
+            // wire it up again.
+            document.dispatchEvent(new CustomEvent("openresults:updated"));
             return true;
           };
 
