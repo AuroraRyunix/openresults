@@ -8,6 +8,17 @@ defmodule OpenResultsWeb.TournamentTest do
     {:ok, swiss: SnapshotPayloads.swiss(), keizer: SnapshotPayloads.keizer()}
   end
 
+  # The fixture's own `after_round` is 2. Several player-card tests below are
+  # about `card_entry/4`'s own logic - colour, a bye's value, a withheld
+  # board, a gap where a round was never published - which round 1 and round
+  # 2 alone do not exercise fully, so those tests read the card through the
+  # LAST published round instead. The gate itself, using the fixture exactly
+  # as it arrived, has a describe block of its own below.
+  defp through_last_round(payload) do
+    last = payload["rounds"] |> Enum.map(& &1["number"]) |> Enum.max()
+    put_in(payload, ["standings", "after_round"], last)
+  end
+
   describe "result tokens" do
     test "every token the contract lists is read, and none other" do
       # The table in docs/snapshot-schema.md, copied out by hand so a token
@@ -203,8 +214,10 @@ defmodule OpenResultsWeb.TournamentTest do
       # for eight of ten players. Players 7 and 10 played a board the arbiter
       # did not publish, so the page can show their standing but not derive
       # their total - and it says so rather than guessing.
+      bumped = through_last_round(swiss)
+
       for no <- [7, 10] do
-        entry = Enum.at(Tournament.card(swiss, no), 2)
+        entry = Enum.at(Tournament.card(bumped, no), 2)
 
         assert entry.kind == :no_game
         assert entry.score == nil
@@ -214,7 +227,7 @@ defmodule OpenResultsWeb.TournamentTest do
     end
 
     test "the running score stops at a round the arbiter withheld", %{swiss: swiss} do
-      card = Tournament.card(swiss, 1)
+      card = Tournament.card(through_last_round(swiss), 1)
 
       assert Enum.map(card, & &1.score) == [1.0, 1.5, 2.5, nil, nil]
       assert Enum.at(card, 3).kind == :unpublished
@@ -225,7 +238,7 @@ defmodule OpenResultsWeb.TournamentTest do
     test "the running score stops at a game with no result yet", %{swiss: swiss} do
       # Board 3 of round 3 has a null result, so player 8's total is unknown
       # from there even though every round is published.
-      card = Tournament.card(swiss, 8)
+      card = Tournament.card(through_last_round(swiss), 8)
 
       assert Enum.at(card, 2).result == nil
       assert Enum.map(card, & &1.score) == [0.5, 0.5, nil, nil, nil]
@@ -242,8 +255,40 @@ defmodule OpenResultsWeb.TournamentTest do
       assert hd(card).score == nil
     end
 
-    test "every round of the tournament gets a row", %{swiss: swiss} do
-      assert Enum.map(Tournament.card(swiss, 10), & &1.round) == [1, 2, 3, 4, 5]
+    test "every round up to the standings gets a row, including a gap", %{swiss: swiss} do
+      assert Enum.map(Tournament.card(through_last_round(swiss), 10), & &1.round) ==
+               [1, 2, 3, 4, 5]
+    end
+  end
+
+  describe "the player card obeys the standings gate" do
+    test "stops at the round the standings cover, even though later rounds are live", %{
+      swiss: swiss
+    } do
+      # The fixture's own shape, unmodified: standings stop after round 2
+      # while rounds 1, 2, 3 and 5 are already published. Round 5's game is
+      # real and readable from its own page, but it may not reach this card.
+      assert Enum.map(Tournament.card(swiss, 1), & &1.round) == [1, 2]
+    end
+
+    test "is empty before the first standings are published, even with rounds live", %{
+      swiss: swiss
+    } do
+      before_round_one =
+        swiss
+        |> put_in(["standings", "after_round"], 0)
+        |> put_in(["standings", "rows"], [])
+
+      assert Tournament.card(before_round_one, 1) == []
+    end
+
+    test "within_standings?/2 is the boundary both the gate and the card read", %{swiss: swiss} do
+      refute Tournament.within_standings?(swiss, 3)
+      assert Tournament.within_standings?(swiss, 2)
+      assert Tournament.within_standings?(swiss, 1)
+
+      absent = update_in(swiss, ["standings"], &Map.delete(&1, "after_round"))
+      refute Tournament.within_standings?(absent, 1)
     end
   end
 

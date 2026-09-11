@@ -478,6 +478,18 @@ defmodule OpenResultsWeb.TournamentControllerTest do
   end
 
   describe "GET /t/:slug/player/:no - the card" do
+    setup %{swiss: swiss} do
+      # The fixture's own `after_round` is 2, with rounds 1, 2, 3 and 5
+      # already published - the standings gate is a describe block of its
+      # own, below. Every test in THIS block is about the card's own
+      # per-round logic (colour, opponent, the running score, a bye's own
+      # row...), not about the gate, so `after_round` is pushed up to the
+      # last published round here and these assertions read exactly as they
+      # did before the gate existed.
+      swiss |> put_in(["standings", "after_round"], 5) |> publish()
+      :ok
+    end
+
     test "one row per round, with colour, opponent, result and running score", %{
       conn: conn,
       slug: slug
@@ -567,6 +579,75 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
     test "a pairing number that is not a number is a 404, not a crash", %{conn: conn, slug: slug} do
       assert conn |> get(~p"/t/#{slug}/player/abc") |> html_response(404)
+    end
+  end
+
+  describe "GET /t/:slug/player/:no - the standings gate" do
+    test "only rounds the standings already cover show, even though later rounds are live", %{
+      conn: conn,
+      slug: slug
+    } do
+      # The fixture's own shape, untouched: standings stop after round 2
+      # while rounds 1, 2, 3 and 5 are already published and full of
+      # results. Rounds 3 and 5 are exactly as published as 1 and 2 are;
+      # they are simply not folded into the standings this card must agree
+      # with yet - contrast with "GET /t/:slug/player/:no - the card" above,
+      # which bumps `after_round` past them precisely so it can test
+      # everything else about the card without this gate in the way.
+      document = conn |> get(~p"/t/#{slug}/player/1") |> doc()
+
+      assert texts(document, "table.card tbody tr") == [
+               "1 White 6 ROU WIM Ștefănescu, Ioana 2033 0 1-0 1",
+               "2 Black 2 SRB IM Đurić, Nikola 2455 1.5 1/2-1/2 1.5"
+             ]
+    end
+
+    test "a round's own page is unaffected and still shows it live", %{conn: conn, slug: slug} do
+      assert conn |> get(~p"/t/#{slug}/round/3") |> html_response(200) =~ "1/2-0"
+      assert conn |> get(~p"/t/#{slug}/round/5") |> html_response(200) =~ "Round 5"
+    end
+
+    test "the placing above the card never counts a later round's result", %{
+      conn: conn,
+      slug: slug
+    } do
+      # Player 9 sits on 2.0 points after round 2 - the fixture's own
+      # standings - and round 5, already live, gives them a further win
+      # (board: white 10, black 9, "0-1"). The summary above the card reads
+      # `standings.rows` directly and must still say 2, not 3: the gate
+      # exists so nothing else can sneak a later round's result in by
+      # another route.
+      document = conn |> get(~p"/t/#{slug}/player/9") |> doc()
+
+      assert texts(document, ".placing") == ["1 of 10, on 2"]
+    end
+
+    test "the empty state before any standings are published, even with rounds live", %{
+      conn: conn,
+      slug: slug,
+      swiss: swiss
+    } do
+      # Rounds 1, 2, 3 and 5 stay exactly as published - only the standings
+      # change, to the state OpenPairings writes before it has closed round
+      # one: `after_round: 0` and no rows. See `Tournament.after_round/1`'s
+      # own doc for why 0 has to read the same way absence does.
+      before_round_one =
+        swiss
+        |> put_in(["standings", "after_round"], 0)
+        |> put_in(["standings", "rows"], [])
+
+      publish(before_round_one)
+      document = conn |> get(~p"/t/#{slug}/player/1") |> doc()
+
+      assert texts(document, "p.empty") == [
+               "Results appear here once the standings after round 1 are published."
+             ]
+
+      assert texts(document, "table.card") == []
+      assert texts(document, ".chart") == []
+
+      # And the round page beside it could not care less.
+      assert conn |> get(~p"/t/#{slug}/round/1") |> html_response(200) =~ "1-0"
     end
   end
 

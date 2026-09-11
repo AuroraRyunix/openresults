@@ -29,13 +29,25 @@ defmodule OpenResultsWeb.CrosstableTest do
       Page.clear()
     end)
 
-    swiss = SnapshotPayloads.swiss()
+    # The fixture's own `after_round` is 2, with rounds 1, 2, 3 and 5 already
+    # live - exactly the situation the standings gate exists for. Almost
+    # everything below is about the GRID's own logic (colours, forfeits,
+    # byes, the placings beside it...) and not about the gate, so the
+    # default here pushes `after_round` up to the last published round and
+    # the gate gets its own describe block, using the fixture exactly as it
+    # arrived - see "the standings gate".
+    swiss = through_last_round(SnapshotPayloads.swiss())
     {:ok, _snapshot} = Snapshots.ingest(swiss)
 
     {:ok, swiss: swiss, slug: swiss["tournament"]["slug"]}
   end
 
   defp publish(payload), do: {:ok, _snapshot} = Snapshots.ingest(payload)
+
+  defp through_last_round(payload) do
+    last = payload["rounds"] |> Enum.map(& &1["number"]) |> Enum.max()
+    put_in(payload, ["standings", "after_round"], last)
+  end
 
   # Replaces the display map wholesale, so every key not named here is absent
   # - which means shown, the rule the whole contract leans on.
@@ -369,16 +381,24 @@ defmodule OpenResultsWeb.CrosstableTest do
                ["1", "Peeters, Wouter", "2088", "4 w 1", "6 b 1", "2", "1"]
     end
 
-    test "a tournament that has not ranked anybody yet gets no empty columns", %{
+    test "and shows the awaiting-standings message when nothing has been ranked yet", %{
       conn: conn,
       slug: slug,
       swiss: swiss
     } do
+      # Before the standings gate existed, a tournament with no standings at
+      # all still showed the whole grid, minus the rank and points columns.
+      # The grid is a standings-derived page now, same as the placings
+      # beside it, so there is nothing of its own to show either - not even
+      # the results already live in rounds 1, 2, 3 and 5.
       publish(Map.delete(swiss, "standings"))
       document = grid(conn, slug)
 
-      assert texts(document, "table.crosstable thead th") ==
-               ["No", "Player", "Elo", "1", "2", "3", "5"]
+      assert texts(document, "p.empty") == [
+               "Results appear here once the standings after round 1 are published."
+             ]
+
+      assert texts(document, "table.crosstable") == []
     end
   end
 
@@ -467,6 +487,69 @@ defmodule OpenResultsWeb.CrosstableTest do
 
       assert conn |> get(~p"/t/#{slug}/crosstable") |> html_response(200) =~
                "No rounds have been published"
+    end
+  end
+
+  describe "the standings gate" do
+    # The fixture exactly as it arrives from OpenPairings: standings stop
+    # after round 2, while rounds 1, 2, 3 and 5 are already published and
+    # full of results. Every other describe block in this file pushes
+    # `after_round` up to the last published round precisely so it can test
+    # the grid's own logic without this gate getting in the way - see
+    # `through_last_round/1`. These tests are the ones that turn it back off.
+    setup do
+      pristine = SnapshotPayloads.swiss()
+      publish(pristine)
+      {:ok, pristine: pristine}
+    end
+
+    test "only rounds the standings already cover get a column, even though later rounds are live",
+         %{conn: conn, slug: slug} do
+      document = grid(conn, slug)
+
+      # Not ["1", "2", "3", "5"], which is what every other test in this
+      # file sees once `after_round` is bumped past them. Rounds 3 and 5
+      # are exactly as published as round 1 and 2 are; they are simply not
+      # folded into the standings this grid must agree with yet.
+      assert texts(document, "table.crosstable thead th") ==
+               ["No", "Player", "Elo", "1", "2", "Points", "Rank"]
+
+      assert cell(document, 1, 1) == "6 w 1"
+      assert cell(document, 1, 2) == "2 b 0.5"
+    end
+
+    test "a round's own page is unaffected and still shows it live", %{conn: conn, slug: slug} do
+      # Round 3 exists nowhere on the grid above, but nothing about the
+      # round page itself narrowed: it is not a standings-derived page and
+      # never claimed to agree with anything but itself.
+      assert conn |> get(~p"/t/#{slug}/round/3") |> html_response(200) =~ "1/2-0"
+      assert conn |> get(~p"/t/#{slug}/round/5") |> html_response(200) =~ "Round 5"
+    end
+
+    test "the awaiting-standings message before any standings are published at all", %{
+      conn: conn,
+      slug: slug,
+      pristine: pristine
+    } do
+      # Rounds 1, 2, 3 and 5 are all live here too - the payload is
+      # unchanged apart from `after_round` itself. Nothing from any of them
+      # may show until the arbiter has closed a round of standings at all.
+      before_round_one =
+        pristine
+        |> put_in(["standings", "after_round"], 0)
+        |> put_in(["standings", "rows"], [])
+
+      publish(before_round_one)
+      document = grid(conn, slug)
+
+      assert texts(document, "p.empty") == [
+               "Results appear here once the standings after round 1 are published."
+             ]
+
+      assert texts(document, "table.crosstable") == []
+
+      # And the round page beside it could not care less.
+      assert conn |> get(~p"/t/#{slug}/round/1") |> html_response(200) =~ "1-0"
     end
   end
 

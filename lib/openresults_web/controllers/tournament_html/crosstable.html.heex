@@ -2,9 +2,11 @@
 
 <section>
   <%!-- No "after round N" beside this heading, unlike the standings. The
-        published rounds can have gaps, so the highest one does not describe
-        the grid, and `standings.after_round` describes the placings rather
-        than the results. The round headings say which rounds are here. --%>
+        grid IS capped at `standings.after_round` now - see
+        `Tournament.within_standings?/2` - but a round the arbiter withheld
+        inside that range still leaves a gap, so the highest column does not
+        always equal that number either. The round headings say which
+        rounds are actually here. --%>
   <h2>{gettext("Cross-table")}</h2>
 
   <.crosstable_table payload={@payload} slug={@slug} />

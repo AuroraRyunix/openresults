@@ -411,6 +411,34 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  Whether round `number` is one the STANDINGS-DERIVED pages - the
+  cross-table and a player's card - may show a result for.
+
+  Those two pages exist to agree with the standings table beside them, not
+  to race ahead of it: an arbiter can publish round 6's boards while the
+  standings still stop after round 5, and until they fold round 6 in, a page
+  built to agree with the standings has nothing of its own to say about it.
+  A round PAGE is not gated by this at all - `/round/:n` shows exactly what
+  was published, live, the moment it arrives, because it never claimed to
+  agree with anything but itself. See `TournamentController.round/2`.
+
+  `false` for every round once `after_round/1` is `nil`: before the first
+  standings are published there is nothing either page may show, which is
+  the whole rule stated as a boundary of zero.
+
+  This is the one place `crosstable/1` and `card/2` both read instead of
+  each comparing to `after_round/1` on its own, so the boundary can only be
+  wrong in one place.
+  """
+  @spec within_standings?(map(), integer()) :: boolean()
+  def within_standings?(payload, number) when is_integer(number) do
+    case after_round(payload) do
+      nil -> false
+      round -> number <= round
+    end
+  end
+
+  @doc """
   Whether the standings page has nothing of its own to show yet: no rows, or
   no round to call them "after".
 
@@ -706,11 +734,17 @@ defmodule OpenResultsWeb.Tournament do
   def result_parts(_absent_or_not_a_token), do: {nil, nil}
 
   @doc """
-  One player's tournament, round by round.
+  One player's tournament, round by round - up to the round the published
+  standings reflect, and no further.
 
-  Carries an entry for every round the tournament has, published or not,
-  because a card with round 4 silently missing reads as a player who sat out
-  rather than as an arbiter who has not published yet.
+  Carries an entry for every round IN THAT RANGE, published or not, because
+  a card with round 4 silently missing reads as a player who sat out rather
+  than as an arbiter who has not published yet. A round beyond the range -
+  published, live, with real boards and a real result - gets no entry at
+  all: this is a standings-derived page, and showing its game before the
+  arbiter has folded that round into the standings shown beside it is
+  exactly the leak `within_standings?/2` exists to close. Empty before the
+  first standings are published.
 
   `:score` is the running total, and it is the only number on this site that
   did not arrive ready-made - the contract carries no per-game points on
@@ -729,6 +763,7 @@ defmodule OpenResultsWeb.Tournament do
 
     payload
     |> round_slots()
+    |> Enum.filter(&within_standings?(payload, &1))
     |> Enum.map_reduce({:known, 0.0}, fn number, running ->
       entry = card_entry(index, by_number, number, no)
       running = advance(running, entry.points)
@@ -861,9 +896,19 @@ defmodule OpenResultsWeb.Tournament do
   game score. Which of the two belongs at the end of a row of results is a
   question about presentation, so it is answered where the columns are
   chosen rather than here.
+
+  ## The standings gate
+
+  "Published" above means published AND no later than `after_round/1` - see
+  `within_standings?/2`. A round can be live, with boards and results, before
+  the arbiter has folded it into the standings beside this grid, and until
+  they do this page has nothing of its own to say about it either: it exists
+  to agree with the standings, not to race ahead of them. A round's own page
+  is unaffected and keeps showing it the moment it is published. Empty
+  before the first standings are published.
   """
   def crosstable(payload) do
-    numbers = round_numbers(payload)
+    numbers = payload |> round_numbers() |> Enum.filter(&within_standings?(payload, &1))
     placings = Map.new(standings_rows(payload), &{Map.get(&1, "player"), &1})
 
     # One pass over every board and bye in the tournament, and then a lookup
@@ -872,7 +917,16 @@ defmodule OpenResultsWeb.Tournament do
     # boards are half its players, so the obvious loop costs players x rounds
     # x players/2 - about 1.1 million comparisons on a 450-player, 11-round
     # event, per render.
-    cells = Map.new(rounds(payload), &{number_of(&1), round_cells(&1)})
+    #
+    # Built from the GATED rounds only, not every published one, so a round
+    # beyond `after_round/1` cannot end up in `cells` at all - not merely
+    # unreachable through `numbers` below, but never read off `rounds(payload)`
+    # in the first place.
+    cells =
+      payload
+      |> rounds()
+      |> Enum.filter(&within_standings?(payload, number_of(&1)))
+      |> Map.new(&{number_of(&1), round_cells(&1)})
 
     for player <- Enum.sort_by(players(payload), &Map.get(&1, "no")),
         no = Map.get(player, "no"),

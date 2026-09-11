@@ -53,13 +53,21 @@
     </a>
   </p>
 
-  <.score_chart payload={@payload} card={@card} no={@player["no"]} />
+  <%!-- Standings-derived, like the cross-table: nothing here until the
+        arbiter folds a round into the published standings, however many
+        rounds are already live - see `Tournament.within_standings?/2` and
+        `Tournament.card/2`. --%>
+  <p :if={@card == []} class="empty">
+    {gettext("Results appear here once the standings after round 1 are published.")}
+  </p>
 
-  <h3>{gettext("Round by round")}</h3>
+  <.score_chart :if={@card != []} payload={@payload} card={@card} no={@player["no"]} />
 
-  <.card_table slug={@slug} card={@card} payload={@payload} />
+  <h3 :if={@card != []}>{gettext("Round by round")}</h3>
 
-  <p :if={Enum.any?(@card, &is_nil(&1.score))} class="footnote">
+  <.card_table :if={@card != []} slug={@slug} card={@card} payload={@payload} />
+
+  <p :if={@card != [] and Enum.any?(@card, &is_nil(&1.score))} class="footnote">
     {raw(
       gettext(
         "The running score stops at the first round whose result is not public - an unpublished round, a board that is not listed, or a game with no result yet. The arbiter's own total is on the %{standings}.",

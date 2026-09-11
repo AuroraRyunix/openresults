@@ -801,6 +801,12 @@ defmodule OpenResultsWeb.TournamentHTML do
   what exists, and this is a table of results, where an empty column would
   read as a round nobody turned up to.
 
+  And only rounds the published standings already cover -
+  `Tournament.within_standings?/2` again narrows "published" the same way it
+  does for `Tournament.crosstable/1` itself, so a round already live but not
+  yet folded into the standings beside this grid gets no column here either,
+  even though its own page already shows it.
+
   Each heading links to that round's own page, which is where the boards,
   the ratings and the scores going in are.
 
@@ -825,11 +831,20 @@ defmodule OpenResultsWeb.TournamentHTML do
   def crosstable_table(assigns) do
     payload = assigns.payload
     rows = Tournament.crosstable(payload)
+    # Published AND no later than the standings beside this page - see
+    # `Tournament.within_standings?/2`. `Tournament.crosstable/1` applies the
+    # same filter to the same list to build each row's `cells`, so the
+    # columns here and the cells there can never disagree about which rounds
+    # exist.
+    rounds =
+      payload
+      |> Tournament.round_numbers()
+      |> Enum.filter(&Tournament.within_standings?(payload, &1))
 
     assigns =
       assigns
       |> assign(:rows, rows)
-      |> assign(:rounds, Tournament.round_numbers(payload))
+      |> assign(:rounds, rounds)
       |> assign(:show, display_rules(payload))
       # A Keizer ladder's "points" are the ladder's own currency and not the
       # sum of the row they would sit beside: player 1 of the fixture has two
@@ -840,10 +855,17 @@ defmodule OpenResultsWeb.TournamentHTML do
       # blanks on a tournament that has not ranked anybody yet is noise, and
       # this page is deliberately readable without a standings block at all.
       |> assign(:placings?, Enum.any?(rows, &(&1.rank || &1.points || &1.score)))
+      # Which empty message applies. Before the first standings are
+      # published there is nothing this page may show at all - not "no
+      # rounds", which is a different and rarer claim about a tournament
+      # that has genuinely posted nothing.
+      |> assign(:awaiting_standings?, is_nil(Tournament.after_round(payload)))
 
     ~H"""
     <p :if={@rows == [] or @rounds == []} class="empty">
-      {gettext("No rounds have been published for this tournament yet.")}
+      {if @awaiting_standings?,
+        do: gettext("Results appear here once the standings after round 1 are published."),
+        else: gettext("No rounds have been published for this tournament yet.")}
     </p>
 
     <div :if={@rows != [] and @rounds != []} class="scroller">
@@ -1488,10 +1510,15 @@ defmodule OpenResultsWeb.TournamentHTML do
   end
 
   @doc """
-  One player's game in each round.
+  One player's game in each round the published standings cover.
 
-  Every round gets a row, including the ones the arbiter has not published, so
-  the gaps are visible instead of being closed up.
+  Every round IN THAT RANGE gets a row, including the ones the arbiter has
+  not published, so the gaps are visible instead of being closed up. A round
+  beyond the range - already live, with a real board and a real result -
+  gets no row at all: `@card` never carries one, because `Tournament.card/2`
+  stops at the same boundary `Tournament.within_standings?/2` sets for the
+  cross-table. The caller shows this table only when `@card` is non-empty -
+  see `player.html.heex`.
   """
   attr :slug, :string, required: true
   attr :card, :list, required: true
