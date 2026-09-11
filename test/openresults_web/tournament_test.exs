@@ -90,13 +90,13 @@ defmodule OpenResultsWeb.TournamentTest do
     test "row values are read positionally and short rows blank out", %{swiss: swiss} do
       row = hd(Tournament.standings_rows(swiss))
 
-      assert Tournament.tiebreak_value(row, 0) == 3.0
-      assert Tournament.tiebreak_value(row, 3) == 5.0
+      assert Tournament.tiebreak_value(row, 0) == 1.0
+      assert Tournament.tiebreak_value(row, 3) == 3.0
       assert Tournament.tiebreak_value(row, 4) == nil
     end
 
     test "after_round/1 reads the published round", %{swiss: swiss} do
-      assert Tournament.after_round(swiss) == 3
+      assert Tournament.after_round(swiss) == 2
     end
 
     test "after_round/1 is nil for 0, not the round that never existed", %{swiss: swiss} do
@@ -176,10 +176,12 @@ defmodule OpenResultsWeb.TournamentTest do
       # It is here because a decoding table with a seat the wrong way round
       # would still look plausible on the page, and this is what catches it.
       #
-      # Only the players whose every round is public are checked. Four of this
-      # fixture's ten are correctly unknown after round 3: two are missing
-      # from the round entirely and two are on the board whose result has not
-      # been reported.
+      # Only the players whose every round is public are checked - which, now
+      # that standings sit after round 2, is all ten: round 3's gaps (two
+      # players missing the round entirely, two on the board with no result
+      # yet) sit past the round these standings cover. Those gaps are still
+      # exercised directly, by the two tests below and "a withheld board
+      # leaves the arbiter's total the only one there is".
       after_round = swiss["standings"]["after_round"]
 
       checked =
@@ -193,7 +195,7 @@ defmodule OpenResultsWeb.TournamentTest do
           row["player"]
         end
 
-      assert length(checked) == 6
+      assert length(checked) == 10
     end
 
     test "a withheld board leaves the arbiter's total the only one there is", %{swiss: swiss} do

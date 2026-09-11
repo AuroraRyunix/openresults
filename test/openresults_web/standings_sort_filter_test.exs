@@ -46,7 +46,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
       # Rank order, not pairing-number order - the fixture's own standings
       # order, exactly as `standings_table/1` renders it. Never re-sorted by
       # this app; see its moduledoc for why.
-      assert attr(rows, "data-name") == Enum.map([1, 9, 4, 2, 3, 7, 5, 6, 8, 10], &player_name/1)
+      assert attr(rows, "data-name") == Enum.map([9, 2, 1, 3, 4, 7, 5, 8, 6, 10], &player_name/1)
       assert Enum.count(attr(rows, "data-points")) == 10
     end
 
@@ -68,7 +68,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
       cells = LazyHTML.query(first, "td.tb-cell")
 
       assert Enum.count(cells) == 4
-      assert attr(cells, "data-value") == ["3.0", "3.5", "2.75", "5.0"]
+      assert attr(cells, "data-value") == ["1.0", "1.5", "1.5", "3.0"]
     end
 
     test "every sortable column header carries its key, in column order", %{document: document} do

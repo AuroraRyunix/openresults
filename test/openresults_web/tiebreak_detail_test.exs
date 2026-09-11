@@ -69,8 +69,8 @@ defmodule OpenResultsWeb.TiebreakDetailTest do
       first_row = document |> LazyHTML.query("table.standings > tbody > tr:first-child")
       summaries = texts(first_row, "td.tb-cell details.tb-detail summary")
 
-      assert Enum.any?(summaries, &String.starts_with?(&1, "3 "))
-      assert Enum.any?(summaries, &String.starts_with?(&1, "3.5 "))
+      assert Enum.any?(summaries, &String.starts_with?(&1, "1 "))
+      assert Enum.any?(summaries, &String.starts_with?(&1, "1.5 "))
     end
 
     test "opened, it carries the same per-round rows the player page shows in full", %{
@@ -79,9 +79,10 @@ defmodule OpenResultsWeb.TiebreakDetailTest do
     } do
       first_row = document |> LazyHTML.query("table.standings > tbody > tr:first-child")
       cell = LazyHTML.query(first_row, "td.tb-cell") |> Enum.at(0)
+      no = first_row |> LazyHTML.query("a.player") |> LazyHTML.attribute("data-player") |> hd()
 
       rows = texts(cell, "table.tb-working tbody tr")
-      player_page = build_conn() |> get(~p"/t/#{slug}/player/1") |> doc()
+      player_page = build_conn() |> get(~p"/t/#{slug}/player/#{no}") |> doc()
       full_rows = texts(player_page, ".working-block:first-of-type table.working-table tbody tr")
 
       assert rows == full_rows
@@ -111,7 +112,7 @@ defmodule OpenResultsWeb.TiebreakDetailTest do
         |> Enum.at(3)
 
       assert LazyHTML.query(last_cell, "details") |> Enum.empty?()
-      assert LazyHTML.text(last_cell) |> String.trim() == "5"
+      assert LazyHTML.text(last_cell) |> String.trim() == "3"
     end
   end
 
@@ -125,7 +126,7 @@ defmodule OpenResultsWeb.TiebreakDetailTest do
       # The tick hides the WORKING, not the arithmetic the standings already
       # published - the same distinction `display.tiebreaks` itself draws.
       values = texts(document, "table.standings > tbody > tr:first-child > td.tb-cell")
-      assert values == ["3", "3.5", "2.75", "5"]
+      assert values == ["1", "1.5", "1.5", "3"]
     end
 
     test "display.tiebreaks off leaves nothing to leak either", %{conn: conn} do

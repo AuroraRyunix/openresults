@@ -75,7 +75,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       assert texts(document, "h1") == ["Gent Spring Open 2026"]
       assert texts(document, "td.rank") == ~w(1 2 3 4 5 6 7 8 9 10)
-      assert texts(document, "h2") == ["Standings after round 3"]
+      assert texts(document, "h2") == ["Standings after round 2"]
     end
 
     test "the tiebreak columns are the payload's labels, in the payload's order", %{
@@ -123,8 +123,10 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       document = conn |> get(~p"/t/#{short["tournament"]["slug"]}") |> doc()
 
+      # Rank 1 is player 9 now that standings stop after round 2 - no
+      # title, so the name renders alone.
       assert cell_values(document, "table.standings > tbody > tr:first-child > td") ==
-               ["1", "GM Müller, Jörg", "2601", "A", "2.5", "3", "3.5", "", ""]
+               ["1", "De Smet, Jean-Baptiste", "1742", "B", "2", "1", "1.5", "", ""]
     end
 
     test "rows render in the order they arrived, not in the order this app would sort them", %{
@@ -155,14 +157,14 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # Player 10 has none of the three. Club play is mostly missing fields.
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
-      # The two 2.5s became 2.0 on 2026-08-28, and the fixture is right.
-      # These files are written by OpenPairings' own `snapshot_test.exs` so
-      # this repo tests against real builder output; that build fixed a
-      # tiebreak bug where an unreported round handed every player's
-      # opponents a phantom half-point. Player 10's Buchholz lost exactly
-      # that half-point. Nothing here changed - the numbers it is given did.
+      # This file is written by OpenPairings' own `snapshot_test.exs`, so
+      # this repo tests against real builder output rather than a value
+      # typed in by hand. Standings now stop after round 2, not round 3, so
+      # player 10's Buchholz Cut-1 and Buchholz each carry one round less
+      # than they used to. Nothing here changed - the numbers it is given
+      # did.
       assert cell_values(document, "table.standings > tbody > tr:last-child > td") ==
-               ["10", "Nguyễn, Thị Hà", "-", "B", "0", "2", "2", "0", "0"]
+               ["10", "Nguyễn, Thị Hà", "-", "B", "0", "1", "1", "0", "0"]
     end
 
     test "a tournament with nothing published at all still says so plainly", %{conn: conn} do
@@ -264,7 +266,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     test "a tournament with a real standings table is unaffected", %{conn: conn, slug: slug} do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
-      assert texts(document, "h2") == ["Standings after round 3"]
+      assert texts(document, "h2") == ["Standings after round 2"]
       assert texts(document, "table.starting-rank") == []
     end
   end
@@ -284,10 +286,10 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       slug: slug
     } do
       # The standings page's own fallback would have gone quiet by now
-      # (round 3 is in, in the ordinary fixture) - the nav still offers a
+      # (round 2 is in, in the ordinary fixture) - the nav still offers a
       # link, but the section itself is the ordinary standings table.
       document = conn |> get(~p"/t/#{slug}") |> doc()
-      assert texts(document, "h2") == ["Standings after round 3"]
+      assert texts(document, "h2") == ["Standings after round 2"]
 
       players_page = conn |> get(~p"/t/#{slug}/players") |> html_response(200)
       assert players_page =~ "Starting rank"
@@ -562,7 +564,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # same detail the arbiter's own Players Card carries, and the reason 4/5
       # against the top boards reads differently from 4/5 against the bottom.
       assert texts(document, "table.card tbody tr") == [
-               "1 White 6 ROU WIM Ștefănescu, Ioana 2033 0.5 1-0 1",
+               "1 White 6 ROU WIM Ștefănescu, Ioana 2033 0 1-0 1",
                "2 Black 2 SRB IM Đurić, Nikola 2455 1.5 1/2-1/2 1.5",
                "3 White 3 IRL FM Ó Súilleabháin, Séamus 2312 1.5 1-0 2.5",
                "4 not published",

@@ -284,7 +284,7 @@ defmodule OpenResultsWeb.CrosstableTest do
              |> get(~p"/t/#{slug}/player/3")
              |> doc()
              |> texts("table.card tbody tr:nth-child(2)") ==
-               ["2 Black 6 ROU WIM Ștefănescu, Ioana 2033 0.5 0-1 1.5"]
+               ["2 Black 6 ROU WIM Ștefănescu, Ioana 2033 0 0-1 1.5"]
     end
 
     test "a round a player is not listed in is empty, which is not the same as a zero", %{
@@ -328,11 +328,12 @@ defmodule OpenResultsWeb.CrosstableTest do
       document = grid(conn, slug)
 
       assert texts(document, "table.crosstable tbody tr:first-child td") ==
-               ["1", "GM Müller, Jörg", "2601", "6 w 1", "2 b 0.5", "3 w 1", "2 b 1", "2.5", "1"]
+               ["1", "GM Müller, Jörg", "2601", "6 w 1", "2 b 0.5", "3 w 1", "2 b 1", "1.5", "3"]
 
-      # Player 9 is second on 2 points, above three players on 1.5 - which is
-      # a tiebreak's answer and not something this page could work out.
-      assert texts(document, "table.crosstable tbody tr:nth-child(9) td:last-child") == ["2"]
+      # Players 6 and 10 both finish on 0 points; the arbiter placed 6 ahead
+      # of 10, which is a tiebreak's answer and not something this page
+      # could work out.
+      assert texts(document, "table.crosstable tbody tr:nth-child(6) td:last-child") == ["9"]
     end
 
     test "and go entirely when the arbiter does not publish standings", %{

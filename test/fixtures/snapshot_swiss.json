@@ -306,99 +306,24 @@
   "schema": "openresults/snapshot",
   "source": {
     "app": "openpairings",
-    "version": "0.58.2-dev"
+    "version": "0.59.0-dev"
   },
   "standings": {
-    "after_round": 3,
+    "after_round": 2,
     "manual_incomplete": false,
     "manual_order": false,
     "manual_stale": false,
     "rows": [
       {
-        "category": "A",
-        "player": 1,
-        "points": 2.5,
-        "rank": 1,
-        "tiebreaks": [
-          3.0,
-          3.5,
-          2.75,
-          5.0
-        ],
-        "working": {
-          "BH": {
-            "parts": [
-              {
-                "opponent": 6,
-                "round": 1,
-                "value": 0.5
-              },
-              {
-                "opponent": 2,
-                "round": 2,
-                "value": 1.5
-              },
-              {
-                "opponent": 3,
-                "round": 3,
-                "value": 1.5
-              }
-            ],
-            "total": 3.5
-          },
-          "BHC1": {
-            "parts": [
-              {
-                "kind": "cut",
-                "opponent": 6,
-                "round": 1,
-                "value": 0.5
-              },
-              {
-                "opponent": 2,
-                "round": 2,
-                "value": 1.5
-              },
-              {
-                "opponent": 3,
-                "round": 3,
-                "value": 1.5
-              }
-            ],
-            "total": 3.0
-          },
-          "SB": {
-            "parts": [
-              {
-                "opponent": 6,
-                "round": 1,
-                "value": 0.5
-              },
-              {
-                "opponent": 2,
-                "round": 2,
-                "value": 0.75
-              },
-              {
-                "opponent": 3,
-                "round": 3,
-                "value": 1.5
-              }
-            ],
-            "total": 2.75
-          }
-        }
-      },
-      {
         "category": "B",
         "player": 9,
         "points": 2.0,
-        "rank": 2,
+        "rank": 1,
         "tiebreaks": [
-          2.0,
-          4.0,
-          2.0,
-          5.0
+          1.0,
+          1.5,
+          1.5,
+          3.0
         ],
         "working": {
           "BH": {
@@ -406,134 +331,46 @@
               {
                 "opponent": 4,
                 "round": 1,
-                "value": 1.5
+                "value": 1.0
               },
               {
                 "opponent": 8,
                 "round": 2,
                 "value": 0.5
-              },
-              {
-                "kind": "virtual",
-                "round": 3,
-                "value": 2.0
               }
             ],
-            "total": 4.0
+            "total": 1.5
           },
           "BHC1": {
             "parts": [
               {
                 "opponent": 4,
                 "round": 1,
-                "value": 1.5
-              },
-              {
-                "opponent": 8,
-                "round": 2,
-                "value": 0.5
+                "value": 1.0
               },
               {
                 "kind": "cut",
-                "round": 3,
-                "value": 2.0
+                "opponent": 8,
+                "round": 2,
+                "value": 0.5
               }
             ],
-            "total": 2.0
+            "total": 1.0
           },
           "SB": {
             "parts": [
               {
                 "opponent": 4,
                 "round": 1,
-                "value": 1.5
+                "value": 1.0
               },
               {
                 "opponent": 8,
                 "round": 2,
                 "value": 0.5
-              },
-              {
-                "kind": "virtual",
-                "round": 3,
-                "value": 0.0
               }
             ],
-            "total": 2.0
-          }
-        }
-      },
-      {
-        "category": "A",
-        "player": 4,
-        "points": 1.5,
-        "rank": 3,
-        "tiebreaks": [
-          4.0,
-          5.5,
-          2.25,
-          2.5
-        ],
-        "working": {
-          "BH": {
-            "parts": [
-              {
-                "opponent": 9,
-                "round": 1,
-                "value": 2.5
-              },
-              {
-                "kind": "virtual",
-                "round": 2,
-                "value": 1.5
-              },
-              {
-                "opponent": 2,
-                "round": 3,
-                "value": 1.5
-              }
-            ],
-            "total": 5.5
-          },
-          "BHC1": {
-            "parts": [
-              {
-                "opponent": 9,
-                "round": 1,
-                "value": 2.5
-              },
-              {
-                "kind": "cut",
-                "round": 2,
-                "value": 1.5
-              },
-              {
-                "opponent": 2,
-                "round": 3,
-                "value": 1.5
-              }
-            ],
-            "total": 4.0
-          },
-          "SB": {
-            "parts": [
-              {
-                "opponent": 9,
-                "round": 1,
-                "value": 0.0
-              },
-              {
-                "kind": "virtual",
-                "round": 2,
-                "value": 1.5
-              },
-              {
-                "opponent": 2,
-                "round": 3,
-                "value": 0.75
-              }
-            ],
-            "total": 2.25
+            "total": 1.5
           }
         }
       },
@@ -541,12 +378,12 @@
         "category": "A",
         "player": 2,
         "points": 1.5,
-        "rank": 4,
+        "rank": 2,
         "tiebreaks": [
-          4.0,
-          5.0,
-          2.25,
-          4.0
+          1.5,
+          2.5,
+          1.75,
+          2.5
         ],
         "working": {
           "BH": {
@@ -559,15 +396,10 @@
               {
                 "opponent": 1,
                 "round": 2,
-                "value": 2.5
-              },
-              {
-                "opponent": 4,
-                "round": 3,
                 "value": 1.5
               }
             ],
-            "total": 5.0
+            "total": 2.5
           },
           "BHC1": {
             "parts": [
@@ -580,15 +412,10 @@
               {
                 "opponent": 1,
                 "round": 2,
-                "value": 2.5
-              },
-              {
-                "opponent": 4,
-                "round": 3,
                 "value": 1.5
               }
             ],
-            "total": 4.0
+            "total": 1.5
           },
           "SB": {
             "parts": [
@@ -600,15 +427,70 @@
               {
                 "opponent": 1,
                 "round": 2,
-                "value": 1.25
-              },
-              {
-                "opponent": 4,
-                "round": 3,
-                "value": 0.0
+                "value": 0.75
               }
             ],
-            "total": 2.25
+            "total": 1.75
+          }
+        }
+      },
+      {
+        "category": "A",
+        "player": 1,
+        "points": 1.5,
+        "rank": 3,
+        "tiebreaks": [
+          1.5,
+          1.5,
+          0.75,
+          2.5
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 1.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 6,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 1.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 0.75
+              }
+            ],
+            "total": 0.75
           }
         }
       },
@@ -616,12 +498,12 @@
         "category": "A",
         "player": 3,
         "points": 1.5,
-        "rank": 5,
+        "rank": 4,
         "tiebreaks": [
-          3.0,
-          3.5,
-          0.75,
-          3.5
+          0.5,
+          0.5,
+          0.25,
+          2.0
         ],
         "working": {
           "BH": {
@@ -634,36 +516,26 @@
               {
                 "opponent": 6,
                 "round": 2,
-                "value": 0.5
-              },
-              {
-                "opponent": 1,
-                "round": 3,
-                "value": 2.5
+                "value": 0.0
               }
             ],
-            "total": 3.5
+            "total": 0.5
           },
           "BHC1": {
             "parts": [
               {
-                "kind": "cut",
                 "opponent": 8,
                 "round": 1,
                 "value": 0.5
               },
               {
+                "kind": "cut",
                 "opponent": 6,
                 "round": 2,
-                "value": 0.5
-              },
-              {
-                "opponent": 1,
-                "round": 3,
-                "value": 2.5
+                "value": 0.0
               }
             ],
-            "total": 3.0
+            "total": 0.5
           },
           "SB": {
             "parts": [
@@ -675,15 +547,69 @@
               {
                 "opponent": 6,
                 "round": 2,
-                "value": 0.5
-              },
-              {
-                "opponent": 1,
-                "round": 3,
                 "value": 0.0
               }
             ],
-            "total": 0.75
+            "total": 0.25
+          }
+        }
+      },
+      {
+        "category": "A",
+        "player": 4,
+        "points": 1.0,
+        "rank": 5,
+        "tiebreaks": [
+          2.0,
+          3.0,
+          1.0,
+          1.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 9,
+                "round": 1,
+                "value": 2.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 3.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 9,
+                "round": 1,
+                "value": 2.0
+              },
+              {
+                "kind": "cut",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 2.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 9,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.0
           }
         }
       },
@@ -693,10 +619,10 @@
         "points": 1.0,
         "rank": 6,
         "tiebreaks": [
-          2.5,
+          1.5,
           2.5,
           1.0,
-          2.0
+          1.0
         ],
         "working": {
           "BH": {
@@ -710,11 +636,6 @@
                 "opponent": 5,
                 "round": 2,
                 "value": 1.0
-              },
-              {
-                "opponent": 10,
-                "round": 3,
-                "value": 0.0
               }
             ],
             "total": 2.5
@@ -727,18 +648,13 @@
                 "value": 1.5
               },
               {
+                "kind": "cut",
                 "opponent": 5,
                 "round": 2,
                 "value": 1.0
-              },
-              {
-                "kind": "cut",
-                "opponent": 10,
-                "round": 3,
-                "value": 0.0
               }
             ],
-            "total": 2.5
+            "total": 1.5
           },
           "SB": {
             "parts": [
@@ -751,11 +667,6 @@
                 "opponent": 5,
                 "round": 2,
                 "value": 1.0
-              },
-              {
-                "opponent": 10,
-                "round": 3,
-                "value": 0.0
               }
             ],
             "total": 1.0
@@ -769,9 +680,9 @@
         "rank": 7,
         "tiebreaks": [
           1.0,
-          1.0,
-          0.0,
-          3.0
+          1.5,
+          0.5,
+          2.0
         ],
         "working": {
           "BH": {
@@ -779,7 +690,7 @@
               {
                 "opponent": 10,
                 "round": 1,
-                "value": 0.0
+                "value": 0.5
               },
               {
                 "opponent": 7,
@@ -787,7 +698,7 @@
                 "value": 1.0
               }
             ],
-            "total": 1.0
+            "total": 1.5
           },
           "BHC1": {
             "parts": [
@@ -795,7 +706,7 @@
                 "kind": "cut",
                 "opponent": 10,
                 "round": 1,
-                "value": 0.0
+                "value": 0.5
               },
               {
                 "opponent": 7,
@@ -810,7 +721,7 @@
               {
                 "opponent": 10,
                 "round": 1,
-                "value": 0.0
+                "value": 0.5
               },
               {
                 "opponent": 7,
@@ -818,81 +729,7 @@
                 "value": 0.0
               }
             ],
-            "total": 0.0
-          }
-        }
-      },
-      {
-        "category": "B",
-        "player": 6,
-        "points": 0.5,
-        "rank": 8,
-        "tiebreaks": [
-          4.0,
-          4.5,
-          0.25,
-          0.5
-        ],
-        "working": {
-          "BH": {
-            "parts": [
-              {
-                "opponent": 1,
-                "round": 1,
-                "value": 2.5
-              },
-              {
-                "opponent": 3,
-                "round": 2,
-                "value": 1.5
-              },
-              {
-                "kind": "virtual",
-                "round": 3,
-                "value": 0.5
-              }
-            ],
-            "total": 4.5
-          },
-          "BHC1": {
-            "parts": [
-              {
-                "opponent": 1,
-                "round": 1,
-                "value": 2.5
-              },
-              {
-                "opponent": 3,
-                "round": 2,
-                "value": 1.5
-              },
-              {
-                "kind": "cut",
-                "round": 3,
-                "value": 0.5
-              }
-            ],
-            "total": 4.0
-          },
-          "SB": {
-            "parts": [
-              {
-                "opponent": 1,
-                "round": 1,
-                "value": 0.0
-              },
-              {
-                "opponent": 3,
-                "round": 2,
-                "value": 0.0
-              },
-              {
-                "kind": "virtual",
-                "round": 3,
-                "value": 0.25
-              }
-            ],
-            "total": 0.25
+            "total": 0.5
           }
         }
       },
@@ -900,12 +737,12 @@
         "category": "B",
         "player": 8,
         "points": 0.5,
-        "rank": 9,
+        "rank": 8,
         "tiebreaks": [
-          2.5,
-          4.0,
+          2.0,
+          3.5,
           0.75,
-          1.5
+          1.0
         ],
         "working": {
           "BH": {
@@ -918,10 +755,10 @@
               {
                 "opponent": 9,
                 "round": 2,
-                "value": 2.5
+                "value": 2.0
               }
             ],
-            "total": 4.0
+            "total": 3.5
           },
           "BHC1": {
             "parts": [
@@ -934,10 +771,10 @@
               {
                 "opponent": 9,
                 "round": 2,
-                "value": 2.5
+                "value": 2.0
               }
             ],
-            "total": 2.5
+            "total": 2.0
           },
           "SB": {
             "parts": [
@@ -958,12 +795,72 @@
       },
       {
         "category": "B",
+        "player": 6,
+        "points": 0.0,
+        "rank": 9,
+        "tiebreaks": [
+          1.5,
+          3.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 3.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 1,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 1.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": "B",
         "player": 10,
         "points": 0.0,
         "rank": 10,
         "tiebreaks": [
-          2.0,
-          2.0,
+          1.0,
+          1.0,
           0.0,
           0.0
         ],
@@ -976,17 +873,12 @@
                 "value": 1.0
               },
               {
-                "opponent": 7,
-                "round": 3,
-                "value": 1.0
-              },
-              {
                 "kind": "virtual",
                 "round": 2,
                 "value": 0.0
               }
             ],
-            "total": 2.0
+            "total": 1.0
           },
           "BHC1": {
             "parts": [
@@ -996,28 +888,18 @@
                 "value": 1.0
               },
               {
-                "opponent": 7,
-                "round": 3,
-                "value": 1.0
-              },
-              {
                 "kind": "cut",
                 "round": 2,
                 "value": 0.0
               }
             ],
-            "total": 2.0
+            "total": 1.0
           },
           "SB": {
             "parts": [
               {
                 "opponent": 5,
                 "round": 1,
-                "value": 0.0
-              },
-              {
-                "opponent": 7,
-                "round": 3,
                 "value": 0.0
               },
               {

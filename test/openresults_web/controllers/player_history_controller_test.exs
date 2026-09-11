@@ -39,8 +39,8 @@ defmodule OpenResultsWeb.PlayerHistoryControllerTest do
       assert entry.slug == slug
       assert entry.player_name == "Müller, Jörg"
       assert entry.player_no == 1
-      assert entry.rank == 1
-      assert entry.points == 2.5
+      assert entry.rank == 3
+      assert entry.points == 1.5
       assert entry.total == 10
       assert entry.linkable?
     end
@@ -86,7 +86,7 @@ defmodule OpenResultsWeb.PlayerHistoryControllerTest do
       publish(SnapshotPayloads.swiss())
 
       html = conn |> get(~p"/players/#{@fide_id}") |> html_response(200)
-      assert html =~ "rank 1 of 10"
+      assert html =~ "rank 3 of 10"
     end
 
     test "withheld player cards list the tournament without a link", %{conn: conn} do

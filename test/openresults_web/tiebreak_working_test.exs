@@ -112,19 +112,57 @@ defmodule OpenResultsWeb.TiebreakWorkingTest do
       assert Enum.any?(texts(document, ".working p.footnote"), &(&1 =~ "does not calculate"))
     end
 
-    test "the summary says what each tie-break is made of", %{conn: conn, slug: slug} do
+    test "the summary says what each tie-break is made of", %{
+      conn: conn,
+      slug: slug,
+      swiss: swiss
+    } do
       document = conn |> get(~p"/t/#{slug}/player/1") |> doc()
 
       summary = texts(document, "#player-summary .tiebreak-summary tbody tr")
 
       assert Enum.any?(summary, &(&1 =~ "Buchholz Cut-1" and &1 =~ "discarded"))
-      assert Enum.any?(summary, &(&1 =~ "from 3 rounds"))
+
+      # No tie-break has 3 contributing rounds at only two rounds played -
+      # standings stop after round 2 in this fixture now. A third round is
+      # added to player 1's own Buchholz working, the way other tests here
+      # build a small variant of the payload, to prove the summary still
+      # counts rounds rather than assuming there are always two.
+      three_rounds =
+        swiss
+        |> put_in(["tournament", "slug"], "three-rounds")
+        |> update_in(["standings", "rows"], fn rows ->
+          Enum.map(rows, fn row ->
+            if row["player"] == 1 do
+              row
+              |> update_in(
+                ["working", "BH", "parts"],
+                &(&1 ++ [%{"opponent" => 9, "round" => 3, "value" => 1.0}])
+              )
+              |> update_in(["working", "BH", "total"], &(&1 + 1.0))
+              |> update_in(["tiebreaks"], fn [c1, bh | rest] -> [c1, bh + 1.0 | rest] end)
+            else
+              row
+            end
+          end)
+        end)
+
+      {:ok, _} = Snapshots.ingest(three_rounds)
+
+      three_rounds_document = conn |> get(~p"/t/three-rounds/player/1") |> doc()
+
+      three_rounds_summary =
+        texts(three_rounds_document, "#player-summary .tiebreak-summary tbody tr")
+
+      assert Enum.any?(three_rounds_summary, &(&1 =~ "from 3 rounds"))
     end
 
     test "the placing is the rank and the field size", %{conn: conn, slug: slug} do
       document = conn |> get(~p"/t/#{slug}/player/1") |> doc()
 
-      assert texts(document, ".placing") == ["1 of 10, on 2.5"]
+      # Player 1 sits third now that standings stop after round 2 - rank,
+      # not "being first", is what this test is about.
+      assert texts(document, ".placing") == ["3 of 10, on 1.5"]
     end
   end
 
@@ -161,7 +199,12 @@ defmodule OpenResultsWeb.TiebreakWorkingTest do
       conn: conn,
       slug: slug
     } do
-      document = conn |> get(~p"/t/#{slug}/player/1") |> doc()
+      # Player 9, not player 1: player 1's own discarded round (round 1 of
+      # Buchholz Cut-1) happens to be worth 0 in this fixture, and a bar
+      # worth 0 is not drawn at all - see `score_chart/1`. Player 9's
+      # discarded round is worth 0.5, so their chart is the one that still
+      # shows a bar in the withheld colour.
+      document = conn |> get(~p"/t/#{slug}/player/9") |> doc()
 
       assert LazyHTML.query(document, ".chart-svg polyline.chart-line") |> Enum.count() == 1
       assert LazyHTML.query(document, ".chart-svg rect.chart-bar") |> Enum.count() >= 1

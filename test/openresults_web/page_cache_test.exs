@@ -43,7 +43,7 @@ defmodule OpenResultsWeb.PageCacheTest do
     # The property CDN caching was rejected to protect. A new version must
     # never be shadowed by a rendered page from the previous one.
     before = conn |> get(~p"/t/#{slug}") |> html_response(200)
-    assert before =~ "after round 3"
+    assert before =~ "after round 2"
 
     changed = put_in(swiss, ["standings", "after_round"], 4)
     {:ok, _} = Snapshots.ingest(changed)
