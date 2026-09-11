@@ -233,6 +233,100 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  Where a tournament sits in its own life cycle: `:live`, `:upcoming` or
+  `:finished`.
+
+  For the front page, to group a long season's worth of events the way a
+  spectator actually thinks about them rather than as one undifferentiated
+  list. `today` is `Date.utc_today/0` by default and an explicit argument
+  for tests - the one place in this module the wall clock enters at all.
+
+  ## The rule, since the payload cannot state this outright
+
+  Nothing here is sent as a single field; it is derived, in this order, from
+  fields the contract already carries:
+
+    1. **`:finished`** - the published rounds reach `rounds_count` (every
+       round is in), OR `end_date` has already passed. Checked first: a
+       calendar that says an event is over outranks everything else, even a
+       `rounds_count` the arbiter never kept current.
+    2. **`:upcoming`** - nothing has been published yet, AND `start_date` is
+       either absent or still in the future.
+    3. **`:live`** - everything else. The default for a tournament actually
+       being played, and for one this server simply cannot place with
+       confidence.
+
+  ## The judgement calls, stated so they can be revisited
+
+  A tournament with rounds published but no `rounds_count` (or one lower
+  than what has actually been posted - a mistyped total) can never read as
+  `:finished` by rule 1 alone; only a past `end_date` can close it. Silence
+  reads as still running rather than as finished, because a spectator
+  finding a live event mislabelled "finished" is a worse failure than the
+  reverse.
+
+  A tournament with NEITHER a published round NOR any date at all reads as
+  `:upcoming` rather than `:live` - the only reading available when nothing
+  the contract carries says otherwise, and the one that puts an entered but
+  not-yet-started event where a spectator would expect to find it rather
+  than beside events actually being played.
+  """
+  @spec status(map(), Date.t()) :: :live | :upcoming | :finished
+  def status(payload, today \\ Date.utc_today()) do
+    cond do
+      finished?(payload, today) -> :finished
+      upcoming?(payload, today) -> :upcoming
+      true -> :live
+    end
+  end
+
+  defp finished?(payload, today) do
+    all_rounds_published?(payload) or past_end_date?(payload, today)
+  end
+
+  # Every round from 1 to `rounds_count`, published - not merely a published
+  # round NUMBERED `rounds_count` or higher. The swiss fixture this repo
+  # tests against is the reason this distinction exists at all: round 4 is
+  # withheld while round 5 is already published, `rounds_count` is 5, and
+  # the standings sit "after round 3" - a tournament plainly still running,
+  # which "the highest published number reached the total" alone would have
+  # called finished.
+  defp all_rounds_published?(payload) do
+    count = rounds_count(payload)
+    count > 0 and MapSet.subset?(MapSet.new(1..count), MapSet.new(round_numbers(payload)))
+  end
+
+  defp past_end_date?(payload, today) do
+    case parse_date(string(info(payload), "end_date")) do
+      {:ok, date} -> Date.compare(date, today) == :lt
+      :error -> false
+    end
+  end
+
+  defp upcoming?(payload, today) do
+    round_numbers(payload) == [] and not started_by?(payload, today)
+  end
+
+  # Absent means NOT known to have started - the safe reading for
+  # `upcoming?`, which is the whole point of checking this rather than
+  # assuming a silent tournament is already under way.
+  defp started_by?(payload, today) do
+    case parse_date(string(info(payload), "start_date")) do
+      {:ok, date} -> Date.compare(date, today) != :gt
+      :error -> false
+    end
+  end
+
+  defp parse_date(nil), do: :error
+
+  defp parse_date(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> {:ok, date}
+      {:error, _reason} -> :error
+    end
+  end
+
+  @doc """
   Round `number`, or `nil` if it is not in the payload.
 
   `nil` is the whole withholding rule: an unpublished round is absent from the

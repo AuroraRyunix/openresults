@@ -140,6 +140,12 @@ per-round working behind it - the same figures the player page already
 shows in full, reached with `<details>`/`<summary>` rather than a script.
 See `OpenResultsWeb.TournamentHTML.tiebreak_cell/1`.
 
+The front page groups its tournaments into live, upcoming and finished, and
+can be searched, again in the browser. A tournament's group is derived from
+fields the snapshot already carries - rounds published against the declared
+total, and its own dates - never computed or stored. See
+`OpenResultsWeb.Tournament.status/2`.
+
 ## Licence
 
 OpenResults is source-available under the **Elastic License 2.0** (see

@@ -8,28 +8,115 @@
     {gettext("Nothing has been published yet.")}
   </p>
 
-  <ul class="tournaments">
-    <li :for={snapshot <- @snapshots}>
-      <a href={~p"/t/#{snapshot.tournament_slug}"}>
-        {Tournament.name(snapshot.payload)}
-      </a>
-      <%!-- The same two ticks the masthead honours on every other page. This list
-            did not consult them, so an arbiter who turned the city or the dates
-            off saw them gone from their tournament's own pages and still
-            printed here, on the one page nobody navigates away from. A display
-            rule that holds on four pages out of five is not a rule. --%>
-      <span class="details">
-        <span :if={
-          Tournament.show?(snapshot.payload, "city") && Tournament.info(snapshot.payload)["city"]
-        }>
-          {Tournament.info(snapshot.payload)["city"]}
-        </span>
-        <span :if={
-          Tournament.show?(snapshot.payload, "dates") && dates(Tournament.info(snapshot.payload))
-        }>
-          {dates(Tournament.info(snapshot.payload))}
-        </span>
-      </span>
-    </li>
-  </ul>
+  <%!-- Hidden until `html.has-js` says the script that drives it actually
+        ran - see `OpenResultsWeb.TournamentHTML.standings_table/1`'s own
+        moduledoc for why a control that filters nothing without JavaScript
+        is worse than no control at all. Every tournament below still
+        renders, grouped, with the script switched off. --%>
+  <div :if={@snapshots != []} class="index-controls" data-index-controls>
+    <label class="index-search">
+      <span class="visually-hidden">{gettext("Search tournaments")}</span>
+      <input
+        type="search"
+        class="index-search-input"
+        placeholder={gettext("Search tournaments…")}
+        autocomplete="off"
+        data-index-search
+      />
+    </label>
+    <p class="empty" data-index-empty hidden>
+      {gettext("No tournaments match your search.")}
+    </p>
+  </div>
+
+  <div :if={@snapshots != []} data-index-panel>
+    <section :for={{kind, snapshots} <- @groups} :if={snapshots != []} data-group={kind}>
+      <h2>{group_title(kind)}</h2>
+
+      <ul class="tournaments">
+        <li
+          :for={snapshot <- snapshots}
+          data-name={Tournament.name(snapshot.payload)}
+          data-city={
+            Tournament.show?(snapshot.payload, "city") &&
+              data_value(Tournament.info(snapshot.payload)["city"])
+          }
+          data-federation={
+            Tournament.show?(snapshot.payload, "federation") &&
+              data_value(Tournament.info(snapshot.payload)["federation"])
+          }
+        >
+          <a href={~p"/t/#{snapshot.tournament_slug}"}>
+            {Tournament.name(snapshot.payload)}
+          </a>
+          <%!-- The same two ticks the masthead honours on every other page. This list
+                did not consult them, so an arbiter who turned the city or the dates
+                off saw them gone from their tournament's own pages and still
+                printed here, on the one page nobody navigates away from. A display
+                rule that holds on four pages out of five is not a rule. --%>
+          <span class="details">
+            <span :if={
+              Tournament.show?(snapshot.payload, "city") &&
+                Tournament.info(snapshot.payload)["city"]
+            }>
+              {Tournament.info(snapshot.payload)["city"]}
+            </span>
+            <span :if={
+              Tournament.show?(snapshot.payload, "dates") &&
+                dates(Tournament.info(snapshot.payload))
+            }>
+              {dates(Tournament.info(snapshot.payload))}
+            </span>
+          </span>
+        </li>
+      </ul>
+    </section>
+  </div>
 </section>
+
+<script>
+  (() => {
+    // Re-run from the very first render - see the root layout's comment on
+    // "openresults:updated" for why this survives the 20-second refresher's
+    // innerHTML swap even though this very <script> tag does not run again.
+    const init = () => {
+      const box = document.querySelector("[data-index-search]");
+      const panel = document.querySelector("[data-index-panel]");
+      if (!box || !panel) { return; }
+
+      const empty = document.querySelector("[data-index-empty]");
+      const groups = Array.from(panel.querySelectorAll("[data-group]"));
+
+      const apply = () => {
+        const query = box.value.trim().toLowerCase();
+        let anyVisible = false;
+
+        groups.forEach((group) => {
+          let groupHasMatch = false;
+
+          group.querySelectorAll(".tournaments > li").forEach((row) => {
+            const haystack = [row.dataset.name, row.dataset.city, row.dataset.federation]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+
+            const match = !query || haystack.includes(query);
+            row.hidden = !match;
+            if (match) { groupHasMatch = true; }
+          });
+
+          group.hidden = !groupHasMatch;
+          if (groupHasMatch) { anyVisible = true; }
+        });
+
+        if (empty) { empty.hidden = anyVisible || !query; }
+      };
+
+      box.addEventListener("input", apply);
+      apply();
+    };
+
+    init();
+    document.addEventListener("openresults:updated", init);
+  })();
+</script>

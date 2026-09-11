@@ -374,6 +374,62 @@ tr.withheld td {
   display: block;
 }
 
+.tournaments > li[hidden] {
+  display: none;
+}
+
+/* Groups the tournament list into - see `Tournament.status/2` and the
+   moduledoc on `OpenResultsWeb.TournamentController.index/2`. Each is its
+   own <section>, hidden outright the moment search leaves nothing in it
+   showing, rather than left standing over an empty list. */
+section[data-group] {
+  margin-top: 1.5rem;
+}
+
+section[data-group][hidden] {
+  display: none;
+}
+
+section[data-group] h2 {
+  margin-bottom: 0.25rem;
+}
+
+/* Client-side, like the standings table's own controls - see
+   `OpenResultsWeb.TournamentHTML.standings_table/1`'s moduledoc for why.
+   Hidden until `html.has-js` says the script that drives it actually ran. */
+.index-controls {
+  display: none;
+  margin-bottom: 1rem;
+}
+
+html.has-js .index-controls {
+  display: block;
+}
+
+.index-search {
+  display: block;
+  max-width: 22rem;
+}
+
+.index-search-input {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.index-controls .empty {
+  margin: 0.5rem 0 0;
+}
+
+.index-controls .empty[hidden] {
+  display: none;
+}
+
 /* ---- the standings table: sorting and filtering ----
 
    Client-side, entirely - see `OpenResultsWeb.TournamentHTML.standings_table/1`

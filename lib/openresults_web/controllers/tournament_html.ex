@@ -135,6 +135,14 @@ defmodule OpenResultsWeb.TournamentHTML do
   end
 
   @doc """
+  A front-page group's own heading - see `Tournament.status/2` for how a
+  tournament ends up in one.
+  """
+  def group_title(:live), do: gettext("Live now")
+  def group_title(:upcoming), do: gettext("Upcoming")
+  def group_title(:finished), do: gettext("Finished")
+
+  @doc """
   An anchor as one gettext binding, for a sentence with a link inside it.
 
   A translator moving the link to the other end of a Dutch sentence must not

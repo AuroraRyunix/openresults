@@ -20,7 +20,15 @@ defmodule OpenResultsWeb.TournamentController do
   alias OpenResultsWeb.Tournament
 
   @doc """
-  `GET /` - the tournaments that have published.
+  `GET /` - the tournaments that have published, grouped by where each one
+  sits in its own life cycle.
+
+  Grouping and search both happen from this one list - see
+  `Tournament.status/1` for how a snapshot becomes `:live`, `:upcoming` or
+  `:finished`, and `tournament_html/index.html.heex` for the search box,
+  which is client-side for the same reason `standings_table/1`'s sort and
+  filter are: the server renders one page regardless of what a reader later
+  types into it.
   """
   def index(conn, _params) do
     # Filtered here rather than in `Snapshots.list_current/0`: which
@@ -29,11 +37,16 @@ defmodule OpenResultsWeb.TournamentController do
     # trap for the next caller - a takedown sweep or an admin view would
     # quietly skip every unlisted tournament and give no reason.
     listed = Enum.filter(Snapshots.list_current(), &Tournament.listed?(&1.payload))
+    grouped = Enum.group_by(listed, &Tournament.status(&1.payload))
 
     render(conn, :index,
       page_title: gettext("Tournaments"),
       page_description: Meta.index(),
-      snapshots: listed
+      snapshots: listed,
+      # Live first (the most immediately relevant), then upcoming, then
+      # finished - and in that fixed order regardless of how many of each
+      # there are, so the page's shape does not shuffle between visits.
+      groups: for(kind <- [:live, :upcoming, :finished], do: {kind, Map.get(grouped, kind, [])})
     )
   end
 
