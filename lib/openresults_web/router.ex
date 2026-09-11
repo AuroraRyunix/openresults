@@ -67,6 +67,12 @@ defmodule OpenResultsWeb.Router do
 
     get "/", TournamentController, :index
 
+    # One player, across every tournament published here - see
+    # `OpenResultsWeb.PlayerHistory` for why this is keyed by FIDE id and not
+    # by name. Not in the scope above: there is no single tournament, and so
+    # no slug, for `Revalidate` to key an ETag against.
+    get "/players/:fide_id", PlayerHistoryController, :show
+
     # Entry. Under the tournament, beside `round` and `player`, because an
     # entry is for one event and the slug is the only handle there is - and
     # because a tournament that has not published here then 404s from the same

@@ -1,0 +1,30 @@
+<header class="masthead">
+  <h1>
+    {heading(@fide_id, @entries)}
+    <span class="quiet">{gettext("FIDE %{id}", id: @fide_id)}</span>
+  </h1>
+  <p class="details">
+    <span>{gettext("Every published tournament this site has for this FIDE id.")}</span>
+  </p>
+</header>
+
+<section>
+  <p :if={@entries == []} class="empty">
+    {gettext("No published tournament lists this FIDE id yet.")}
+  </p>
+
+  <ul :if={@entries != []} class="tournaments player-history">
+    <li :for={entry <- @entries}>
+      <a :if={entry.linkable?} href={~p"/t/#{entry.slug}/player/#{entry.player_no}"}>
+        {entry.name}
+      </a>
+      <span :if={not entry.linkable?}>{entry.name}</span>
+
+      <span class="details">
+        <span :if={entry.city}>{entry.city}</span>
+        <span :if={dates(entry)}>{dates(entry)}</span>
+        <span :if={placing(entry)}>{placing(entry)}</span>
+      </span>
+    </li>
+  </ul>
+</section>

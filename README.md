@@ -123,6 +123,11 @@ In production. Publishing, registration, tournament keys, takedown, themes,
 per-tournament display rules and the FIDE search are all live and covered by
 the test suite.
 
+A player's history across every tournament this server holds, found by FIDE
+id, is also live: linked from a player's card when they have one, honouring
+the same display rules, takedown and unlisting as everywhere else. See
+`OpenResultsWeb.PlayerHistory`.
+
 ## Licence
 
 OpenResults is source-available under the **Elastic License 2.0** (see

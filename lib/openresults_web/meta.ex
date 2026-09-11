@@ -118,6 +118,22 @@ defmodule OpenResultsWeb.Meta do
     gettext("%{tournament} on OpenResults.", tournament: Tournament.name(payload))
   end
 
+  @doc """
+  The cross-tournament player history page, by FIDE id.
+
+  Says how many tournaments are listed and nothing about who the player is -
+  see `OpenResultsWeb.PlayerHistory` for why a name is never a safe thing to
+  assert from a FIDE id alone.
+  """
+  def player_history(fide_id, entries) do
+    ngettext(
+      "%{count} published tournament carries FIDE %{id}.",
+      "%{count} published tournaments carry FIDE %{id}.",
+      length(entries),
+      id: fide_id
+    )
+  end
+
   @doc "The entry form."
   def register(payload) do
     gettext(

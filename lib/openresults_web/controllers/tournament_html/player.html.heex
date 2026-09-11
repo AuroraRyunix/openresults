@@ -40,6 +40,19 @@
 </section>
 
 <section id="player-detail">
+  <%!-- Deliberately outside #player-summary: the overlay lifts that section
+        verbatim for the right-click peek, and this is not part of the peek -
+        it is a reason to leave this tournament altogether, which belongs
+        with the rest of "open the page properly". Never by name - see
+        `OpenResultsWeb.PlayerHistory` for why matching on a name would
+        silently merge two different people. A player with no FIDE id gets no
+        cross-link at all, here or anywhere else. --%>
+  <p :if={@player["fide_id"]} class="card-more">
+    <a href={~p"/players/#{@player["fide_id"]}"}>
+      {gettext("This player's history across tournaments")}
+    </a>
+  </p>
+
   <.score_chart payload={@payload} card={@card} no={@player["no"]} />
 
   <h3>{gettext("Round by round")}</h3>
