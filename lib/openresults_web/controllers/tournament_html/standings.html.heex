@@ -2,33 +2,26 @@
 
 <% starting_rank? = Tournament.starting_rank?(@payload) %>
 
-<section :if={starting_rank?}>
-  <h2>{gettext("Starting rank")}</h2>
-
-  <p class="footnote">
-    {gettext("Standings appear once round 1 has been published.")}
-  </p>
-
-  <.starting_rank_table payload={@payload} slug={@slug} />
-</section>
-
-<section :if={not starting_rank?}>
+<section>
   <h2>
     {gettext("Standings")}
+    <span :if={starting_rank?} class="quiet">{gettext("before round 1")}</span>
     <%!-- `Tournament.after_round/1` is `nil` for `0` as well as for absent -
           see its own doc for why printing "after round 0" was the bug this
           guards against. --%>
-    <span :if={Tournament.after_round(@payload)} class="quiet">
+    <span :if={not starting_rank? and Tournament.after_round(@payload)} class="quiet">
       {gettext("after round %{number}", number: Tournament.after_round(@payload))}
     </span>
   </h2>
 
-  <.standings_table payload={@payload} slug={@slug} />
+  <.starting_rank_table :if={starting_rank?} payload={@payload} slug={@slug} />
+
+  <.standings_table :if={not starting_rank?} payload={@payload} slug={@slug} />
 
   <%!-- Keizer's ladder is not a FIDE tiebreak table and reads like a broken
         one if nobody says so: the points move for reasons that are not in the
         results column. --%>
-  <p :if={Tournament.keizer?(@payload)} class="footnote">
+  <p :if={not starting_rank? and Tournament.keizer?(@payload)} class="footnote">
     {gettext(
       "These are Keizer points, not FIDE tiebreaks - the whole ladder is recalculated from results, byes and absences every time."
     )}

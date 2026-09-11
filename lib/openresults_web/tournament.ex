@@ -430,10 +430,8 @@ defmodule OpenResultsWeb.Tournament do
   Every player, in starting-number order - the field as entered, before a
   single result exists.
 
-  Shared by the standings page's before-round-one fallback and the
-  permanent `/t/:slug/players` page, so the two render one list rather than
-  two that could drift apart. Not `crosstable/1`'s row shape: there is
-  nothing yet to attach a cell to.
+  What the standings page renders while `starting_rank?/1` holds. Not
+  `crosstable/1`'s row shape: there is nothing yet to attach a cell to.
   """
   def starting_rank(payload) do
     payload

@@ -52,11 +52,6 @@ defmodule OpenResultsWeb.Router do
     pipe_through [:browser, OpenResultsWeb.Plugs.Revalidate]
 
     get "/t/:slug", TournamentController, :standings
-    # The starting rank. Its own page as well as the standings page's
-    # fallback before round one - see `TournamentController.players/2` - and
-    # it needs this plug for the same reason every other read page here does:
-    # a hall full of phones asking for the same entry list between publishes.
-    get "/t/:slug/players", TournamentController, :players
     # The grid. In this scope and not the one below, because it is the
     # heaviest document this app renders - a row per player, a column per
     # round - and it is exactly the kind of page a hall full of phones asks

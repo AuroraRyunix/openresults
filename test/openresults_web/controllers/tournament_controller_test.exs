@@ -207,7 +207,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       publish(no_rounds(swiss))
       document = conn |> get(~p"/t/#{swiss["tournament"]["slug"]}") |> doc()
 
-      assert texts(document, "h2") == ["Starting rank"]
+      assert texts(document, "h2") == ["Standings before round 1"]
       refute texts(document, "p.empty") |> Enum.any?(&(&1 =~ "No standings"))
     end
 
@@ -249,18 +249,18 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       publish(no_rounds(keizer))
       html = conn |> get(~p"/t/#{keizer["tournament"]["slug"]}") |> html_response(200)
 
-      assert html =~ "Starting rank"
+      assert html =~ "before round 1"
       assert html =~ "Peeters, Wouter"
     end
 
-    test "the standings page's own description mentions the starting rank instead", %{
+    test "the standings page's own description says so too, before round 1", %{
       conn: conn,
       swiss: swiss
     } do
       publish(no_rounds(swiss))
       html = conn |> get(~p"/t/#{swiss["tournament"]["slug"]}") |> html_response(200)
 
-      assert html =~ "Starting rank of Gent Spring Open 2026."
+      assert html =~ "Standings of Gent Spring Open 2026, before round 1."
     end
 
     test "a tournament with a real standings table is unaffected", %{conn: conn, slug: slug} do
@@ -268,82 +268,6 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       assert texts(document, "h2") == ["Standings after round 2"]
       assert texts(document, "table.starting-rank") == []
-    end
-  end
-
-  describe "GET /t/:slug/players - the permanent starting rank page" do
-    test "renders the same list, in starting-number order", %{conn: conn, slug: slug} do
-      document = conn |> get(~p"/t/#{slug}/players") |> doc()
-
-      assert texts(document, "h2") == ["Starting rank"]
-
-      assert texts(document, "table.starting-rank tbody tr td:first-child") ==
-               ~w(1 2 3 4 5 6 7 8 9 10)
-    end
-
-    test "stays up once real standings exist - it is the permanent list, not a stand-in", %{
-      conn: conn,
-      slug: slug
-    } do
-      # The standings page's own fallback would have gone quiet by now
-      # (round 2 is in, in the ordinary fixture) - the nav still offers a
-      # link, but the section itself is the ordinary standings table.
-      document = conn |> get(~p"/t/#{slug}") |> doc()
-      assert texts(document, "h2") == ["Standings after round 2"]
-
-      players_page = conn |> get(~p"/t/#{slug}/players") |> html_response(200)
-      assert players_page =~ "Starting rank"
-      assert players_page =~ "Müller, Jörg"
-    end
-
-    test "reachable even when the standings tick itself is off", %{conn: conn, swiss: swiss} do
-      hidden =
-        swiss
-        |> put_in(["tournament", "slug"], "no-standings-open")
-        |> put_in(["tournament", "display", "standings"], false)
-
-      publish(hidden)
-
-      assert conn |> get(~p"/t/no-standings-open") |> html_response(404)
-
-      assert conn |> get(~p"/t/no-standings-open/players") |> html_response(200) =~
-               "Müller, Jörg"
-    end
-
-    test "is linked from the masthead, next to Standings", %{conn: conn, slug: slug} do
-      document = conn |> get(~p"/t/#{slug}") |> doc()
-
-      assert texts(document, "nav.rounds a.chip") |> Enum.take(2) ==
-               ["Standings", "Starting rank"]
-
-      assert LazyHTML.query(document, ~s(nav.rounds a[href="/t/#{slug}/players"]))
-             |> Enum.any?()
-    end
-
-    test "a slug nobody has published is a 404", %{conn: conn} do
-      html = conn |> get(~p"/t/no-such-tournament/players") |> html_response(404)
-
-      assert html =~ "No tournament has published under no-such-tournament"
-    end
-
-    test "withheld when player cards are off, same as a player's own card", %{
-      conn: conn,
-      swiss: swiss
-    } do
-      hidden =
-        swiss
-        |> put_in(["tournament", "slug"], "no-cards-open")
-        |> put_in(["tournament", "display", "player_cards"], false)
-
-      publish(hidden)
-
-      html = conn |> get(~p"/t/no-cards-open/players") |> html_response(404)
-      assert html =~ "does not publish player cards"
-
-      # A withheld page is not a broken link either - the standings are
-      # untouched, and the nav does not offer a link to what it withheld.
-      standings = conn |> get(~p"/t/no-cards-open") |> html_response(200)
-      refute standings =~ ~s|href="/t/no-cards-open/players"|
     end
   end
 
@@ -482,7 +406,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
       assert texts(document, "nav.rounds a.chip") ==
-               ["Standings", "Starting rank", "Cross-table", "1", "2", "3", "5"]
+               ["Standings", "Cross-table", "1", "2", "3", "5"]
 
       assert texts(document, "nav.rounds span.chip.withheld") == ["4, not published"]
     end

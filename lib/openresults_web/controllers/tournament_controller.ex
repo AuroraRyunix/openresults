@@ -1,8 +1,6 @@
 defmodule OpenResultsWeb.TournamentController do
   @moduledoc """
-  The public pages: standings (with the starting rank standing in for it
-  before round one), the starting rank's own permanent page, the
-  cross-table, one round, one player.
+  The public pages: standings, the cross-table, one round, one player.
 
   Each action does the same three things - fetch the current snapshot, refuse
   what is not in it, hand the payload to a template. There is no query beyond
@@ -66,51 +64,12 @@ defmodule OpenResultsWeb.TournamentController do
   end
 
   defp render_standings(conn, payload, slug) do
-    # The starting rank replaces the standings block on this same page and
-    # this same URL rather than redirecting anywhere, so the description of
-    # what is actually on the page has to switch with it.
-    description =
-      if Tournament.starting_rank?(payload),
-        do: Meta.starting_rank(payload),
-        else: Meta.standings(payload)
-
     render(conn, :standings,
       page_title: Tournament.name(payload),
-      page_description: description,
+      page_description: Meta.standings(payload),
       payload: payload,
       slug: slug,
       current: :standings
-    )
-  end
-
-  @doc """
-  `GET /t/:slug/players` - the starting rank: every entered player, in
-  pairing-number order.
-
-  The one page here that does not wait for a round to close - it is ready
-  the moment the tournament itself is published, which is also what the
-  standings page shows in its place until round one does. Gated on the same
-  tick as a player's own card, not a tick of its own: see `player/2` below
-  for why the enforcement belongs in the controller, and every row here
-  links to exactly the page that tick controls.
-  """
-  def players(conn, %{"slug" => slug}) do
-    with_payload(conn, slug, fn payload ->
-      if Tournament.show?(payload, "player_cards") do
-        render_players(conn, payload, slug)
-      else
-        withheld(conn, payload, slug, :player_cards)
-      end
-    end)
-  end
-
-  defp render_players(conn, payload, slug) do
-    render(conn, :players,
-      page_title: "#{Tournament.name(payload)} - #{gettext("Starting rank")}",
-      page_description: Meta.starting_rank(payload),
-      payload: payload,
-      slug: slug,
-      current: :starting_rank
     )
   end
 

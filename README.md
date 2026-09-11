@@ -29,11 +29,11 @@ stopping anybody's chess.
 ## What it does
 
 1. **Publish.** Accepts a snapshot of a tournament and serves it: standings
-   with the arbiter's chosen tiebreaks, a starting rank of every entered
-   player (shown in place of the standings before round one, and always
-   reachable on its own), a page per round, a cross-table of every published
-   result, and a card per player showing every game they have played. A
-   published round is immutable, so it caches for a long time.
+   with the arbiter's chosen tiebreaks (a starting rank of every entered
+   player, in place of the table, before round one), a page per round, a
+   cross-table of every published result, and a card per player showing
+   every game they have played. A published round is immutable, so it
+   caches for a long time.
 2. **Registration.** Takes entries from a public form and holds them in a
    queue. It never writes to a tournament - the arbiter's machine pulls the
    queue, and the arbiter decides who is in.
@@ -129,12 +129,8 @@ id, is also live: linked from a player's card when they have one, honouring
 the same display rules, takedown and unlisting as everywhere else. See
 `OpenResultsWeb.PlayerHistory`.
 
-The starting rank - every entered player, in pairing-number order - stands in
-for the standings before round one, so an arbiter who has published a
-tournament but not yet closed a round shows a field list rather than an empty
-page. It is also its own permanent page at `/t/:slug/players`, linked from the
-masthead beside Standings and gated on the same tick as a player's own card.
-See `Tournament.starting_rank?/1` and `TournamentController.players/2`.
+Before round one, the standings page shows the field in starting-number
+order instead of an empty table. See `Tournament.starting_rank?/1`.
 
 The standings table can be sorted by any column and filtered by club,
 federation or category, entirely in the browser - the server renders one

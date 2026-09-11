@@ -263,24 +263,11 @@ defmodule OpenResultsWeb.DisplayRulesTest do
       refute standings =~ ~s|href="/t/#{slug}/round/1"|
     end
 
-    test "the round strip stays for the starting rank alone", %{conn: conn} do
-      # Standings and pairings are both off, but player cards are not - so
-      # there is still exactly one thing to navigate to, and the strip says
-      # so rather than disappearing under a rule that predates this page.
+    test "the round strip disappears entirely when both pages are off", %{conn: conn} do
       slug = publish(hiding(["standings", "pairings"]))
 
+      # A navigation strip with nothing to navigate to is furniture.
       html = conn |> get(~p"/t/#{slug}/player/1") |> html_response(200)
-      assert html =~ ~s|aria-label="Rounds"|
-      assert html =~ ~s|href="/t/#{slug}/players"|
-    end
-
-    test "the round strip disappears entirely when every page behind it is off", %{conn: conn} do
-      slug = publish(hiding(["standings", "pairings", "player_cards"]))
-
-      # Standings, the rounds and the player cards are all off now, so the
-      # only page left that still renders the masthead is the entry form -
-      # registration is gated on its own terms, not on any of these three.
-      html = conn |> get(~p"/t/#{slug}/register") |> html_response(200)
       refute html =~ ~s|aria-label="Rounds"|
     end
 

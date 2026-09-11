@@ -29,10 +29,7 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   attr :current, :any,
     required: true,
-    doc: """
-    :standings, :starting_rank, :crosstable, :register, {:round, n} or
-    {:player, no}
-    """
+    doc: ":standings, :crosstable, :register, {:round, n} or {:player, no}"
 
   def masthead(assigns) do
     payload = assigns.payload
@@ -74,29 +71,14 @@ defmodule OpenResultsWeb.TournamentHTML do
       </p>
 
       <%!-- A navigation strip with nothing to navigate to is furniture, so it
-            goes entirely when every page behind it is off. --%>
-      <nav
-        :if={@show.standings or @show.pairings or @show.player_cards}
-        class="rounds"
-        aria-label={gettext("Rounds")}
-      >
+            goes entirely when both pages behind it are off. --%>
+      <nav :if={@show.standings or @show.pairings} class="rounds" aria-label={gettext("Rounds")}>
         <a
           :if={@show.standings}
           href={~p"/t/#{@slug}"}
           class={["chip", @current == :standings && "current"]}
         >
           {gettext("Standings")}
-        </a>
-        <%!-- Gated on the player-cards tick, same as the page itself - see
-              `TournamentController.players/2`. Every row it links to is one
-              of the pages that tick controls, so an arbiter who has switched
-              those off must not be handed a list of links to them. --%>
-        <a
-          :if={@show.player_cards}
-          href={~p"/t/#{@slug}/players"}
-          class={["chip", @current == :starting_rank && "current"]}
-        >
-          {gettext("Starting rank")}
         </a>
         <%!-- The grid, beside the pages it is made of. Behind the pairings
               tick as well as its own, because it IS the pairings - see
@@ -597,10 +579,8 @@ defmodule OpenResultsWeb.TournamentHTML do
   @doc """
   The starting rank: every player, in pairing-number order.
 
-  Shared between the standings page's before-round-one fallback (see
-  `Tournament.starting_rank?/1`) and the permanent `/t/:slug/players` page -
-  see `TournamentController.players/2` - so the two can never drift into
-  different markup for what is, underneath, the identical list.
+  What the standings page renders in place of the standings table while
+  `Tournament.starting_rank?/1` holds - see `standings.html.heex`.
 
   There is nothing to sort or filter here the way `standings_table/1` offers:
   a field that has not played a round has no points, no rank and no

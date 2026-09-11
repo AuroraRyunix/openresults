@@ -486,7 +486,6 @@ defmodule OpenResultsWeb.CrosstableTest do
 
       assert texts(document, "nav.rounds a.chip") == [
                "Standings",
-               "Starting rank",
                "Cross-table",
                "1",
                "2",
