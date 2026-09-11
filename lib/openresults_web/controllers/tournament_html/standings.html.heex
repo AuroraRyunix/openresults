@@ -1,10 +1,25 @@
 <.masthead payload={@payload} slug={@slug} current={@current} />
 
-<section>
+<% starting_rank? = Tournament.starting_rank?(@payload) %>
+
+<section :if={starting_rank?}>
+  <h2>{gettext("Starting rank")}</h2>
+
+  <p class="footnote">
+    {gettext("Standings appear once round 1 has been published.")}
+  </p>
+
+  <.starting_rank_table payload={@payload} slug={@slug} />
+</section>
+
+<section :if={not starting_rank?}>
   <h2>
     {gettext("Standings")}
-    <span :if={Tournament.standings(@payload)["after_round"]} class="quiet">
-      {gettext("after round %{number}", number: Tournament.standings(@payload)["after_round"])}
+    <%!-- `Tournament.after_round/1` is `nil` for `0` as well as for absent -
+          see its own doc for why printing "after round 0" was the bug this
+          guards against. --%>
+    <span :if={Tournament.after_round(@payload)} class="quiet">
+      {gettext("after round %{number}", number: Tournament.after_round(@payload))}
     </span>
   </h2>
 

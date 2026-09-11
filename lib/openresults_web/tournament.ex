@@ -395,6 +395,54 @@ defmodule OpenResultsWeb.Tournament do
   def standings_rows(payload), do: standings(payload) |> list("rows") |> Enum.filter(&is_map/1)
 
   @doc """
+  Which round the standings reflect, or `nil`.
+
+  `0` reads as `nil` here, not as a round. OpenPairings writes
+  `standings.after_round: 0` for a tournament nobody has closed a round of
+  yet, and a page that printed it verbatim said "Standings after round 0" -
+  a round that has never existed. Absent means the same thing for a payload
+  from before this field existed, so the two collapse to one answer.
+  """
+  def after_round(payload) do
+    case Map.get(standings(payload), "after_round") do
+      round when is_integer(round) and round > 0 -> round
+      _zero_or_absent -> nil
+    end
+  end
+
+  @doc """
+  Whether the standings page has nothing of its own to show yet: no rows, or
+  no round to call them "after".
+
+  This is the moment between a tournament being published and its first
+  round closing: the arbiter's snapshot already carries every entered
+  player, and there is nothing dishonest about showing them in starting
+  order while the placings do not exist yet. `players(payload) != []` is
+  what tells that state apart from a tournament with nothing published at
+  all, which keeps its own "no standings" message - see
+  `TournamentHTML.standings_table/1`.
+  """
+  def starting_rank?(payload) do
+    (standings_rows(payload) == [] or is_nil(after_round(payload))) and players(payload) != []
+  end
+
+  @doc """
+  Every player, in starting-number order - the field as entered, before a
+  single result exists.
+
+  Shared by the standings page's before-round-one fallback and the
+  permanent `/t/:slug/players` page, so the two render one list rather than
+  two that could drift apart. Not `crosstable/1`'s row shape: there is
+  nothing yet to attach a cell to.
+  """
+  def starting_rank(payload) do
+    payload
+    |> players()
+    |> Enum.filter(&(not is_nil(Map.get(&1, "no"))))
+    |> Enum.sort_by(&Map.get(&1, "no"))
+  end
+
+  @doc """
   The label to print beside a board - what the hall's printed sheet says.
 
   Falls back to the raw board number, which is what every snapshot published

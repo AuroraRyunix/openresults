@@ -44,16 +44,29 @@ defmodule OpenResultsWeb.Meta do
 
   @doc "The standings page - the one that gets shared."
   def standings(payload) do
-    case Tournament.standings(payload)["after_round"] do
-      round when is_integer(round) ->
+    case Tournament.after_round(payload) do
+      nil ->
+        gettext("Standings of %{tournament}.", tournament: Tournament.name(payload))
+
+      round ->
         gettext("Standings after round %{round} of %{tournament}.",
           round: round,
           tournament: Tournament.name(payload)
         )
-
-      _not_stated ->
-        gettext("Standings of %{tournament}.", tournament: Tournament.name(payload))
     end
+    |> with_where(payload)
+  end
+
+  @doc """
+  The starting rank - the field as entered, before round one.
+
+  Used for the standings page while `Tournament.starting_rank?/1` holds, and
+  for the permanent `/t/:slug/players` page, which is not time-limited the
+  same way and carries this description regardless of what round the
+  tournament has reached.
+  """
+  def starting_rank(payload) do
+    gettext("Starting rank of %{tournament}.", tournament: Tournament.name(payload))
     |> with_where(payload)
   end
 

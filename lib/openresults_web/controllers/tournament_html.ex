@@ -29,7 +29,10 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   attr :current, :any,
     required: true,
-    doc: ":standings, :crosstable, :register, {:round, n} or {:player, no}"
+    doc: """
+    :standings, :starting_rank, :crosstable, :register, {:round, n} or
+    {:player, no}
+    """
 
   def masthead(assigns) do
     payload = assigns.payload
@@ -71,14 +74,29 @@ defmodule OpenResultsWeb.TournamentHTML do
       </p>
 
       <%!-- A navigation strip with nothing to navigate to is furniture, so it
-            goes entirely when both pages behind it are off. --%>
-      <nav :if={@show.standings or @show.pairings} class="rounds" aria-label={gettext("Rounds")}>
+            goes entirely when every page behind it is off. --%>
+      <nav
+        :if={@show.standings or @show.pairings or @show.player_cards}
+        class="rounds"
+        aria-label={gettext("Rounds")}
+      >
         <a
           :if={@show.standings}
           href={~p"/t/#{@slug}"}
           class={["chip", @current == :standings && "current"]}
         >
           {gettext("Standings")}
+        </a>
+        <%!-- Gated on the player-cards tick, same as the page itself - see
+              `TournamentController.players/2`. Every row it links to is one
+              of the pages that tick controls, so an arbiter who has switched
+              those off must not be handed a list of links to them. --%>
+        <a
+          :if={@show.player_cards}
+          href={~p"/t/#{@slug}/players"}
+          class={["chip", @current == :starting_rank && "current"]}
+        >
+          {gettext("Starting rank")}
         </a>
         <%!-- The grid, beside the pages it is made of. Behind the pairings
               tick as well as its own, because it IS the pairings - see
@@ -573,6 +591,75 @@ defmodule OpenResultsWeb.TournamentHTML do
         document.addEventListener("openresults:updated", init);
       })();
     </script>
+    """
+  end
+
+  @doc """
+  The starting rank: every player, in pairing-number order.
+
+  Shared between the standings page's before-round-one fallback (see
+  `Tournament.starting_rank?/1`) and the permanent `/t/:slug/players` page -
+  see `TournamentController.players/2` - so the two can never drift into
+  different markup for what is, underneath, the identical list.
+
+  There is nothing to sort or filter here the way `standings_table/1` offers:
+  a field that has not played a round has no points, no rank and no
+  tiebreaks to sort by, only the number the arbiter assigned it going in.
+
+  Every column honours the arbiter's own display rules, exactly as the
+  standings table and a player's own card do: `rating`, `federation` and
+  `club` each hide on their own tick, and the name links to the player's
+  card only when `player_cards` is on - the same three ticks
+  `Tournament.show?/2` already governs everywhere else.
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+
+  def starting_rank_table(assigns) do
+    payload = assigns.payload
+    show = display_rules(payload)
+
+    assigns =
+      assigns
+      |> assign(:rows, Tournament.starting_rank(payload))
+      |> assign(:show, show)
+
+    ~H"""
+    <p :if={@rows == []} class="empty">
+      {gettext("No players have been published for this tournament yet.")}
+    </p>
+
+    <div :if={@rows != []} class="scroller">
+      <table class="starting-rank">
+        <thead>
+          <tr>
+            <th class="num" scope="col" title={gettext("Starting number")}>{gettext("No")}</th>
+            <th scope="col">{gettext("Player")}</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Rating")}</th>
+            <th :if={@show.federation} scope="col">{gettext("Federation")}</th>
+            <th :if={@show.club} scope="col">{gettext("Club")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={player <- @rows}>
+            <td class="num">{player["no"]}</td>
+            <td>
+              <.player_link
+                slug={@slug}
+                no={player["no"]}
+                player={player}
+                show={@show}
+                cards?={@show.player_cards}
+                detail
+              />
+            </td>
+            <td :if={@show.rating} class="num">{dash(player["rating"])}</td>
+            <td :if={@show.federation}>{dash(player["federation"])}</td>
+            <td :if={@show.club}>{dash(player["club"])}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     """
   end
 

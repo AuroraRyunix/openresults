@@ -94,6 +94,62 @@ defmodule OpenResultsWeb.TournamentTest do
       assert Tournament.tiebreak_value(row, 3) == 5.0
       assert Tournament.tiebreak_value(row, 4) == nil
     end
+
+    test "after_round/1 reads the published round", %{swiss: swiss} do
+      assert Tournament.after_round(swiss) == 3
+    end
+
+    test "after_round/1 is nil for 0, not the round that never existed", %{swiss: swiss} do
+      # OpenPairings writes 0 for a tournament nobody has closed a round of
+      # yet, not `null` - so 0 has to read the same way absence does.
+      zero = put_in(swiss, ["standings", "after_round"], 0)
+      absent = update_in(swiss, ["standings"], &Map.delete(&1, "after_round"))
+
+      assert Tournament.after_round(zero) == nil
+      assert Tournament.after_round(absent) == nil
+    end
+  end
+
+  describe "the starting rank" do
+    test "a tournament with real standings does not fall back to it", %{swiss: swiss} do
+      refute Tournament.starting_rank?(swiss)
+    end
+
+    test "an after_round of 0 with players entered triggers the fallback", %{swiss: swiss} do
+      before_round_one =
+        swiss
+        |> put_in(["standings", "after_round"], 0)
+        |> put_in(["standings", "rows"], [])
+
+      assert Tournament.starting_rank?(before_round_one)
+    end
+
+    test "a payload that has never sent standings at all also triggers it", %{swiss: swiss} do
+      no_standings = Map.delete(swiss, "standings")
+
+      assert Tournament.starting_rank?(no_standings)
+    end
+
+    test "a tournament with no players at all does not - there is nothing to rank", %{
+      swiss: swiss
+    } do
+      empty = swiss |> Map.delete("standings") |> Map.put("players", [])
+
+      refute Tournament.starting_rank?(empty)
+    end
+
+    test "starting_rank/1 lists every player in pairing-number order", %{swiss: swiss} do
+      shuffled = update_in(swiss["players"], &Enum.shuffle/1)
+
+      assert Enum.map(Tournament.starting_rank(shuffled), &Map.get(&1, "no")) ==
+               Enum.to_list(1..10)
+    end
+
+    test "a player with no `no` is left out rather than sorted first" do
+      payload = %{"players" => [%{"name" => "Nobody"}, %{"no" => 2, "name" => "Someone"}]}
+
+      assert Enum.map(Tournament.starting_rank(payload), &Map.get(&1, "no")) == [2]
+    end
   end
 
   describe "the player card" do
