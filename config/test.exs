@@ -12,8 +12,38 @@ config :openresults, :ingest_token, "test-ingest-token"
 # Run `mix help test` for more information.
 config :openresults, OpenResults.Repo,
   database: Path.expand("../openresults_test#{System.get_env("MIX_TEST_PARTITION")}.db", __DIR__),
-  pool_size: 5,
-  pool: Ecto.Adapters.SQL.Sandbox
+  # One connection, so the pool cannot contend with itself. SQLite's default
+  # (WAL, from ecto_sqlite3) lets readers and a writer coexist, but it does
+  # NOT let a connection's read survive a concurrent commit: `Snapshots.store/3`
+  # and `Registrations.room_for_one_more/2` both read (has this already been
+  # published? is the queue full?) and then write, inside the one transaction
+  # the Sandbox holds open for the whole test. If any other pooled connection
+  # commits between that read and that write, this connection's write is
+  # rejected outright - reproduced with two raw connections: a busy_timeout of
+  # 30000ms did not make it wait, the write failed in under 5ms every time,
+  # because a stale WAL read snapshot cannot be promoted to a writer no matter
+  # how long the caller is willing to wait; only a fresh transaction can. With
+  # `pool_size: 5` and dozens of `SnapshotsTest`/`RegistrationsTest` cases all
+  # doing exactly that read-then-write, two of them landing on different
+  # connections during the same span was routine, not rare - reliably ~1 run
+  # in 2 by the time the async controller test files added enough concurrent
+  # writers. Raising `busy_timeout` alone therefore barely helped (it targets
+  # a lock a connection is willing to wait out, and this one is not that);
+  # forcing `default_transaction_mode: :immediate` made it worse, because it
+  # makes every transaction - reads included - queue for the same single
+  # write slot across all 5 connections at once. Serialising the pool instead
+  # removes the second connection a commit could ever come from. Tests still
+  # declare `async: true` and DBConnection queues them on the one connection,
+  # which costs the suite nothing worth trading this away for (~3.3s either
+  # way, locally).
+  pool_size: 1,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  # Kept explicit rather than left to ecto_sqlite3's defaults, which already
+  # match these: a backstop for whatever contention a single connection can
+  # still see (checkin/checkout overlap, or `OpenResults.BackupTest`'s raw,
+  # unsandboxed connection onto the very same file for its `VACUUM INTO`).
+  busy_timeout: 30_000,
+  journal_mode: :wal
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
