@@ -470,8 +470,24 @@ defmodule OpenResultsWeb.Tournament do
   def working(payload, no) do
     case standings_row(payload, no) do
       nil -> %{}
-      row -> row |> object("working") |> Map.new(fn {code, w} -> {code, normalise_working(w)} end)
+      row -> working_for_row(row)
     end
+  end
+
+  @doc """
+  Same as `working/2`, for a standings ROW already in hand rather than a
+  player number.
+
+  `working/2` finds the row by searching `standings_rows/1`, which is fine
+  once and quadratic across a whole table: the standings page itself walks
+  every row to build the sortable, filterable table and, since this feature,
+  a tiebreak cell's own expandable detail - see
+  `OpenResultsWeb.TournamentHTML.standings_table/1` and `tiebreak_cell/1`.
+  This is that walk's O(rows) instead of O(rows^2).
+  """
+  @spec working_for_row(map()) :: %{String.t() => %{String.t() => term()}}
+  def working_for_row(row) when is_map(row) do
+    row |> object("working") |> Map.new(fn {code, w} -> {code, normalise_working(w)} end)
   end
 
   defp normalise_working(working) when is_map(working) do

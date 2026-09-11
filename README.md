@@ -135,6 +135,11 @@ stays exactly as valid as it always was. A club or federation filter is
 reflected in the URL and can be copied and shared. See
 `OpenResultsWeb.TournamentHTML.standings_table/1`.
 
+Every tiebreak value on that table opens, by tap or by keyboard, to the
+per-round working behind it - the same figures the player page already
+shows in full, reached with `<details>`/`<summary>` rather than a script.
+See `OpenResultsWeb.TournamentHTML.tiebreak_cell/1`.
+
 ## Licence
 
 OpenResults is source-available under the **Elastic License 2.0** (see

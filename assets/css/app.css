@@ -1081,6 +1081,44 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   color: var(--withheld);
 }
 
+/* One tiebreak value on the standings table, opened to its own per-round
+   working - see `OpenResultsWeb.TournamentHTML.tiebreak_cell/1`. Needs
+   nothing from `html.has-js`: `<details>`/`<summary>` open and close by tap
+   and by keyboard on their own, which is the reason this markup was chosen
+   over a script-built popover. */
+.tb-cell details.tb-detail {
+  display: inline-block;
+  text-align: left;
+}
+
+.tb-cell summary {
+  cursor: pointer;
+  list-style: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.tb-cell summary::-webkit-details-marker {
+  display: none;
+}
+
+.tb-cell summary:hover,
+.tb-cell summary:focus-visible {
+  text-decoration-style: solid;
+}
+
+/* Narrower than `.working-table`'s own default and without its minimum
+   width - this one opens inside a table cell rather than under a heading,
+   and eleven of them open on a wide standings table would otherwise force
+   the whole row wider than the columns beside it. */
+.tb-working {
+  min-width: 0;
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+}
+
 .tag {
   margin-left: 0.4rem;
   padding: 0 0.35rem;

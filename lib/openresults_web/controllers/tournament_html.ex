@@ -229,6 +229,10 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:manual_incomplete?, Tournament.manual_warning?(payload, :incomplete))
       |> assign(:show, show)
       |> assign(:categories?, categories?)
+      # A finer tick than `tiebreaks` itself: an arbiter can publish the
+      # columns while keeping the per-round arithmetic behind them closed.
+      # Absent means shown, like every other key `Tournament.show?/2` reads.
+      |> assign(:explain_tiebreaks?, Tournament.show?(payload, "tiebreak_working"))
       # Each filter is offered only behind its own display tick - a club or
       # federation an arbiter has hidden from this table must not resurface
       # in a dropdown - and only when there is more than one value to split
@@ -380,13 +384,22 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <td class="num">{number(row["score"])}</td>
               <% else %>
                 <td class="num strong">{number(row["points"])}</td>
+                <% working = Tournament.working_for_row(row) %>
                 <td
-                  :for={{_tiebreak, at} <- Enum.with_index(@tiebreaks)}
+                  :for={{tiebreak, at} <- Enum.with_index(@tiebreaks)}
                   :if={@show.tiebreaks}
                   class="num tb-cell"
                   data-value={Tournament.tiebreak_value(row, at)}
                 >
-                  {number(Tournament.tiebreak_value(row, at))}
+                  <.tiebreak_cell
+                    slug={@slug}
+                    players={@players}
+                    show={@show}
+                    code={tiebreak["code"]}
+                    value={Tournament.tiebreak_value(row, at)}
+                    working={working}
+                    explain?={@explain_tiebreaks?}
+                  />
                 </td>
               <% end %>
             </tr>
@@ -547,6 +560,81 @@ defmodule OpenResultsWeb.TournamentHTML do
         document.addEventListener("openresults:updated", init);
       })();
     </script>
+    """
+  end
+
+  @doc """
+  One tiebreak value on the standings table, openable to the same per-round
+  working the player page already shows in full - see `working_tables/1`.
+
+  A plain number unless there is something to open: the tournament has to
+  publish this tiebreak's working at all (`working` is keyed by code, empty
+  for a tiebreak whose arithmetic is not a per-round sum - Direct Encounter,
+  chiefly - or for a tournament that has not published any working), and
+  `display.tiebreak_working` has to allow it. That is a finer tick than
+  `display.tiebreaks` itself: an arbiter can publish the tiebreak COLUMNS
+  while keeping the per-round arithmetic behind them closed, the same
+  distinction the schema already draws between a value and its working.
+
+  `<details>`/`<summary>` rather than a hover card or a script-built popover:
+  it opens and closes by tap and by keyboard with nothing written here to
+  make that true, and it degrades to exactly the plain number underneath it
+  the moment either the working is absent or the tick is off - never a
+  disclosure triangle with nothing behind it.
+  """
+  attr :slug, :string, required: true
+  attr :players, :map, required: true
+  attr :show, :map, default: %{}
+  attr :code, :string, required: true
+  attr :value, :any, required: true
+
+  attr :working, :map,
+    required: true,
+    doc: "this ROW's working, from `Tournament.working_for_row/1` - not re-fetched per cell"
+
+  attr :explain?, :boolean, required: true, doc: "`display.tiebreak_working`, resolved once"
+
+  def tiebreak_cell(assigns) do
+    # `not is_nil(@value)` matters for the row short of a value - see
+    # `Tournament.tiebreak_value/2` - where the working may still carry an
+    # entry for a column this particular row sent nothing for. Opening a
+    # blank cell to "explain" a number that is not there would be
+    # explaining nothing.
+    open? =
+      assigns.explain? and not is_nil(assigns.value) and
+        Map.has_key?(assigns.working, assigns.code)
+
+    assigns =
+      assigns
+      |> assign(:open?, open?)
+      |> assign(:parts, if(open?, do: assigns.working[assigns.code]["parts"], else: []))
+
+    ~H"""
+    <details :if={@open?} class="tb-detail">
+      <summary>
+        {number(@value)}
+        <span class="visually-hidden">{gettext("show how this was reached")}</span>
+      </summary>
+      <div class="scroller">
+        <table class="working-table tb-working">
+          <tbody>
+            <tr :for={part <- @parts} class={not Tournament.part_counted?(part) && "withheld"}>
+              <td class="num">{part["round"]}</td>
+              <td>
+                <.part_source
+                  part={part}
+                  slug={@slug}
+                  player={@players[part["opponent"]]}
+                  show={@show}
+                />
+              </td>
+              <td class="num">{number(part["value"])}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <span :if={not @open?}>{number(@value)}</span>
     """
   end
 

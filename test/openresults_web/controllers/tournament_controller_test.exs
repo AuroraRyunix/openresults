@@ -24,6 +24,31 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim() |> String.replace(~r/\s+/, " ")))
   end
 
+  # The plain value a standings cell shows, ignoring a tiebreak's own
+  # explanatory detail - see `OpenResultsWeb.TournamentHTML.tiebreak_cell/1`.
+  # `LazyHTML.text/1` reads every descendant regardless of whether
+  # `<details>` is open, because that is what static HTML text always is;
+  # what a reader actually SEES collapsed is only the `<summary>`'s own
+  # leading word, which is what this returns instead.
+  defp cell_values(document, selector) do
+    document
+    |> LazyHTML.query(selector)
+    |> Enum.map(fn td ->
+      case LazyHTML.query(td, "details > summary") |> Enum.to_list() do
+        [] ->
+          td |> LazyHTML.text() |> String.trim() |> String.replace(~r/\s+/, " ")
+
+        [summary] ->
+          summary
+          |> LazyHTML.text()
+          |> String.trim()
+          |> String.replace(~r/\s+/, " ")
+          |> String.split(" ")
+          |> hd()
+      end
+    end)
+  end
+
   describe "GET /" do
     test "lists what has published", %{conn: conn, swiss: swiss} do
       html = conn |> get(~p"/") |> html_response(200)
@@ -72,7 +97,8 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       assert texts(document, "table.standings thead th") ==
                ["#", "Player", "Rating", "Cat", "Points", "Average rating"]
 
-      assert texts(document, "table.standings tbody tr:first-child td:last-child") == ["1997"]
+      assert texts(document, "table.standings > tbody > tr:first-child > td:last-child") ==
+               ["1997"]
     end
 
     test "a row with fewer values than there are columns leaves the cell blank", %{
@@ -86,7 +112,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       document = conn |> get(~p"/t/#{short["tournament"]["slug"]}") |> doc()
 
-      assert texts(document, "table.standings tbody tr:first-child td") ==
+      assert cell_values(document, "table.standings > tbody > tr:first-child > td") ==
                ["1", "GM Müller, Jörg", "2601", "A", "2.5", "3", "3.5", "", ""]
     end
 
@@ -124,7 +150,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # tiebreak bug where an unreported round handed every player's
       # opponents a phantom half-point. Player 10's Buchholz lost exactly
       # that half-point. Nothing here changed - the numbers it is given did.
-      assert texts(document, "table.standings tbody tr:last-child td") ==
+      assert cell_values(document, "table.standings > tbody > tr:last-child > td") ==
                ["10", "Nguyễn, Thị Hà", "-", "B", "0", "2", "2", "0", "0"]
     end
 

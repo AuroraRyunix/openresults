@@ -39,7 +39,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
     end
 
     test "every row carries rank, name and points", %{document: document} do
-      rows = LazyHTML.query(document, "table.standings tbody tr")
+      rows = LazyHTML.query(document, "table.standings > tbody > tr")
       assert Enum.count(rows) == 10
 
       assert Enum.count(attr(rows, "data-rank")) == 10
@@ -51,7 +51,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
     end
 
     test "each tiebreak cell carries its own raw value", %{document: document} do
-      first = document |> LazyHTML.query("table.standings tbody tr") |> Enum.at(0)
+      first = document |> LazyHTML.query("table.standings > tbody > tr") |> Enum.at(0)
       cells = LazyHTML.query(first, "td.tb-cell")
 
       assert Enum.count(cells) == 4
@@ -68,7 +68,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
     test "the whole table renders with no row marked hidden - JS off is the default", %{
       document: document
     } do
-      rows = LazyHTML.query(document, "table.standings tbody tr")
+      rows = LazyHTML.query(document, "table.standings > tbody > tr")
       refute Enum.any?(attr(rows, "hidden"))
     end
 
@@ -106,7 +106,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
       assert document |> LazyHTML.query(~s([data-filter="club"])) |> Enum.empty?()
-      rows = LazyHTML.query(document, "table.standings tbody tr")
+      rows = LazyHTML.query(document, "table.standings > tbody > tr")
       refute Enum.any?(attr(rows, "data-club"))
     end
 
@@ -115,7 +115,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
       assert document |> LazyHTML.query(~s([data-filter="federation"])) |> Enum.empty?()
-      rows = LazyHTML.query(document, "table.standings tbody tr")
+      rows = LazyHTML.query(document, "table.standings > tbody > tr")
       refute Enum.any?(attr(rows, "data-federation"))
       refute Enum.any?(attr(rows, "data-rating"))
       assert document |> LazyHTML.query(~s(thead button[data-sort-key="rating"])) |> Enum.empty?()
@@ -157,7 +157,7 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
       slug = publish(SnapshotPayloads.keizer())
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
-      rows = LazyHTML.query(document, "table.standings tbody tr")
+      rows = LazyHTML.query(document, "table.standings > tbody > tr")
       row_count = Enum.count(rows)
       assert Enum.count(attr(rows, "data-value")) == row_count
       assert Enum.count(attr(rows, "data-score")) == row_count
