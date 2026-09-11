@@ -1105,8 +1105,16 @@ a.xt-opp:hover {
      * the inset shadows, because a border on a sticky cell does not travel
        with it under `border-collapse: collapse`. It stays behind with the
        row, so the column would lose its rules exactly while being scrolled. */
+/* Sized to its content, and at least as wide as its container, so the
+   browser never squeezes a column below its declared width to fit the
+   screen before letting the table scroll. It did: the number column,
+   squeezed from 3.25rem to its digits, stopped matching the offset the
+   name column is pinned at. At rest the name then covered the first digit
+   of the rating; scrolled, round results showed through the gap. */
 .crosstable {
   --xt-key: 3.25rem;
+  width: max-content;
+  min-width: 100%;
 }
 
 .crosstable .xt-no,
@@ -1127,9 +1135,14 @@ a.xt-opp:hover {
     inset 0 -2px var(--rule);
 }
 
+/* border-box, so this width - padding included - is exactly the offset the
+   name column is pinned at: no gap between the two, and no overlap. */
 .crosstable .xt-no {
   left: 0;
+  box-sizing: border-box;
   width: var(--xt-key);
+  min-width: var(--xt-key);
+  max-width: var(--xt-key);
 }
 
 /* Capped rather than left to grow: one long name would otherwise take half a
