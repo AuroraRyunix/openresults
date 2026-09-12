@@ -4,7 +4,7 @@ defmodule OpenResults.MixProject do
   def project do
     [
       app: :openresults,
-      version: "0.1.0",
+      version: "0.13.0",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -67,6 +67,11 @@ defmodule OpenResults.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
+      # Renders CHANGELOG.md - see OpenResults.Markdown for why this is the
+      # parser half of Earmark and not Earmark itself (CVE-2026-48591, and
+      # the package is retired with no fixed version to move to). Mirrors
+      # OpenPairings' own dependency and reasoning exactly.
+      {:earmark_parser, "~> 1.4"},
       {:jason, "~> 1.2"},
       # The only outbound HTTP this site makes: lending the entry form a
       # search of the arbiter's FIDE list. Deliberately the same client the

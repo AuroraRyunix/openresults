@@ -197,10 +197,20 @@
         <%!-- In the footer of a site with no login, because the person asking
               "did my deploy land" is looking at this from outside. A version
               number could not answer it: this app reported the same 0.1.0 for
-              weeks while never having been deployed at all. --%>
-        <span class="build-id" title={OpenResults.Build.long()}>
+              weeks while never having been deployed at all.
+
+              A link to the changelog, the same way OpenPairings' own version
+              number is one - the build stamp after the version is what
+              answers "did my deploy land" and is unchanged by this; clicking
+              the whole thing just answers the next question, "land as what". --%>
+        <a
+          class="build-id"
+          href={~p"/changelog"}
+          title={OpenResults.Build.long()}
+          aria-label={gettext("Changelog")}
+        >
           {OpenResults.Build.id()}
-        </span>
+        </a>
       </footer>
     </div>
 
