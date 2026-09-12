@@ -80,12 +80,12 @@ msgstr "Un résultat a changé depuis la dernière fixation de l'ordre, qui peut
 #: lib/openresults_web/controllers/registration_html/too_many.html.heex:18
 #, elixir-autogen, elixir-format
 msgid "A shared connection counts as one: a club, a school or a venue's wifi all look the same from here. If a group is entering together, leave a few minutes between entries, or send the list to the organisers instead."
-msgstr "Une connexion partagée compte pour une seule : un club, une école ou le wifi d'une salle se ressemblent tous vus d'ici. Si un groupe s'inscrit ensemble, laissez quelques minutes entre les inscriptions, ou envoyez plutôt la liste aux organisateurs."
+msgstr "Une connexion partagée compte pour une seule : un club, une école ou le wifi d'une salle se ressemblent tous vus d'ici. Si un groupe s'inscrit ensemble, laissez quelques minutes entre les inscriptions, ou envoyez plutôt la liste aux organisateurs."
 
 #: lib/openresults_web/controllers/tournament_html.ex:62
 #, elixir-autogen, elixir-format
 msgid "Arbiter: %{name}"
-msgstr "Arbitre : %{name}"
+msgstr "Arbitre : %{name}"
 
 #: lib/openresults_web/controllers/registration_html.ex:306
 #, elixir-autogen, elixir-format
@@ -187,7 +187,7 @@ msgstr "Thème de couleurs"
 #: lib/openresults_web/controllers/tournament_html.ex:65
 #, elixir-autogen, elixir-format
 msgid "Deputy: %{name}"
-msgstr "Arbitre adjoint : %{name}"
+msgstr "Arbitre adjoint : %{name}"
 
 #: lib/openresults_web/controllers/tournament_html.ex:877
 #: lib/openresults_web/controllers/tournament_html.ex:1061
@@ -289,7 +289,7 @@ msgstr "Langue"
 #: lib/openresults_web/meta.ex:40
 #, elixir-autogen, elixir-format
 msgid "Live chess results published by arbiters: standings, round pairings and a card for every player."
-msgstr "Résultats d'échecs en direct publiés par les arbitres : classement, appariements par ronde et une fiche pour chaque joueur."
+msgstr "Résultats d'échecs en direct publiés par les arbitres : classement, appariements par ronde et une fiche pour chaque joueur."
 
 #: lib/openresults_web/components/layouts/root.html.heex:226
 #: lib/openresults_web/components/layouts/root.html.heex:232
@@ -544,12 +544,12 @@ msgstr "Envoyer à l'arbitre"
 #: lib/openresults_web/meta.ex:150
 #, elixir-autogen, elixir-format
 msgid "Send your details to the arbiter of %{tournament}. They decide who plays; this form only carries the message."
-msgstr "Envoyez vos coordonnées à l'arbitre de %{tournament}. C'est lui qui décide qui joue ; ce formulaire ne fait que transmettre le message."
+msgstr "Envoyez vos coordonnées à l'arbitre de %{tournament}. C'est lui qui décide qui joue ; ce formulaire ne fait que transmettre le message."
 
 #: lib/openresults_web/controllers/registration_html/received.html.heex:26
 #, elixir-autogen, elixir-format
 msgid "Sent it twice, or spotted a mistake? Send it again and say so in the name field, or write to the organisers. Nothing on this page can edit or delete an entry: sorting out two entries for the same player is the arbiter's job, the same as it is with a paper form."
-msgstr "Envoyé deux fois, ou une erreur repérée ? Renvoyez le formulaire en le signalant dans le champ du nom, ou écrivez aux organisateurs. Rien sur cette page ne peut modifier ou supprimer une inscription : démêler deux inscriptions pour le même joueur est le travail de l'arbitre, comme avec un formulaire papier."
+msgstr "Envoyé deux fois, ou une erreur repérée ? Renvoyez le formulaire en le signalant dans le champ du nom, ou écrivez aux organisateurs. Rien sur cette page ne peut modifier ou supprimer une inscription : démêler deux inscriptions pour le même joueur est le travail de l'arbitre, comme avec un formulaire papier."
 
 #: lib/openresults_web/controllers/registration_html/too_many.html.heex:7
 #, elixir-autogen, elixir-format
@@ -590,12 +590,12 @@ msgstr "Commencez à taper votre nom, ou collez votre ID FIDE"
 #: lib/openresults_web/controllers/registration_html.ex:96
 #, elixir-autogen, elixir-format
 msgid "Surname first, as it should appear on the pairing list: \"De Vos, Ilse\"."
-msgstr "Nom de famille d'abord, tel qu'il doit figurer sur la liste d'appariement : \"De Vos, Ilse\"."
+msgstr "Nom de famille d'abord, tel qu'il doit figurer sur la liste d'appariement : \"De Vos, Ilse\"."
 
 #: lib/openresults_web/controllers/tournament_html.ex:68
 #, elixir-autogen, elixir-format
 msgid "Tempo: %{time_control}"
-msgstr "Cadence : %{time_control}"
+msgstr "Cadence : %{time_control}"
 
 #: lib/openresults_web/controllers/registration_html/received.html.heex:18
 #, elixir-autogen, elixir-format
@@ -620,7 +620,7 @@ msgstr "Le numéro figurant sur votre profil FIDE, si vous en avez un."
 #: lib/openresults_web/controllers/tournament_html.ex:277
 #, elixir-autogen, elixir-format
 msgid "The order also uses tie-breaks this tournament does not publish, so two players can appear one above the other with every column here identical."
-msgstr "L'ordre utilise aussi des départages que ce tournoi ne publie pas : deux joueurs peuvent donc se suivre alors que toutes les colonnes affichées ici sont identiques."
+msgstr "L'ordre utilise aussi des départages que ce tournoi ne publie pas : deux joueurs peuvent donc se suivre alors que toutes les colonnes affichées ici sont identiques."
 
 #: lib/openresults_web/controllers/tournament_html.ex:1762
 #, elixir-autogen, elixir-format
@@ -630,7 +630,7 @@ msgstr "L'ordre utilise aussi des départages que ce tournoi ne publie pas."
 #: lib/openresults_web/controllers/tournament_html.ex:257
 #, elixir-autogen, elixir-format
 msgid "The order below was set by the arbiter, not computed from the tiebreaks. The points and tiebreak columns are unchanged; the rank column is their decision."
-msgstr "L'ordre ci-dessous a été fixé par l'arbitre, non calculé à partir des départages. Les colonnes des points et des départages sont inchangées ; la colonne du rang est sa décision."
+msgstr "L'ordre ci-dessous a été fixé par l'arbitre, non calculé à partir des départages. Les colonnes des points et des départages sont inchangées ; la colonne du rang est sa décision."
 
 #: lib/openresults_web/controllers/registration_html/closed.html.heex:7
 #, elixir-autogen, elixir-format
@@ -650,7 +650,7 @@ msgstr "Le score cumulé du joueur par ronde."
 #: lib/openresults_web/controllers/tournament_html/player.html.heex:72
 #, elixir-autogen, elixir-format
 msgid "The running score stops at the first round whose result is not public - an unpublished round, a board that is not listed, or a game with no result yet. The arbiter's own total is on the %{standings}."
-msgstr "Le score cumulé s'arrête à la première ronde dont le résultat n'est pas public - une ronde non publiée, un échiquier qui ne figure pas dans la liste, ou une partie sans résultat. Le total officiel de l'arbitre figure au %{standings}."
+msgstr "Le score cumulé s'arrête à la première ronde dont le résultat n'est pas public - une ronde non publiée, un échiquier qui ne figure pas dans la liste, ou une partie sans résultat. Le total de l'arbitre figure au %{standings}."
 
 #: lib/openresults_web/controllers/registration_html.ex:126
 #, elixir-autogen, elixir-format
@@ -675,7 +675,7 @@ msgstr "Ce sont les chiffres de l'arbitre, publiés avec les résultats - cette 
 #: lib/openresults_web/controllers/registration_html/new.html.heex:12
 #, elixir-autogen, elixir-format
 msgid "This form sends your details to the arbiter of %{tournament}. It does not enter you. The tournament is run on the arbiter's own machine; this page only holds what you send until they collect it, and they decide who plays. Nothing here will change until they enter you and publish a round."
-msgstr "Ce formulaire envoie vos coordonnées à l'arbitre de %{tournament}. Il ne vous inscrit pas. Le tournoi tourne sur la machine de l'arbitre ; cette page ne fait que conserver ce que vous envoyez jusqu'à ce qu'il le récupère, et c'est lui qui décide qui joue. Rien ici ne changera tant qu'il ne vous aura pas inscrit et publié une ronde."
+msgstr "Ce formulaire envoie vos coordonnées à l'arbitre de %{tournament}. Il ne vous inscrit pas. Le tournoi tourne sur la machine de l'arbitre ; cette page ne fait que conserver ce que vous envoyez jusqu'à ce qu'il le récupère, et c'est lui qui décide qui joue. Rien ici ne changera tant qu'il ne vous aura pas inscrit et publié une ronde."
 
 #: lib/openresults_web/controllers/registration_html/received.html.heex:16
 #, elixir-autogen, elixir-format
@@ -749,7 +749,7 @@ msgstr "D'où viennent les départages"
 #: lib/openresults_web/controllers/registration_html.ex:119
 #, elixir-autogen, elixir-format
 msgid "Whichever rating you play under. Leave it empty if you have none."
-msgstr "Le classement sous lequel vous jouez. Laissez vide si vous n'en avez pas."
+msgstr "Le classement Elo sous lequel vous jouez. Laissez vide si vous n'en avez pas."
 
 #: lib/openresults_web/controllers/tournament_html.ex:1023
 #: lib/openresults_web/controllers/tournament_html.ex:1070
@@ -939,7 +939,7 @@ msgstr "Ce formulaire garde déjà autant d'inscriptions qu'il le peut et n'en a
 #: lib/openresults_web/controllers/registration_html/queue_full.html.heex:13
 #, elixir-autogen, elixir-format
 msgid "This is about the form, not about the tournament: nobody here has decided the field is full. Contact the organisers directly - they can still add you by hand, and they are the only ones who can."
-msgstr "Il s'agit du formulaire, pas du tournoi : personne ici n'a décidé que le champ des participants était complet. Contactez directement les organisateurs - ils peuvent encore vous ajouter à la main, et eux seuls le peuvent."
+msgstr "Il s'agit du formulaire, pas du tournoi : personne ici n'a décidé que le champ des participants était complet. Contactez directement les organisateurs - ils peuvent encore vous ajouter à la main, et eux seuls le peuvent."
 
 #: lib/openresults_web/controllers/registration_controller.ex:233
 #: lib/openresults_web/controllers/registration_html/queue_full.html.heex:2
@@ -962,7 +962,7 @@ msgstr "Grille américaine"
 #: lib/openresults_web/controllers/tournament_html.ex:919
 #, elixir-autogen, elixir-format
 msgid "Each cell is one round: the opponent's pairing number, the colour this player had - w for White, b for Black - and the score from this player's own side."
-msgstr "Chaque case est une ronde : le numéro d'appariement de l'adversaire, la couleur qu'a eue ce joueur - w pour les Blancs, b pour les Noirs - et le score de son propre point de vue."
+msgstr "Chaque case est une ronde : le numéro d'appariement de l'adversaire, la couleur qu'a eue ce joueur - w pour les Blancs, b pour les Noirs - et le score du point de vue de ce joueur."
 
 #: lib/openresults_web/meta.ex:81
 #, elixir-autogen, elixir-format
@@ -989,8 +989,8 @@ msgstr "Numéro de départ"
 #, elixir-autogen, elixir-format
 msgid "%{count} published tournament carries FIDE %{id}."
 msgid_plural "%{count} published tournaments carry FIDE %{id}."
-msgstr[0] "%{count} tournoi publié mentionne le FIDE %{id}."
-msgstr[1] "%{count} tournois publiés mentionnent le FIDE %{id}."
+msgstr[0] "%{count} tournoi publié mentionne le numéro FIDE %{id}."
+msgstr[1] "%{count} tournois publiés mentionnent le numéro FIDE %{id}."
 
 #: lib/openresults_web/controllers/player_history_controller.ex:30
 #, elixir-autogen, elixir-format

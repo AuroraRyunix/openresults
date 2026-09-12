@@ -203,6 +203,33 @@ defmodule OpenResultsWeb.LocaleTest do
       assert html =~ "de arbiter heeft een adres nodig om u te bereiken"
     end
 
+    # The two tests above pass on messages Ecto reports with no options worth
+    # mentioning. A LENGTH failure is the other shape, and until 2026-09-12 it
+    # was answered in English on this very page: `validate_length/3` attaches
+    # Ecto's `count:` option whether or not the message it was given says
+    # anything about a count, and `CoreComponents.translate_error/1` took that
+    # option as permission to look the message up as a PLURAL - which a
+    # singular msgid never answers. The catalogue was complete throughout, so
+    # the "every message is translated" test below saw nothing wrong.
+    test "and so is a length failure, which is looked up differently", %{slug: slug} do
+      html =
+        "fr"
+        |> asking()
+        |> post(~p"/t/#{slug}/register", %{
+          "registration" => %{
+            "name" => "A",
+            "email" => "ilse@example.com",
+            "club" => String.duplicate("c", 200)
+          }
+        })
+        |> html_response(422)
+
+      assert html =~ "un nom compte entre 2 et 100 caractères"
+      assert html =~ "un nom de club compte au maximum 100 caractères"
+      refute html =~ "a name is between 2 and 100 characters"
+      refute html =~ "a club name is at most 100 characters"
+    end
+
     test "a 404 is answered in the reader's language too", %{conn: conn} do
       html = conn |> put_req_header("accept-language", "fr") |> get(~p"/t/nope")
 
