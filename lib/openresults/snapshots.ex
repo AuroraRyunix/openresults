@@ -17,6 +17,7 @@ defmodule OpenResults.Snapshots do
 
   alias OpenResults.Envelope
   alias OpenResults.Repo
+  alias OpenResults.Snapshots.LatestIdCache
   alias OpenResults.Snapshots.Snapshot
   alias OpenResults.TournamentKeys
 
@@ -94,8 +95,22 @@ defmodule OpenResults.Snapshots do
           payload: payload
         })
         |> Repo.insert()
+        |> cache_inserted_id(slug)
     end
   end
+
+  # The write side of `LatestIdCache`. The moment a publish inserts a row and
+  # this process knows its id, every OTHER reader of this slug must be able
+  # to see it too - immediately, not on their next cache miss - or a poll
+  # already in flight could be told "unchanged" about a page that no longer
+  # is. See `OpenResults.Snapshots.LatestIdCache` for why this is a plain
+  # overwrite rather than a compare-and-swap.
+  defp cache_inserted_id({:ok, %Snapshot{id: id}} = result, slug) do
+    LatestIdCache.put(slug, id)
+    result
+  end
+
+  defp cache_inserted_id(error, _slug), do: error
 
   defp source_field(payload, key) do
     case Map.get(payload, "source") do
@@ -182,14 +197,17 @@ defmodule OpenResults.Snapshots do
   end
 
   @doc """
-  Forgets everything cached. For tests, and for anything that deletes rows
-  behind this module's back.
+  Forgets everything cached - both this module's snapshot-body cache and
+  `LatestIdCache`. For tests, and for anything that deletes rows behind this
+  module's back.
   """
   def clear_cache do
     case :ets.whereis(@cache) do
       :undefined -> :ok
       _ref -> :ets.delete_all_objects(@cache)
     end
+
+    LatestIdCache.clear()
 
     :ok
   end
@@ -206,14 +224,29 @@ defmodule OpenResults.Snapshots do
   publish, and a byte-identical re-send is collapsed rather than inserted
   (see `store/3`). So a reader holding id 41 and finding 41 still current is
   holding the current document, and nothing has to be read to prove it.
+
+  A cache hit answers this without a query at all - see
+  `OpenResults.Snapshots.LatestIdCache`, which `store/3` keeps current on
+  every publish. A miss falls back to exactly the query this function used
+  to always run, and remembers the answer for next time.
   """
   @spec latest_id(String.t()) :: integer() | nil
   def latest_id(slug) do
-    slug
-    |> for_slug()
-    |> limit(1)
-    |> select([s], s.id)
-    |> Repo.one()
+    case LatestIdCache.fetch(slug) do
+      {:ok, id} ->
+        id
+
+      :miss ->
+        id =
+          slug
+          |> for_slug()
+          |> limit(1)
+          |> select([s], s.id)
+          |> Repo.one()
+
+        if id, do: LatestIdCache.put(slug, id)
+        id
+    end
   end
 
   @doc """
@@ -272,11 +305,17 @@ defmodule OpenResults.Snapshots do
 
   Only ever called from `OpenResults.Takedown.purge/1`, which is what makes
   sure the registration queue and the key claim go in the same breath.
+
+  Also forgets `slug` in `LatestIdCache`: after this, the true answer is "no
+  snapshot", and a cache still holding the id of a row just deleted would be
+  telling readers the opposite.
   """
   @spec delete_all_for(String.t()) :: non_neg_integer()
   def delete_all_for(slug) do
     {count, _returned} =
       from(s in Snapshot, where: s.tournament_slug == ^slug) |> Repo.delete_all()
+
+    LatestIdCache.forget(slug)
 
     count
   end

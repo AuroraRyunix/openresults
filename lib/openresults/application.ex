@@ -24,6 +24,12 @@ defmodule OpenResults.Application do
       # Owns the ETS table behind the entry form's rate limit. Before the
       # endpoint, so the table exists before anything can be posted at it.
       OpenResults.RateLimit,
+      # Owns the ETS table behind `Snapshots.latest_id/1`. Before the
+      # endpoint for the same reason as the rate limiter above: the table
+      # must exist before the first request, not be created lazily by
+      # whichever request happens to arrive first. See
+      # `OpenResults.Snapshots.LatestIdCache`.
+      OpenResults.Snapshots.LatestIdCache,
       # Start to serve requests, typically the last entry
       OpenResults.Backup.Scheduler,
       OpenResultsWeb.Endpoint

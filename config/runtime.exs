@@ -106,9 +106,30 @@ if config_env() == :prod do
       For example: /etc/openresults/openresults.db
       """
 
+  # POOL_SIZE default, raised from 5 to 10 after the 2026-09-12 load test
+  # (`docs/load-test-2026-09-12.md`). That test found `pool_size: 5`
+  # exhausted between 200 and 400 concurrent readers on a 2 vCPU box -
+  # `DBConnection.ConnectionError`, queue waits up to 2.7s - but the actual
+  # cause was `Plugs.Revalidate` running a real query on EVERY request,
+  # including a bare `304`. That is fixed separately (see
+  # `OpenResults.Snapshots.LatestIdCache`): a request that only needs "is my
+  # copy current" now costs an ETS lookup, not a connection checkout, so the
+  # pool is no longer on the hot path for ordinary read traffic at all.
+  #
+  # This is not "therefore leave it at 5". What is left on the pool once the
+  # hot path is gone is a burst of genuine cache misses (many tournaments'
+  # ids all cold at once - a restart, mid-event) plus actual writes
+  # (publishes, registrations, backups), and those deserve headroom without
+  # over-provisioning a small box: SQLite has exactly one writer regardless
+  # of pool size, so a bigger pool buys more concurrent READERS in flight,
+  # not more write throughput, and a 2 vCPU box gets little from a pool far
+  # past its core count. 10 - double the old default, five times the box's
+  # vCPUs - covers a multi-tournament cold-cache burst comfortably while
+  # staying a small, cheap number for a read-mostly app that (with the fix
+  # above) spends almost none of its request volume on the database at all.
   config :openresults, OpenResults.Repo,
     database: database_path,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you

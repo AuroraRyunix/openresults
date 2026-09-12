@@ -168,12 +168,39 @@ All read in `config/runtime.exs`.
 | `PHX_SERVER` | yes (`true`) | actually serve HTTP |
 | `PORT` | no (default 4000) | internal HTTP port - **the unit sets 4004**, see below |
 | `OPENRESULTS_INGEST_TOKEN` | effectively | the bearer token an arbiter publishes with. Unset means every publish is refused with a 401 |
-| `POOL_SIZE` | no (default 5) | Ecto connection pool size |
+| `POOL_SIZE` | no (default 10) | Ecto connection pool size |
 | `DNS_CLUSTER_QUERY` | no | multi-node clustering, unused here |
 
 Notably absent, compared with OpenPairings: **no SMTP** (this app sends no
 mail, and has no account-recovery path to send it for) and **no Keycloak**
 (no accounts at all).
+
+### BEAM scheduler count
+
+Not an environment variable this app reads, but worth carrying in the unit
+regardless: the 2026-09-12 load test (`docs/load-test-2026-09-12.md`) found
+that leaving BEAM's scheduler count at its own default (one per logical CPU
+on whatever machine compiled it) rather than matching the box's real 2 vCPUs
+costs 25-35% throughput and materially worse tail latency, purely from
+scheduler contention - independent of, and on top of, the connection-pool
+fix above.
+
+The unit is started with `mix phx.server` directly (no `mix release`), so
+there is no `vm.args` to edit. The fix is the `ELIXIR_ERL_OPTIONS`
+environment variable, which the `elixir`/`mix` launcher scripts read
+regardless of how they are invoked:
+
+```
+Environment="ELIXIR_ERL_OPTIONS=+S 2:2"
+```
+
+Add it as a drop-in under
+`/etc/systemd/system/openresults.service.d/`, **not** in the unit file
+itself - the deploy script rewrites `openresults.service` on every run and
+would wipe a hand-added line there (see "Secrets" below, which already
+documents this pattern for other hand-managed values). `+S 2:2` means two
+scheduler threads for two logical CPUs, matching this host's 2 vCPUs; change
+the number if the box ever changes size.
 
 ### `OPENRESULTS_INGEST_TOKEN` is only on this side
 
