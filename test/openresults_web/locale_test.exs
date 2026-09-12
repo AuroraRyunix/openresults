@@ -155,7 +155,10 @@ defmodule OpenResultsWeb.LocaleTest do
     test "the response varies on what it read", %{conn: conn, slug: slug} do
       answer = get(conn, ~p"/t/#{slug}")
 
-      assert get_resp_header(answer, "vary") == ["accept-language, cookie"]
+      # `accept-encoding` is `OpenResultsWeb.Plugs.Revalidate`'s own addition
+      # (it now serves a gzip variant to readers who accept one) - merged
+      # onto this plug's value, not replacing it.
+      assert get_resp_header(answer, "vary") == ["accept-language, cookie, accept-encoding"]
     end
   end
 

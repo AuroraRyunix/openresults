@@ -158,6 +158,67 @@ defmodule OpenResultsWeb.RevalidateTest do
     end
   end
 
+  describe "compression" do
+    test "a reader who does not accept gzip gets identity bytes, unchanged", %{
+      conn: conn,
+      slug: slug
+    } do
+      plain = get(conn, ~p"/t/#{slug}")
+
+      assert get_resp_header(plain, "content-encoding") == []
+      assert plain.resp_body =~ "<html"
+    end
+
+    test "a reader who accepts gzip gets the same document, gzip-encoded", %{
+      conn: conn,
+      slug: slug
+    } do
+      plain = get(conn, ~p"/t/#{slug}") |> html_response(200)
+
+      gzipped =
+        build_conn()
+        |> put_req_header("accept-encoding", "gzip, deflate")
+        |> get(~p"/t/#{slug}")
+
+      assert get_resp_header(gzipped, "content-encoding") == ["gzip"]
+      assert :zlib.gunzip(gzipped.resp_body) == plain
+    end
+
+    test "gzip does not change what a conditional request gets back", %{
+      conn: conn,
+      slug: slug
+    } do
+      # Fetching with gzip support first is what populates the gzip variant
+      # in `Page` - the point of this test is that revalidation still bypasses
+      # both variants and answers a bare 304.
+      first =
+        conn
+        |> put_req_header("accept-encoding", "gzip")
+        |> get(~p"/t/#{slug}")
+
+      tag = etag(first)
+
+      second =
+        build_conn()
+        |> put_req_header("accept-encoding", "gzip")
+        |> put_req_header("if-none-match", tag)
+        |> get(~p"/t/#{slug}")
+
+      assert second.status == 304
+      assert second.resp_body == ""
+      assert get_resp_header(second, "content-encoding") == []
+    end
+
+    test "the vary header names accept-encoding alongside the locale plug's own value", %{
+      conn: conn,
+      slug: slug
+    } do
+      conn = get(conn, ~p"/t/#{slug}")
+
+      assert get_resp_header(conn, "vary") == ["accept-language, cookie, accept-encoding"]
+    end
+  end
+
   describe "what is deliberately left alone" do
     test "the entry form never revalidates", %{conn: conn, slug: slug} do
       # A form is not a document. A browser deciding it already has the

@@ -51,6 +51,30 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   Only the read routes for a published tournament. The entry form is a form,
   the registration and snapshot APIs are authenticated, and none of them
   wants a browser deciding it already knows the answer.
+
+  ## Compression
+
+  Bandit will gzip a response on its own (`compress: true` is the library
+  default) - except that it deliberately refuses to on any response carrying
+  a *strong* ETag (see `Bandit.Compression.new/5`: a strong validator claims
+  byte-for-byte identity, which a freshly gzipped stream cannot promise). This
+  plug always sends a strong tag, so Bandit's own compression is silently
+  off for every page this plug touches - confirmed with `curl -H
+  "Accept-Encoding: gzip"` against a running server before this comment was
+  written, not assumed.
+
+  So compression is done here instead, once per publish rather than once per
+  request: the moment a page is stored in `Page` (a cache miss), the gzip
+  bytes are computed and stored alongside the identity ones under a second
+  key. A cache HIT - the common case under load - then costs a lookup and a
+  send either way, gzip or not; nothing is compressed on the request path
+  itself. A reader whose `Accept-Encoding` does not mention gzip (or who asks
+  before anybody has, i.e. the miss itself) gets the identity bytes exactly
+  as before this change - this is additive, not a replacement of the default.
+
+  `Vary: Accept-Encoding` is added (merged with `OpenResultsWeb.Plugs.Locale`'s
+  own `Vary`, never overwriting it) because the response now genuinely
+  depends on a second request header.
   """
 
   import Plug.Conn
@@ -59,6 +83,11 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   alias OpenResultsWeb.Plugs.Revalidate.Page
 
   @secret {__MODULE__, :etag_secret}
+
+  # Below this, gzip's own framing overhead is not worth paying for - nothing
+  # real this app serves is this small (the smallest measured page is a
+  # 33 KB player card), so this only ever matters for a test fixture.
+  @gzip_min_bytes 512
 
   def init(opts), do: opts
 
@@ -94,14 +123,28 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
         locale = locale(conn)
         etag = etag_for(conn, id, locale)
 
+        # Computed ahead of the `cond` rather than inside one of its clauses:
+        # `&&`/`and` each open their own scope for the value they short
+        # circuit to, so a `body = ...` bound on their right-hand side is not
+        # visible in the clause's own body afterward.
+        gzip_body = gzip_acceptable?(conn) && Page.get(slug, id, locale, gzip_key(etag))
+
         conn =
           conn
           |> put_resp_header("etag", etag)
           |> put_resp_header("cache-control", "private, no-cache")
+          |> add_vary_accept_encoding()
 
         cond do
           etag in request_etags(conn) ->
             conn |> send_resp(304, "") |> halt()
+
+          gzip_body ->
+            conn
+            |> put_resp_header("content-encoding", "gzip")
+            |> put_resp_content_type("text/html")
+            |> send_resp(200, gzip_body)
+            |> halt()
 
           body = Page.get(slug, id, locale, etag) ->
             conn
@@ -115,6 +158,35 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
     end
   end
 
+  # A cache miss always answers with the identity bytes, whatever this
+  # particular reader's own Accept-Encoding says - see the moduledoc's
+  # "Compression" section for why: this is the rare event (once per
+  # tournament version, not once per request), so simplicity here costs
+  # nothing worth measuring. The gzip variant is computed once, right here,
+  # for every reader *after* this one to find in `Page`.
+  defp add_vary_accept_encoding(conn) do
+    case get_resp_header(conn, "vary") do
+      [] -> put_resp_header(conn, "vary", "accept-encoding")
+      [existing | _] -> put_resp_header(conn, "vary", existing <> ", accept-encoding")
+    end
+  end
+
+  # Deliberately simple: real browsers never list `gzip` in `Accept-Encoding`
+  # while refusing it via `;q=0` - that combination only shows up in
+  # hand-built test requests - so this does not parse q-values. Getting that
+  # corner wrong would mean gzipping for a reader who asked not to receive
+  # it, which is not a correctness bug for an HTML document every browser can
+  # already decode; it is a missed preference, not a wrong answer.
+  defp gzip_acceptable?(conn) do
+    conn
+    |> get_req_header("accept-encoding")
+    |> Enum.any?(&String.contains?(String.downcase(&1), "gzip"))
+  end
+
+  # Same key `Page` already uses, just for a second body under one tag - no
+  # change needed to that module, which does not care what the bytes mean.
+  defp gzip_key(etag), do: etag <> "|gzip"
+
   # Set by `OpenResultsWeb.Plugs.Locale`, which the browser pipeline runs
   # before this one. The fallback is not decoration: this plug must not be
   # the thing that breaks if it is ever mounted somewhere that one is not.
@@ -123,7 +195,17 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   # Only a plain 200 of HTML. A redirect, a 404 or an error page is not this
   # document and must never be served in its place.
   defp keep(%{status: 200} = conn, slug, id, locale, etag) do
-    if html?(conn), do: Page.put(slug, id, locale, etag, IO.iodata_to_binary(conn.resp_body))
+    if html?(conn) do
+      body = IO.iodata_to_binary(conn.resp_body)
+      Page.put(slug, id, locale, etag, body)
+
+      # Paid once here, per tournament version and language, not per request -
+      # see the moduledoc's "Compression" section.
+      if byte_size(body) >= @gzip_min_bytes do
+        Page.put(slug, id, locale, gzip_key(etag), :zlib.gzip(body))
+      end
+    end
+
     conn
   end
 
