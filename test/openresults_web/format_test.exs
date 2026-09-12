@@ -63,7 +63,8 @@ defmodule OpenResultsWeb.FormatTest do
 
     test "day, month name, year - in fr, lowercase" do
       assert Format.date("2026-08-29", "fr") == "29 août 2026"
-      assert Format.date("2026-01-01", "fr") == "1 janvier 2026"
+      assert Format.date("2026-01-01", "fr") == "1er janvier 2026"
+      assert Format.date("2026-01-02", "fr") == "2 janvier 2026"
     end
 
     test "en is the ISO string, untouched" do
@@ -89,7 +90,7 @@ defmodule OpenResultsWeb.FormatTest do
   describe "date_range/3" do
     test "the same month is named once" do
       assert Format.date_range("2026-03-01", "2026-03-05", "nl") == "1-5 maart 2026"
-      assert Format.date_range("2026-03-01", "2026-03-05", "fr") == "1-5 mars 2026"
+      assert Format.date_range("2026-03-01", "2026-03-05", "fr") == "1er-5 mars 2026"
     end
 
     test "a single-digit span still reads as a range, not one date" do

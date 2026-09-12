@@ -134,13 +134,13 @@ defmodule OpenResultsWeb.Format do
          %Date{year: year, month: month, day: finish_day},
          locale
        ) do
-    "#{start_day}-#{finish_day} #{month_name(month, locale)} #{year}"
+    "#{day(start_day, locale)}-#{day(finish_day, locale)} #{month_name(month, locale)} #{year}"
   end
 
   # Same year, different month: the year still said once, at the end.
   defp idiomatic_range(%Date{year: year} = start_date, %Date{year: year} = finish_date, locale) do
-    "#{start_date.day} #{month_name(start_date.month, locale)} - " <>
-      "#{finish_date.day} #{month_name(finish_date.month, locale)} #{year}"
+    "#{day(start_date.day, locale)} #{month_name(start_date.month, locale)} - " <>
+      "#{day(finish_date.day, locale)} #{month_name(finish_date.month, locale)} #{year}"
   end
 
   # Different years: nothing left to share, so both ends are the full form.
@@ -149,7 +149,12 @@ defmodule OpenResultsWeb.Format do
   end
 
   defp long(%Date{} = date, locale),
-    do: "#{date.day} #{month_name(date.month, locale)} #{date.year}"
+    do: "#{day(date.day, locale)} #{month_name(date.month, locale)} #{date.year}"
+
+  # French writes the first of the month as an ordinal - "1er septembre" - and
+  # every other day as a plain number. Dutch has no such form.
+  defp day(1, "fr"), do: "1er"
+  defp day(day, _locale), do: Integer.to_string(day)
 
   # `with_locale/3` rather than trusting the process's own locale to already
   # be `locale`: it very often is (nothing here changes it), but a caller

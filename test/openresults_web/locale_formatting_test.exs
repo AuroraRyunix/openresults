@@ -176,7 +176,7 @@ defmodule OpenResultsWeb.LocaleFormattingTest do
       for {lang, expected} <- [
             {"en", "2026-03-01 to 2026-03-05"},
             {"nl", "1-5 maart 2026"},
-            {"fr", "1-5 mars 2026"}
+            {"fr", "1er-5 mars 2026"}
           ] do
         html = build_conn() |> get(~p"/t/#{slug}?lang=#{lang}") |> html_response(200)
         assert html =~ expected, "locale #{lang}"
@@ -187,7 +187,7 @@ defmodule OpenResultsWeb.LocaleFormattingTest do
       for {lang, expected} <- [
             {"en", "2026-03-01"},
             {"nl", "1 maart 2026"},
-            {"fr", "1 mars 2026"}
+            {"fr", "1er mars 2026"}
           ] do
         round = build_conn() |> get(~p"/t/#{slug}/round/1?lang=#{lang}") |> html_response(200)
 
@@ -203,7 +203,7 @@ defmodule OpenResultsWeb.LocaleFormattingTest do
       for {lang, expected} <- [
             {"en", "starts 2026-03-01"},
             {"nl", "start 1 maart 2026"},
-            {"fr", "début le 1 mars 2026"}
+            {"fr", "début le 1er mars 2026"}
           ] do
         html = build_conn() |> get(~p"/t/#{slug}/register?lang=#{lang}") |> html_response(200)
         assert html =~ expected, "locale #{lang}"
