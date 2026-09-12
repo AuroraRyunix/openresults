@@ -27,6 +27,21 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Dutch and French pages now write numbers and dates the way
+  those languages do** - `5,5` rather than `5.5` for every score, tiebreak
+  value and Keizer value on the site, and `29 augustus 2026` / `29 août
+  2026` rather than `2026-08-29` for every date, including the projector
+  screen and the entry form. This is the fix for the two things
+  `docs/translations-audit-2026-09-12.md` found were not translated at all
+  (findings 2 and 3) - **English is untouched**, still `5.5` and still
+  `2026-08-29`. A tournament's own date range now reads idiomatically
+  rather than as two dates joined by a word - `1-5 maart 2026` within one
+  month, `30 augustus - 2 september 2026` across two - and a date this
+  cannot parse still renders rather than taking the page down, exactly as
+  an old snapshot's missing date always has. Nothing a script reads
+  changed: the standings sort's `data-*` attributes keep the point, in
+  every language, which is what lets the sort and filter script go on
+  reading them with a plain `parseFloat`.
 - [Fix] **Sorting and filtering the standings did nothing on a tournament
   that opened before round 1** until the page was reloaded. The script that
   wires the sort buttons and the filter lived inside the standings table,
