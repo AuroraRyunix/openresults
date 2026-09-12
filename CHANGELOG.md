@@ -31,7 +31,8 @@ Each entry is tagged so a version can be skimmed:
   those languages do** - `5,5` rather than `5.5` for every score, tiebreak
   value and Keizer value on the site, and `29 augustus 2026` / `29 août
   2026` rather than `2026-08-29` for every date, including the projector
-  screen and the entry form. This is the fix for the two things
+  screen and the entry form, with French's `1er` for the first of the
+  month. This is the fix for the two things
   `docs/translations-audit-2026-09-12.md` found were not translated at all
   (findings 2 and 3) - **English is untouched**, still `5.5` and still
   `2026-08-29`. A tournament's own date range now reads idiomatically
@@ -75,9 +76,9 @@ Each entry is tagged so a version can be skimmed:
   `docs/translations-audit-2026-09-12.md`, including what was checked and
   found correct (the page cache serves each language its own pages; every
   placeholder matches; French and Dutch chess vocabulary is the right
-  vocabulary) and what is a decision rather than a defect - scores still
-  print `5.5` rather than `5,5`, and dates still print `2026-08-29`, in
-  every language.
+  vocabulary) and what was left for a separate decision - scores printing
+  `5.5` and dates printing `2026-08-29` in every language, since fixed for
+  Dutch and French (the entry at the top of this section).
 
 ## [0.13.0] - 2026-09-12
 
