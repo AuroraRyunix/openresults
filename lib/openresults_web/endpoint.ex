@@ -56,6 +56,13 @@ defmodule OpenResultsWeb.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
-  plug Plug.Session, @session_options
+  # No `Plug.Session` here any more. It used to be, and every public response
+  # stayed cookie-free only because nothing on the public side happened to
+  # call `fetch_session`. The one session this app has belongs to `/admin`
+  # and is plugged in that pipeline alone - see
+  # `OpenResultsWeb.Plugs.AdminSession` - so a public route that tried to
+  # use a session would now fail loudly instead of quietly setting a cookie.
+  # (`@session_options` above stays for the LiveView socket's declaration,
+  # which nothing on this site connects to.)
   plug OpenResultsWeb.Router
 end

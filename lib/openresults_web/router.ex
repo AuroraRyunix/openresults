@@ -33,6 +33,33 @@ defmodule OpenResultsWeb.Router do
     plug OpenResultsWeb.Framing
   end
 
+  # The admin panel - the thing the comments above were waiting for: the
+  # first page on this site that acts on somebody's behalf. So it gets the
+  # session and CSRF protection the public pipeline argues it does not need,
+  # and it gets them on its own pipeline, so none of it can leak onto a
+  # public response. Nothing from `:browser` is shared: no locale (English
+  # only), no framing permission (the opposite), no revalidation or page
+  # cache (see `OpenResultsWeb.Plugs.AdminHeaders`).
+  #
+  # The order is load-bearing:
+  #
+  #   1. `AdminAuth` first, before anything has touched the response, so a
+  #      request without a valid Cloudflare Access token leaves as the
+  #      router's own unknown-route 404 - same status, body and headers.
+  #   2. `AdminHeaders` next, so every admin response from here on, error
+  #      pages included, is no-store and unframeable.
+  #   3. The session and the CSRF check only after the gate, so a stranger
+  #      is never handed a session cookie, not even a refused one.
+  pipeline :admin do
+    plug OpenResultsWeb.Plugs.AdminAuth
+    plug OpenResultsWeb.Plugs.AdminHeaders
+    # Always HTML, whatever `Accept` says - negotiating would only add a 406
+    # nobody needs.
+    plug :put_format, "html"
+    plug OpenResultsWeb.Plugs.AdminSession
+    plug :put_root_layout, html: {OpenResultsWeb.Admin.Layouts, :root}
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -148,5 +175,27 @@ defmodule OpenResultsWeb.Router do
     pipe_through :api
 
     get "/tournaments/:slug", SnapshotController, :show
+  end
+
+  # The admin panel. Behind Cloudflare Access at the edge and checked again
+  # by `:admin` - see `OpenResultsWeb.Plugs.AdminAuth` and docs/admin.md.
+  #
+  # Only routes that exist are linked from the panel's navigation
+  # (`OpenResultsWeb.Admin.Layouts.nav_items/1`), so a section appears there
+  # the moment its route is added here. An `/admin/...` path with no route
+  # is the router's ordinary 404, for admins and strangers alike.
+  scope "/admin", OpenResultsWeb.Admin do
+    pipe_through :admin
+
+    get "/", DashboardController, :show
+
+    # Test-only: a harmless confirmation page and the POST behind it, so the
+    # confirmation pattern and the CSRF check are proven through this exact
+    # pipeline. Compiled in only where config/test.exs asks for it; no
+    # production route table has it.
+    if Application.compile_env(:openresults, :admin_confirmation_probe, false) do
+      get "/confirmation-probe", ConfirmationProbeController, :new
+      post "/confirmation-probe", ConfirmationProbeController, :create
+    end
   end
 end

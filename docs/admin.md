@@ -1,0 +1,283 @@
+# The admin panel: setting it up
+
+`https://openresults.zerotwo.cloud/admin` is where the operator moderates
+public publishing. This document is for the person switching it on: what to
+click in Keycloak and in Cloudflare, which three variables to set on the
+server, how to check it worked, how to sign out, and what each kind of
+misconfiguration looks like.
+
+The contract behind it is the "Admin panel: `/admin`" section of
+[`public-publishing.md`](public-publishing.md). The code is
+`OpenResultsWeb.Plugs.AdminAuth` and the modules under
+`lib/openresults_web/admin_access/`.
+
+## How the lock works
+
+Two locks, and each one alone opens nothing.
+
+1. **Cloudflare Access**, at the edge. An Access application covers
+   `openresults.zerotwo.cloud/admin*`. Nobody reaches the server on those
+   paths without signing in through Keycloak and being in the Keycloak group
+   `openresults-admin`.
+2. **The app itself.** Cloudflare attaches a signed token to every request
+   it lets through (`Cf-Access-Jwt-Assertion`). The app verifies that token
+   against Cloudflare's published keys, checks it was issued for *this*
+   Access application and *this* team, and checks the email in it against its
+   own list, `OPENRESULTS_ADMIN_EMAILS`.
+
+The second lock is there because an Access policy is a form in a dashboard,
+and forms get edited wrong. If the Access application is deleted, its path is
+mistyped, or its policy is widened while testing, the panel stays shut: a
+request without a valid token for this application gets the site's ordinary
+"Not Found".
+
+This app still talks to no identity provider itself. Keycloak is Cloudflare
+Access's identity provider, not this app's; there are no accounts or
+passwords here.
+
+## Before you start
+
+You need:
+
+- admin rights in the Keycloak realm that Cloudflare Access signs people in
+  with;
+- admin rights in Cloudflare Zero Trust for the `zerotwo.cloud` account;
+- root on the host, to add three environment variables.
+
+Your **team domain** is shown under **Zero Trust → Settings → Team name and
+domain**. It looks like `<team-name>.cloudflareaccess.com`. You need it twice
+below. (Renaming the team later changes it, and the panel then answers "Not
+Found" until the variable is updated too.)
+
+## 1. Keycloak: the group, and groups in the token
+
+If Keycloak is already an identity provider in Zero Trust for other
+applications, its client exists; do only the group and the mapper check.
+
+1. **Create the group.** Realm → **Groups → Create group**, name
+   `openresults-admin`. Add the people who should administer the site
+   (**Users → the user → Groups → Join group**). Each needs an email address
+   set on their Keycloak user: that address is what reaches the app.
+2. **The client, if there is none yet.** **Clients → Create client**, type
+   *OpenID Connect*, a client ID such as `cloudflare-access`, **Client
+   authentication** on. Valid redirect URI:
+   `https://<team-name>.cloudflareaccess.com/cdn-cgi/access/callback`.
+   Copy the client secret from the **Credentials** tab.
+3. **Put the groups in the token.** **Clients → the Cloudflare client →
+   Client scopes → the `…-dedicated` scope → Add mapper → By configuration →
+   Group Membership**:
+   - **Name**: `groups`
+   - **Token Claim Name**: `groups`
+   - **Full group path**: **off** (otherwise the value is
+     `/openresults-admin`, and the policy below will not match it)
+   - **Add to ID token**, **Add to access token**, **Add to userinfo**: on
+
+## 2. Cloudflare: Keycloak as an identity provider
+
+Skip this if Keycloak is already listed under **Zero Trust → Integrations →
+Identity providers**, but check that its **OIDC Claims** include `groups`.
+
+Otherwise: **Zero Trust → Integrations → Identity providers → Add new
+identity provider → OpenID Connect**.
+
+| Field | Value |
+|---|---|
+| Name | `Keycloak` |
+| Client ID | the client ID from step 1 |
+| Client secret | the secret from step 1 |
+| Auth URL | `https://<keycloak host>/realms/<realm>/protocol/openid-connect/auth` |
+| Token URL | `https://<keycloak host>/realms/<realm>/protocol/openid-connect/token` |
+| Certificate URL | `https://<keycloak host>/realms/<realm>/protocol/openid-connect/certs` |
+| PKCE | on |
+| OIDC Claims | add `groups` |
+
+Save, then use **Test** on the provider: sign in as one of the admins and
+check that the result shows `groups` containing `openresults-admin`.
+
+## 3. Cloudflare: the Access application for `/admin`
+
+**Zero Trust → Access controls → Applications → Add an application →
+Self-hosted** (in some dashboards: *Self-hosted and private → Add public
+hostname*).
+
+| Field | Value |
+|---|---|
+| Application name | `OpenResults admin` |
+| Session duration | `8 hours` (shorter is fine; this is how long a sign-in lasts) |
+| Subdomain | `openresults` |
+| Domain | `zerotwo.cloud` |
+| Path | `admin*` |
+| Identity providers | **Keycloak only**; *Apply instant authentication* on, so the Access login page is skipped |
+
+**The path is `admin*`, not `admin/*` and not `admin`.** Cloudflare's path
+rules are literal about this: `admin/*` covers `/admin/tournaments` but *not*
+`/admin` itself, and `admin` without a wildcard covers only `/admin`. `admin*`
+covers `/admin`, `/admin/` and everything beneath it. (It also covers any
+other path starting with "admin"; the public site has none.)
+
+Add one policy:
+
+| Field | Value |
+|---|---|
+| Policy name | `openresults-admin group` |
+| Action | **Allow** |
+| Include | selector **OIDC Claims** (shown as *IdP OIDC Claim* in some dashboards), claim name `groups`, claim value `openresults-admin` |
+| Require (optional) | selector **Login Methods**, value `Keycloak` |
+
+No other policy. In particular no *Bypass*, no *Service Auth* and no
+*Everyone* rule on this application: a service token has no email and the app
+would refuse it anyway, and a bypass would leave only the second lock.
+
+Save the application. The existing tunnel route for `openresults.zerotwo.cloud`
+(see [`deployment.md`](deployment.md)) does not change; Access sits in front
+of it for the `/admin*` paths only, and every public page stays exactly as
+open as it was.
+
+## 4. The Application Audience (AUD) tag
+
+**Zero Trust → Access controls → Applications →** `OpenResults admin` **→
+Configure → Additional settings → Application Audience (AUD) Tag.** Copy it:
+a long hexadecimal string.
+
+It identifies this one application. A token Cloudflare issued for any other
+Access application in the same team carries a different AUD and is refused.
+Deleting and re-creating the application gives it a **new** AUD, and the
+variable must be updated.
+
+## 5. The three variables
+
+As a systemd drop-in, not in `openresults.service` itself: the deploy
+rewrites the unit on every run and would wipe hand-added lines (see
+"Secrets" in [`deployment.md`](deployment.md)).
+
+```ini
+# /etc/systemd/system/openresults.service.d/admin.conf
+[Service]
+Environment="OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN=<team-name>.cloudflareaccess.com"
+Environment="OPENRESULTS_ADMIN_ACCESS_AUD=<the AUD tag>"
+Environment="OPENRESULTS_ADMIN_EMAILS=first.admin@example.org,second.admin@example.org"
+```
+
+```bash
+chmod 600 /etc/systemd/system/openresults.service.d/admin.conf
+systemctl daemon-reload
+systemctl restart openresults
+journalctl -u openresults -g "admin panel" -n 5
+```
+
+| Variable | What it is |
+|---|---|
+| `OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN` | the team domain from "Before you start". With or without `https://` and a trailing slash; anything that is not a plain host name counts as unset |
+| `OPENRESULTS_ADMIN_ACCESS_AUD` | the AUD tag from step 4 |
+| `OPENRESULTS_ADMIN_EMAILS` | comma separated, spaces around commas ignored, compared case-insensitively. The exact address Keycloak has for each admin |
+
+**All three or nothing.** With any one missing, every `/admin` path answers
+"Not Found" exactly as a page that does not exist. A club's own copy of
+OpenResults, which sets none of them, therefore has no admin panel at all.
+
+After the restart the journal should say:
+
+```
+[info] admin panel: enabled behind Cloudflare Access
+```
+
+## 6. Checking it works
+
+Do all of these once, after setting it up and after changing anything in
+Access.
+
+1. **An admin gets in.** In a private window open
+   `https://openresults.zerotwo.cloud/admin`. Keycloak's sign-in appears (or
+   Cloudflare's, if instant authentication is off); after it, the dashboard
+   says **Signed in as** your address, and **Checked by** says *Cloudflare
+   Access, and this server's own check of the Access token*.
+2. **Someone outside the group does not.** Sign in as a Keycloak user who is
+   not in `openresults-admin`. Cloudflare shows its own access-denied page;
+   the request never reaches the server.
+3. **Someone in the group but not on the list gets a 403.** Temporarily
+   leave one admin's address out of `OPENRESULTS_ADMIN_EMAILS` (or test with a
+   third group member). They see a plain page: *Forbidden - Signed in as ...,
+   which is not on this server's list of administrators.* Put the address
+   back.
+4. **The app's own lock holds without Access.** On the host, bypassing
+   Cloudflare entirely:
+
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4004/admin
+   curl -s -o /dev/null -w '%{http_code}\n' -H 'Cf-Access-Jwt-Assertion: forged' http://127.0.0.1:4004/admin
+   ```
+
+   Both must print `404`. The journal shows
+   `admin panel: refused GET /admin (no_access_token)` and `(malformed)`.
+5. **The admin pages are never stored or framed.** In the browser's developer
+   tools, on the dashboard's response: `cache-control: no-store`,
+   `x-frame-options: DENY`, and a `content-security-policy` ending in
+   `frame-ancestors 'none'`.
+6. **The public site is unchanged.**
+
+   ```bash
+   curl -sI https://openresults.zerotwo.cloud/ | grep -i set-cookie
+   ```
+
+   prints nothing.
+
+## Signing out
+
+**Sign out**, top right, goes to `/cdn-cgi/access/logout` on this hostname.
+Cloudflare answers that address itself: it ends the Access session and clears
+its cookie, and the next visit to `/admin` goes back through Access's sign-in.
+
+What it does not end is **Keycloak's own session**. Keycloak may still
+remember you, in which case the next visit to `/admin` signs you straight back
+in without asking for a password. On a shared or borrowed machine, also sign
+out of Keycloak (its account console,
+`https://<keycloak host>/realms/<realm>/account`, **Sign out**), or close the
+browser.
+
+The panel's own cookie, `_openresults_admin`, holds only a form token and
+one-off messages. It says nothing about who you are and ends with the browser
+session; who is signed in is re-checked from Cloudflare's token on every
+request.
+
+## When it does not work
+
+Every refusal of a configured panel is logged with its reason (never with the
+token). Start with:
+
+```bash
+journalctl -u openresults -g "admin panel" -n 20
+```
+
+| What you see | Log | Cause |
+|---|---|---|
+| "Not Found" on every `/admin` path | at boot: `admin panel: OFF, every /admin path answers 404 - missing or unusable: …` | a variable is missing, empty, or (team domain) not a host name. The line names which |
+| "Not Found", no log at all | nothing | none of the three variables is set: the panel is off, as on every club's own copy |
+| "Not Found" | `refused GET /admin (no_access_token)` | the request did not come through Access: no Access application covers this path, its path is `admin/*` or `admin`, or it is disabled. The app stayed shut, but fix Access |
+| "Not Found" | `(wrong_audience)` | `OPENRESULTS_ADMIN_ACCESS_AUD` is another application's tag, or the application was re-created and has a new one |
+| "Not Found" | `(unknown_key)`, often with `could not fetch Cloudflare Access certs for …` and an HTTP status or connection error | the team domain is wrong (another team's, a typo, or the team was renamed), or the host cannot reach `https://<team domain>/cdn-cgi/access/certs` (outbound HTTPS, DNS) |
+| "Not Found" | `(wrong_issuer)` | the keys matched but the token names a different issuer: the configured team domain is not the exact `<team-name>.cloudflareaccess.com` shown under Settings → Team name and domain |
+| "Not Found" | `(expired)` or `(not_yet_valid)` | the server's clock is off by more than a minute: `timedatectl` |
+| plain "Forbidden - Signed in as …" | `"…" passed Cloudflare Access but is not in OPENRESULTS_ADMIN_EMAILS` | that address is not on the list. Compare it with the Keycloak user's email |
+| Cloudflare's own access-denied page | nothing (the request never arrived) | the Access policy refused: not in the group, the `groups` mapper missing or with *Full group path* on, or `groups` not listed under the provider's **OIDC Claims** |
+| the service does not start | `refusing to start: the admin panel's development bypass is configured …` | `:admin_dev_bypass` reached production configuration. Remove it; it belongs in `config/dev.exs` only |
+
+### Signing keys
+
+The app fetches Cloudflare's signing keys from the team domain and keeps them.
+It fetches again when a token names a key it has not seen (Cloudflare rotates
+keys every six weeks) and when its copy is more than an hour old - but never
+more than once every 30 seconds, whatever the requests say, so a flood of
+made-up tokens cannot turn the server into a request generator aimed at
+Cloudflare. If a fetch fails, the keys already held stay in use.
+
+In practice that means one visible effect: in the first 30 seconds after the
+server has just fetched keys, a token signed with a brand-new key is refused
+("Not Found", `unknown_key`). Reloading a moment later works.
+
+## Local development
+
+`config/dev.exs` turns on a development bypass: on `mix phx.server`, `/admin`
+signs you in as `admin@localhost` with no Cloudflare in front, and says so in a
+banner on every page. It exists only in development and test configuration,
+is never read from an environment variable, is ignored outside those two
+environments, and a production start with it configured refuses to boot.
