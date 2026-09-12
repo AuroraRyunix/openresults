@@ -37,7 +37,17 @@ defmodule OpenResultsWeb.Endpoint do
   end
 
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  # `log: :debug` rather than the default `:info`: the 2026-09-12 load test's
+  # own numbers (see docs/load-test-2026-09-12.md) showed this plug's two
+  # lines a request ("GET /path", "Sent 200 in Xms") adding real, measured
+  # contention once concurrency climbed past a few hundred - Logger writes to
+  # its console backend from the request process itself, and that is one
+  # more thing competing for the single pinned core alongside every other
+  # request. `config/prod.exs` already sets the general Logger level to
+  # `:info`, so this line is simply filtered out in production, exactly as it
+  # was before this plug started emitting anything - while dev, which never
+  # raises the Logger level, keeps seeing every request exactly as before.
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: :debug
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
