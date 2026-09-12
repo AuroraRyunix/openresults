@@ -366,19 +366,22 @@ defmodule OpenResultsWeb.CrosstableTest do
 
     test "a Keizer ladder shows the game score rather than its own currency", %{conn: conn} do
       # The one system where "points" beside a row of results would be a
-      # contradiction rather than a total: player 1 won both games and has 17
-      # Keizer points, which are a function of who they beat and not of how
-      # many. The ladder's own number stays on the standings, under the
-      # column that says what it is.
+      # contradiction rather than a total: player 1 won their round 1 game
+      # and stands second with 1 point, a function of who they beat and not
+      # of how many. The ladder's own number stays on the standings, under
+      # the column that says what it is. The grid rows are in entry-number
+      # order, not rank order, so the first row is still player 1's; the
+      # standings gate stops after round 1, so it carries one round, not
+      # both published ones.
       keizer = SnapshotPayloads.keizer()
       publish(keizer)
       document = grid(conn, keizer["tournament"]["slug"])
 
       assert texts(document, "table.crosstable thead th") ==
-               ["No", "Player", "Elo", "1", "2", "Score", "Rank"]
+               ["No", "Player", "Elo", "1", "Score", "Rank"]
 
       assert texts(document, "table.crosstable tbody tr:first-child td") ==
-               ["1", "Peeters, Wouter", "2088", "4 w 1", "6 b 1", "2", "1"]
+               ["1", "Peeters, Wouter", "2088", "4 w 1", "1", "2"]
     end
 
     test "and shows the awaiting-standings message when nothing has been ranked yet", %{

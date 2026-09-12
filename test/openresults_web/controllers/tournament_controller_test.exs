@@ -150,7 +150,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
                ["#", "Player", "Rating", "Value", "Keizer points", "Score"]
 
       assert texts(document, "table.standings tbody tr:first-child td") ==
-               ["1", "Peeters, Wouter", "2088", "12", "17", "2"]
+               ["1", "Ó Braonáin, Cillian", "1690", "12", "8", "1"]
     end
 
     test "a player with no rating, title or club renders cleanly", %{conn: conn, slug: slug} do
