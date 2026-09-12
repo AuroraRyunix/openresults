@@ -18,6 +18,11 @@
 
   <.standings_table :if={not starting_rank?} payload={@payload} slug={@slug} />
 
+  <%!-- Unconditional - see `TournamentHTML.standings_script/1`'s own
+        moduledoc for why this cannot live inside `standings_table/1`, which
+        does not render at all while `starting_rank?` holds. --%>
+  <.standings_script />
+
   <%!-- Keizer's ladder is not a FIDE tiebreak table and reads like a broken
         one if nobody says so: the points move for reasons that are not in the
         results column. --%>
