@@ -73,6 +73,13 @@ defmodule OpenResultsWeb.Router do
     # no slug, for `Revalidate` to key an ETag against.
     get "/players/:fide_id", PlayerHistoryController, :show
 
+    # What changed here, release by release - see
+    # `OpenResultsWeb.ChangelogController` for why this sits beside
+    # `players/:fide_id` rather than in the scope above: there is no
+    # tournament and no slug behind it either, and nothing it shows can
+    # change between two requests against the same running build.
+    get "/changelog", ChangelogController, :show
+
     # Entry. Under the tournament, beside `round` and `player`, because an
     # entry is for one event and the slug is the only handle there is - and
     # because a tournament that has not published here then 404s from the same

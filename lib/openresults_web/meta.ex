@@ -173,6 +173,9 @@ defmodule OpenResultsWeb.Meta do
   @doc "Anything that is not here."
   def not_found, do: gettext("This page is not published here.")
 
+  @doc "The changelog."
+  def changelog, do: gettext("What has changed on this site, release by release.")
+
   # City and dates, each behind the arbiter's own tick, appended to a
   # sentence that is already complete without them. Empty is the ordinary
   # answer for a club event and for any tournament whose arbiter said no.

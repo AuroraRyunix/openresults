@@ -1428,11 +1428,19 @@ a.xt-opp:hover {
 
 /* Which build is serving this page. Quiet - it is for the operator, not the
    reader - but present on every page, because the question it answers is
-   asked from outside and there is no login to put it behind. */
+   asked from outside and there is no login to put it behind. A link to
+   /changelog now, so `text-decoration` is set explicitly rather than left to
+   the browser default: still quiet until a reader's cursor says otherwise. */
 .build-id {
   color: var(--quiet);
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.build-id:hover,
+.build-id:focus-visible {
+  text-decoration: underline;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1590,4 +1598,108 @@ a.xt-opp:hover {
 
 .projector-byes h2 {
   font-size: 1.05rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Changelog
+
+   `OpenResultsWeb.ChangelogController` - CHANGELOG.md, rendered to HTML at
+   compile time and dropped in here with `{raw/1}`. No new theme tokens: this
+   site's whole palette is the seven variables at the top of this file, one
+   of them (`--accent`) already doing double duty across several components,
+   so the six entry tags below are told apart by WEIGHT and BORDER rather
+   than by inventing hues a theme was never given.
+   --------------------------------------------------------------------------- */
+
+.changelog-body h2 {
+  font-size: 1.05rem;
+  margin: 2.5rem 0 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+}
+
+.changelog-body h2:first-of-type {
+  margin-top: 1.5rem;
+  padding-top: 0;
+  border-top: none;
+}
+
+.changelog-body p {
+  margin: 0 0 0.75rem;
+  color: var(--quiet);
+  max-width: 52rem;
+}
+
+.changelog-body ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  max-width: 52rem;
+}
+
+.changelog-body li {
+  margin: 0.3rem 0;
+  line-height: 1.55;
+}
+
+.changelog-body li strong {
+  color: var(--ink);
+}
+
+.changelog-body code {
+  background: var(--panel);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+
+.changelog-body table {
+  border-collapse: collapse;
+  margin: 0 0 1rem;
+}
+
+.changelog-body th,
+.changelog-body td {
+  border: 1px solid var(--rule);
+  padding: 0.25rem 0.6rem;
+  text-align: left;
+}
+
+.changelog-body table td:first-child {
+  white-space: nowrap;
+}
+
+.changelog-body hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 1.5rem 0;
+}
+
+.cl-tag {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  padding: 0 0.4rem;
+  margin-right: 0.2rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.cl-feature { color: var(--accent); }
+.cl-fix { color: var(--ink); }
+.cl-change { color: var(--quiet); }
+.cl-removed { color: var(--withheld); }
+.cl-verified { color: var(--quiet); border-style: dashed; }
+
+/* The one tag worth a heavier mark than a border: filled rather than
+   outlined, so a security entry still stands out to someone skimming past
+   rather than reading every line. */
+.cl-security {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
 }
