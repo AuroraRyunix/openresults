@@ -31,6 +31,12 @@ defmodule OpenResults.Takedown do
   follows. The slug returns to unclaimed and the next publish claims it again,
   by the same trust-on-first-use path as any other new slug.
 
+  ## What it leaves
+
+  Reports about the tournament (`OpenResults.Reports`) and the moderation
+  action log. Both are records of why somebody acted on the page rather than
+  the page's own data, and a takedown is often the action they record.
+
   ## One transaction
 
   A purge that removed the snapshots and then failed would leave a registration
@@ -42,6 +48,7 @@ defmodule OpenResults.Takedown do
   alias OpenResults.Repo
   alias OpenResults.Snapshots
   alias OpenResults.TournamentKeys
+  alias OpenResults.Tournaments
 
   @type counts :: %{
           snapshots: non_neg_integer(),
@@ -62,6 +69,13 @@ defmodule OpenResults.Takedown do
   def purge(slug) do
     {:ok, counts} =
       Repo.transaction(fn ->
+        # The tournament's row goes too - its status and, for a slug minted
+        # for an installation, its owner - so the slug is gone rather than
+        # sealed, for the same reason as the key above. Not in the counts:
+        # those are the contract's response body, and they count what a
+        # takedown is FOR, which is the published data.
+        Tournaments.delete_row(slug)
+
         # Each context deletes its own rows. The alternative - one query per
         # table written here - would put `snapshots` and `registrations` schema
         # knowledge in a third place that has no other reason to know it.
@@ -71,6 +85,9 @@ defmodule OpenResults.Takedown do
           key: TournamentKeys.release(slug)
         }
       end)
+
+    # After the commit, so the read path learns what was committed.
+    Tournaments.forget(slug)
 
     counts
   end

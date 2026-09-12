@@ -18,6 +18,25 @@ config :openresults,
 # is refused, which is the right way for this to fail.
 config :openresults, :ingest_token, nil
 
+# Public publishing - `docs/public-publishing.md`, `OpenResults.PublicPublishing`.
+# Off by default, and that default is the point: a club running this beside its
+# own website must never be opened to the public by an upgrade. Each value can
+# be overridden from the environment in config/runtime.exs.
+config :openresults, :public_publishing, false
+config :openresults, :operator_name, nil
+config :openresults, :terms_url, nil
+config :openresults, :registrations_per_address, 10
+config :openresults, :registrations_per_day, 200
+config :openresults, :installation_publishes_per_minute, 30
+config :openresults, :installation_max_tournaments, 50
+# Measured, not guessed - the derivation is in docs/public-publishing.md under
+# "Snapshot size cap". 3 MiB: about twice a 500-player, 11-round open with
+# five tie-breaks' working published.
+config :openresults, :installation_max_snapshot_bytes, 3_145_728
+
+# How often `OpenResults.Retention` runs. `:disabled` in test.
+config :openresults, :retention_interval, :timer.hours(24)
+
 # Configure the endpoint
 config :openresults, OpenResultsWeb.Endpoint,
   url: [host: "localhost"],

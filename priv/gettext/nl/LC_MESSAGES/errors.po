@@ -58,3 +58,9 @@ msgstr "een clubnaam telt hoogstens 100 tekens"
 
 msgid "this tournament is not taking bye requests"
 msgstr "dit toernooi neemt geen byeverzoeken aan"
+
+msgid "choose what is wrong with this page"
+msgstr "kies wat er mis is met deze pagina"
+
+msgid "please keep the details to 2000 characters"
+msgstr "houd de toelichting op hoogstens 2000 tekens"

@@ -67,3 +67,8 @@ config :phoenix,
   sort_verified_routes_query_params: true
 
 config :openresults, :backup_interval, :disabled
+
+# On in test, so the suite exercises the feature; the tests that prove the
+# environment gate switch it off themselves (and are not async).
+config :openresults, :public_publishing, true
+config :openresults, :retention_interval, :disabled

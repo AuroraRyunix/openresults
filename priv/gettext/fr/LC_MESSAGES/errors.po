@@ -58,3 +58,9 @@ msgstr "un nom de club compte au maximum 100 caractères"
 
 msgid "this tournament is not taking bye requests"
 msgstr "ce tournoi n'accepte pas de demandes de bye"
+
+msgid "choose what is wrong with this page"
+msgstr "choisissez ce qui ne va pas sur cette page"
+
+msgid "please keep the details to 2000 characters"
+msgstr "limitez les précisions à 2000 caractères"

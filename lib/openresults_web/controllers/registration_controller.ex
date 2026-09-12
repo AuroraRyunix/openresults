@@ -25,8 +25,8 @@ defmodule OpenResultsWeb.RegistrationController do
   alias OpenResults.RateLimit
   alias OpenResults.Registrations
   alias OpenResults.Registrations.Entry
-  alias OpenResults.Snapshots
   alias OpenResults.TournamentKeys
+  alias OpenResults.Tournaments
   alias OpenResultsWeb.ClientAddress
   alias OpenResultsWeb.Meta
   alias OpenResultsWeb.Tournament
@@ -88,7 +88,7 @@ defmodule OpenResultsWeb.RegistrationController do
   open would make it reachable for every tournament on the site regardless.
   """
   def fide(conn, %{"slug" => slug} = params) do
-    case Snapshots.latest(slug) do
+    case Tournaments.public_latest(slug) do
       nil ->
         conn |> put_status(:not_found) |> json(%{"players" => []})
 
@@ -180,8 +180,10 @@ defmodule OpenResultsWeb.RegistrationController do
     )
   end
 
+  # `public_latest/1`: a hidden tournament takes no entries, and says so with
+  # the same 404 as a tournament that never published.
   defp with_tournament(conn, slug, render_fun) do
-    case Snapshots.latest(slug) do
+    case Tournaments.public_latest(slug) do
       nil ->
         not_found(
           conn,
@@ -283,7 +285,12 @@ defmodule OpenResultsWeb.RegistrationController do
   repeatedly.
   """
   def index(conn, %{"slug" => slug}) do
-    case TournamentKeys.authorize_read(slug, tournament_key(conn)) do
+    # Break-glass only for the operator token. An installation key reaching
+    # here has already been checked as this tournament's owner by
+    # `OpenResultsWeb.InstallationAccess`; the tournament key applies on top.
+    case TournamentKeys.authorize_read(slug, tournament_key(conn),
+           break_glass: conn.assigns[:credential] == :operator
+         ) do
       :ok -> render_index(conn, slug)
       {:error, reason} -> forbid(conn, reason)
     end

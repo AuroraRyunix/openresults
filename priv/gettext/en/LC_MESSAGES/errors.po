@@ -58,3 +58,9 @@ msgstr ""
 
 msgid "this tournament is not taking bye requests"
 msgstr ""
+
+msgid "choose what is wrong with this page"
+msgstr ""
+
+msgid "please keep the details to 2000 characters"
+msgstr ""

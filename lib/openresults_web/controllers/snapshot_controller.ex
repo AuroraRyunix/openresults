@@ -15,6 +15,15 @@ defmodule OpenResultsWeb.SnapshotController do
   purpose: **401** is "you may not talk to this server", from the plug on the
   pipeline, and **403** is "you may, but not to this tournament".
 
+  With public publishing enabled, `create`, `delete` and `history` also take
+  an installation key in place of the operator token - only for tournaments
+  minted for that installation, and never with break-glass. Which of the two
+  credentials a request carries is decided by `OpenResultsWeb.Plugs.IngestAuth`
+  and checked per route by `OpenResultsWeb.InstallationAccess` before any
+  action here runs; see `docs/public-publishing.md`. `show` reads through
+  `OpenResults.Tournaments.public_latest/1`, so a hidden tournament is a 404
+  here exactly as it is on every page.
+
   The key travels in a HEADER and never in the payload. It could not go in the
   document even if the contract wanted it to: `payload` is stored whole and
   verbatim, and `show` serves that column to the public, so a key inside it
@@ -40,6 +49,8 @@ defmodule OpenResultsWeb.SnapshotController do
   alias OpenResults.Snapshots
   alias OpenResults.Takedown
   alias OpenResults.TournamentKeys
+  alias OpenResults.Tournaments
+  alias OpenResultsWeb.ApiError
 
   # The name is OpenPairings' - it was written first, and one spelling of a
   # header beats two, the same way the contract insists on one spelling of a
@@ -66,7 +77,10 @@ defmodule OpenResultsWeb.SnapshotController do
     # merged with the query string, and the stored document has to be the body
     # verbatim - otherwise `?rounds=[]` on the publish URL would end up inside
     # a payload that is meant to be exactly what the arbiter's machine built.
-    case Snapshots.ingest(conn.body_params, key: tournament_key(conn)) do
+    case Snapshots.ingest(conn.body_params,
+           key: tournament_key(conn),
+           installation: installation(conn)
+         ) do
       {:ok, snapshot} ->
         json(conn, %{
           status: "ok",
@@ -76,6 +90,12 @@ defmodule OpenResultsWeb.SnapshotController do
 
       {:error, reason} when reason in [:key_required, :key_mismatch] ->
         forbid(conn, reason)
+
+      # An installation key, and the ownership check inside the publish
+      # transaction disagreed with the one the plug made a moment earlier -
+      # a delete or a hide landed in between.
+      {:error, reason} when reason in [:not_owner, :tournament_hidden] ->
+        ApiError.send(conn, reason)
 
       {:error, reason} when is_atom(reason) ->
         reject(conn, reason)
@@ -98,7 +118,7 @@ defmodule OpenResultsWeb.SnapshotController do
   wrong". The counts distinguish those without making the retry an error.
   """
   def delete(conn, %{"slug" => slug}) do
-    case TournamentKeys.authorize_delete(slug, tournament_key(conn)) do
+    case TournamentKeys.authorize_delete(slug, tournament_key(conn), break_glass: operator?(conn)) do
       :ok ->
         json(conn, %{status: "deleted", slug: slug, deleted: Takedown.purge(slug)})
 
@@ -116,6 +136,18 @@ defmodule OpenResultsWeb.SnapshotController do
       [] -> nil
     end
   end
+
+  # Which credential the ingest plug accepted. Break-glass - the operator
+  # token in the key header - is honoured only for the operator; see
+  # `OpenResults.TournamentKeys`.
+  defp installation(conn) do
+    case conn.assigns[:credential] do
+      {:installation, installation} -> installation
+      _operator -> nil
+    end
+  end
+
+  defp operator?(conn), do: conn.assigns[:credential] == :operator
 
   @doc """
   `GET /api/tournaments/:slug` - returns the CURRENT stored payload.
@@ -135,17 +167,36 @@ defmodule OpenResultsWeb.SnapshotController do
   end
 
   def show(conn, %{"slug" => slug}) do
-    case {:ok, Snapshots.latest(slug)} do
-      {:ok, nil} ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "not_found", slug: slug})
+    # Through `public_latest/1`, like every public page: a hidden tournament
+    # answers exactly what a slug that never published answers.
+    case Tournaments.public_latest(slug) do
+      nil ->
+        not_found(conn, slug)
 
-      {:ok, snapshot} ->
+      snapshot ->
         # The payload as stored, byte for byte in meaning. A response that
         # reshaped it would be a second, undocumented contract.
-        json(conn, snapshot.payload)
+        conn
+        |> noindex_if_pending(slug)
+        |> json(snapshot.payload)
     end
+  end
+
+  defp not_found(conn, slug) do
+    conn
+    |> put_status(:not_found)
+    |> json(%{
+      error: "not_found",
+      detail: "no tournament has published under this slug",
+      slug: slug
+    })
+  end
+
+  # Reachable is not the same as indexable - see `OpenResults.Tournaments`.
+  defp noindex_if_pending(conn, slug) do
+    if Tournaments.status(slug) == :pending,
+      do: put_resp_header(conn, "x-robots-tag", "noindex"),
+      else: conn
   end
 
   @doc """
@@ -160,7 +211,7 @@ defmodule OpenResultsWeb.SnapshotController do
     case resolve_at(Map.get(params, "at")) do
       {:ok, instant} ->
         case Snapshots.as_of(slug, instant) do
-          nil -> conn |> put_status(:not_found) |> json(%{error: "not_found", slug: slug})
+          nil -> not_found(conn, slug)
           snapshot -> json(conn, snapshot.payload)
         end
 

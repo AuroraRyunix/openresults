@@ -40,8 +40,16 @@ defmodule OpenResults.Application do
       # exhaustion LatestIdCache exists to prevent.
       OpenResults.Snapshots.BodyCache,
       OpenResultsWeb.Plugs.Revalidate.PageTable,
+      # Owns the ETS table behind `Tournaments.status/1` - visibility, asked by
+      # every public page before it may answer. Before the endpoint for the
+      # same reason as the caches above. See
+      # `OpenResults.Tournaments.StatusCache`.
+      OpenResults.Tournaments.StatusCache,
       # Start to serve requests, typically the last entry
       OpenResults.Backup.Scheduler,
+      # Forgets old client addresses, releases minted slugs that never
+      # published, and removes expired address blocks - once a day.
+      OpenResults.Retention.Scheduler,
       OpenResultsWeb.Endpoint
     ]
 

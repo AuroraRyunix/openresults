@@ -10,11 +10,11 @@ defmodule OpenResultsWeb.Router do
   # can be cached by anything in front of them. Add either one back only
   # alongside the thing that needs it.
   #
-  # There is now one form on this pipeline - the entry form below - and it
-  # still needs neither, for the reason set out where it is routed: it acts on
-  # nobody's behalf, so there is no ambient authority for a forged request to
-  # borrow. That reasoning is about THIS form. A form that ever acts for a
-  # visitor brings both plugs back with it.
+  # There are now two forms on this pipeline - the entry form and the report
+  # form below - and they still need neither, for the reason set out where the
+  # entry form is routed: they act on nobody's behalf, so there is no ambient
+  # authority for a forged request to borrow. That reasoning is about THESE
+  # forms. A form that ever acts for a visitor brings both plugs back with it.
   #
   # The language picker did not bring a session back either, and the argument
   # above is why: an explicit choice travels in the URL, and only a request
@@ -41,6 +41,13 @@ defmodule OpenResultsWeb.Router do
     plug OpenResultsWeb.Plugs.IngestAuth
   end
 
+  # The routes that exist only when `OPENRESULTS_PUBLIC_PUBLISHING=enabled` -
+  # see `OpenResultsWeb.Plugs.PublicPublishingGate`. Put FIRST in a scope's
+  # `pipe_through`, so a gated route answers exactly like an unrouted one.
+  pipeline :public_publishing do
+    plug OpenResultsWeb.Plugs.PublicPublishingGate
+  end
+
   # The public pages. A tournament is addressed by its slug and a player by
   # `no`, the tournament pairing number - the same two handles the payload
   # uses, so no database id appears in a URL either.
@@ -48,8 +55,13 @@ defmodule OpenResultsWeb.Router do
   # revalidation plug, which the entry form below deliberately must not: a
   # form is not a document, and a browser deciding it already has the answer
   # is exactly wrong there.
+  #
+  # `Visibility` runs before `Revalidate` on every route that has a slug, in
+  # both scopes: a hidden tournament must not get a 304 or a cached page, and a
+  # pending one must carry `noindex` on every response, cached or not. See
+  # `OpenResults.Tournaments` for what each status shows to whom.
   scope "/", OpenResultsWeb do
-    pipe_through [:browser, OpenResultsWeb.Plugs.Revalidate]
+    pipe_through [:browser, OpenResultsWeb.Plugs.Visibility, OpenResultsWeb.Plugs.Revalidate]
 
     get "/t/:slug", TournamentController, :standings
     # The grid. In this scope and not the one below, because it is the
@@ -63,7 +75,8 @@ defmodule OpenResultsWeb.Router do
   end
 
   scope "/", OpenResultsWeb do
-    pipe_through :browser
+    # `Visibility` does nothing on the three routes here without a slug.
+    pipe_through [:browser, OpenResultsWeb.Plugs.Visibility]
 
     get "/", TournamentController, :index
 
@@ -105,21 +118,59 @@ defmodule OpenResultsWeb.Router do
     # empty list rather than an error whenever it cannot answer, because the
     # form works without it.
     get "/t/:slug/fide", RegistrationController, :fide
+
+    # Reporting a page to the operator - fake results, personal data, spam.
+    # The same reasoning as the entry form above for having neither a session
+    # nor a CSRF token: it acts on nobody's behalf, and a stranger with `curl`
+    # can already do anything a forged request could. Guarded the same way,
+    # too: only for a tournament the public can see, and rate-limited by
+    # address. See `OpenResultsWeb.ReportController`.
+    get "/t/:slug/report", ReportController, :new
+    post "/t/:slug/report", ReportController, :create
+  end
+
+  # Public publishing, the open half: an OpenPairings installation asking for
+  # its own key. No token - the key is what it is asking for - so it is
+  # guarded instead by the environment gate, the `registration_open` switch,
+  # address blocks and two registration budgets. See
+  # `OpenResultsWeb.InstallationController` and `docs/public-publishing.md`.
+  scope "/api", OpenResultsWeb do
+    pipe_through [:public_publishing, :api]
+
+    post "/installations", InstallationController, :create
   end
 
   # Writes. Everything behind this pipeline can create a tournament page, so
   # the token gate is on the pipeline rather than on the action - a route added
   # here later is authenticated by default rather than by remembering.
+  #
+  # That now has two halves. The OPERATOR token is accepted on every route
+  # here, as it always was. An INSTALLATION key is accepted on none of them
+  # unless the route names what it does in `installation_access`, and naming
+  # it is what makes `OpenResultsWeb.InstallationAccess` run that action's
+  # checks - ownership included - before the controller. A route added here
+  # without it refuses installation keys with the anonymous 401, which
+  # `test/openresults_web/default_deny_test.exs` walks this router to prove.
+  scope "/api", OpenResultsWeb do
+    pipe_through [:public_publishing, :api, :ingest]
+
+    # Minting a slug for the installation asking. Gated like the route above;
+    # the operator token is refused in the controller with
+    # `installation_key_required`, since there is no installation to bind to.
+    post "/tournaments", MintController, :create, private: %{installation_access: :mint}
+  end
+
   scope "/api", OpenResultsWeb do
     pipe_through [:api, :ingest]
 
-    post "/snapshots", SnapshotController, :create
+    post "/snapshots", SnapshotController, :create, private: %{installation_access: :publish}
 
     # History is a WRITE-side privilege, not a read-side one. An earlier
     # snapshot can hold a round or board the arbiter has since retracted, so
     # walking back through the append-only table is exactly as sensitive as
     # publishing into it.
-    get "/tournaments/:slug/history", SnapshotController, :history
+    get "/tournaments/:slug/history", SnapshotController, :history,
+      private: %{installation_access: :history}
 
     # Takedown. On the write pipeline because it is a write - the most
     # destructive one here - and gated a second time by the tournament key,
@@ -129,12 +180,14 @@ defmodule OpenResultsWeb.Router do
     # with the email addresses in it. Until this route existed the only way to
     # remove a published tournament was to SSH in and edit SQLite, which meant
     # that in practice a tournament published by accident stayed published.
-    delete "/tournaments/:slug", SnapshotController, :delete
+    delete "/tournaments/:slug", SnapshotController, :delete,
+      private: %{installation_access: :delete}
 
     # The arbiter pulling what the public form collected. Token-gated for the
     # same reason as history and for one of its own: this is the only route
     # in the system that returns an email address.
-    get "/tournaments/:slug/registrations", RegistrationController, :index
+    get "/tournaments/:slug/registrations", RegistrationController, :index,
+      private: %{installation_access: :registrations}
   end
 
   # Reads. Open, because the CURRENT snapshot only ever contains what an
@@ -147,6 +200,14 @@ defmodule OpenResultsWeb.Router do
   scope "/api", OpenResultsWeb do
     pipe_through :api
 
+    # What this server is and whether it takes installations - the first thing
+    # an OpenPairings copy in public mode asks. Open, and never cached: see
+    # `OpenResultsWeb.ServerController`.
+    get "/server", ServerController, :show
+
+    # Reachable for a pending tournament and not for a hidden one, which gets
+    # the same 404 as a slug that never published - see
+    # `SnapshotController.show/2`.
     get "/tournaments/:slug", SnapshotController, :show
   end
 end

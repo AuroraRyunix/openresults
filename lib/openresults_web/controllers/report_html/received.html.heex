@@ -1,0 +1,17 @@
+<.masthead payload={@payload} slug={@slug} current={:report} />
+
+<section>
+  <h2>{gettext("Report sent")}</h2>
+
+  <p>
+    {gettext("Thank you. The operator of this site will read your report.")}
+  </p>
+
+  <p class="footnote">
+    {gettext(
+      "The page stays as it is until they have looked at it. If you left an email address, they may write to you; otherwise you will not hear back."
+    )}
+  </p>
+
+  <p><a href={~p"/t/#{@slug}"}>{gettext("Back to the tournament")}</a></p>
+</section>

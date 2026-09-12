@@ -20,6 +20,7 @@ defmodule OpenResults.Snapshots do
   alias OpenResults.Snapshots.LatestIdCache
   alias OpenResults.Snapshots.Snapshot
   alias OpenResults.TournamentKeys
+  alias OpenResults.Tournaments
 
   @schema_id "openresults/snapshot"
 
@@ -53,23 +54,75 @@ defmodule OpenResults.Snapshots do
 
     * `:received_at` - the server's clock, injectable for tests.
 
+    * `:installation` - the `OpenResults.Installations.Installation` the
+      request authenticated as, or absent for the operator token. See
+      "Two paths" below.
+
   The key is checked AFTER the envelope, because the slug it authorises
   against is inside the envelope and there is nothing to authorise until it
   has been read. It is checked BEFORE anything is written, including before
   the idempotent-repeat comparison below: a request with the wrong key must
   change nothing, and it must not learn from a "nothing changed" answer what
   the tournament currently holds.
+
+  ## Two paths
+
+  **The operator token** publishes as it always did, and afterwards makes
+  sure the slug has its `OpenResults.Tournaments` row - `listed`, no owner -
+  without touching a row that already exists.
+
+  **An installation key** may publish only to a slug minted for it
+  (`{:error, :not_owner}`), not to one moderation hid
+  (`{:error, :tournament_hidden}`), and never with break-glass. The ownership
+  check, the key check and the insert run in ONE immediate transaction. The
+  ingest plug already checked ownership, and this is not a second opinion but
+  the one that cannot race: without it, a delete of the same tournament
+  landing between the plug's check and the insert would leave a snapshot with
+  no row behind it - which reads as `listed` - and a pending tournament would
+  have promoted itself onto the front page and the player pages.
   """
   @spec ingest(term(), keyword()) ::
           {:ok, Snapshot.t()}
-          | {:error, Envelope.error() | TournamentKeys.error() | Ecto.Changeset.t()}
+          | {:error,
+             Envelope.error()
+             | TournamentKeys.error()
+             | :not_owner
+             | :tournament_hidden
+             | Ecto.Changeset.t()}
   def ingest(payload, opts \\ []) do
     with {:ok, slug} <-
-           Envelope.validate(payload, @schema_id, @supported_versions, ["tournament", "slug"]),
-         :ok <- TournamentKeys.authorize_publish(slug, Keyword.get(opts, :key)) do
+           Envelope.validate(payload, @schema_id, @supported_versions, ["tournament", "slug"]) do
       received_at = Keyword.get_lazy(opts, :received_at, &DateTime.utc_now/0)
-      store(slug, payload, received_at)
+      key = Keyword.get(opts, :key)
+
+      case Keyword.get(opts, :installation) do
+        nil -> ingest_as_operator(slug, payload, key, received_at)
+        installation -> ingest_as_installation(slug, payload, key, received_at, installation)
+      end
     end
+  end
+
+  defp ingest_as_operator(slug, payload, key, received_at) do
+    with :ok <- TournamentKeys.authorize_publish(slug, key),
+         {:ok, snapshot} <- store(slug, payload, received_at) do
+      Tournaments.ensure_listed(slug)
+      {:ok, snapshot}
+    end
+  end
+
+  defp ingest_as_installation(slug, payload, key, received_at, installation) do
+    Repo.transaction(
+      fn ->
+        with :ok <- Tournaments.authorize_owner(slug, installation, :publish),
+             :ok <- TournamentKeys.authorize_publish(slug, key, break_glass: false),
+             {:ok, snapshot} <- store(slug, payload, received_at) do
+          snapshot
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end,
+      mode: :immediate
+    )
   end
 
   defp store(slug, payload, received_at) do
@@ -281,8 +334,8 @@ defmodule OpenResults.Snapshots do
   `received_at`, so a server clock that steps backwards cannot resurrect a
   superseded snapshot as the current one.
   """
-  @spec list_current() :: [Snapshot.t()]
-  def list_current do
+  @spec list_current(keyword()) :: [Snapshot.t()]
+  def list_current(opts \\ []) do
     newest_per_slug =
       from s in Snapshot,
         group_by: s.tournament_slug,
@@ -292,8 +345,25 @@ defmodule OpenResults.Snapshots do
       where: s.id in subquery(newest_per_slug),
       order_by: [asc: s.tournament_slug]
     )
+    |> only_listed(Keyword.get(opts, :listed_only, false))
     |> Repo.all()
   end
+
+  # `listed_only: true` - leave out tournaments moderation has not listed
+  # (`OpenResults.Tournaments`: pending and hidden), IN the query rather than
+  # after it. An option the caller has to ask for, so this function still
+  # never omits a row silently; and in SQL, because public publishing lets
+  # anybody create pending tournaments of up to a few megabytes each, and a
+  # listing that loaded all of them to throw them away would hand every
+  # visitor to the front page that bill.
+  defp only_listed(query, true) do
+    unlisted =
+      from t in OpenResults.Tournaments.Tournament, where: t.status != "listed", select: t.slug
+
+    where(query, [s], s.tournament_slug not in subquery(unlisted))
+  end
+
+  defp only_listed(query, _all), do: query
 
   @doc """
   Deletes EVERY snapshot held for a tournament, returning how many went.

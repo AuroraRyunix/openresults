@@ -1,0 +1,13 @@
+<.masthead payload={@payload} slug={@slug} current={:report} />
+
+<section>
+  <h2>{gettext("Report this page")}</h2>
+
+  <p class="footnote">
+    {gettext(
+      "This goes to the operator of this site, not to the arbiter of the tournament. Nothing on the page changes when you send it: somebody reads it first and decides what to do."
+    )}
+  </p>
+
+  <.report_form form={@form} slug={@slug} />
+</section>

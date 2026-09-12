@@ -28,17 +28,44 @@ defmodule OpenResults.TournamentKeys do
   check it against. Two reasons that is the right trade here rather than a
   hole:
 
-  1. **The first question is already answered.** Nothing reaches this module
-     without the server-wide ingest token, so the claimant is not the public;
-     it is a machine an operator deliberately configured. The exposure this
-     guards is ACCIDENT - two arbiters' laptops picking the same obvious slug
-     for two different events, one silently flattening the other - rather
-     than attack.
+  1. **The first question is already answered.** With the operator token,
+     the claimant is not the public; it is a machine an operator deliberately
+     configured. The exposure this guards is ACCIDENT - two arbiters' laptops
+     picking the same obvious slug for two different events, one silently
+     flattening the other - rather than attack.
   2. **The alternative is an account system.** Verifying a claim needs an
      identity to verify it against, and this app deliberately has no accounts,
      no sessions and no cookies. Adding them so that a slug could be
      pre-registered would cost the whole read-side design to close a gap the
      ingest token already narrows to configured machines.
+
+  ## Installation keys, where the claimant IS the public
+
+  Public publishing (`docs/public-publishing.md`) broke reason 1. An
+  installation key is handed to any OpenPairings copy that asks, so a publish
+  carrying one comes from whoever that is - and TOFU against the public, on
+  slugs the public chooses, is squatting: register a key, publish to
+  `gent-open-2026` before its arbiter does, and the claim is yours.
+
+  What makes TOFU safe again is not in this module - it is that an
+  installation never gets to choose, or reach, a slug that could already mean
+  something:
+
+    * **The server mints the slug.** `POST /api/tournaments` picks nine random
+      bytes and binds the slug to the installation that asked
+      (`OpenResults.Tournaments.mint/2`). No readable name can be requested.
+    * **An installation key touches only its own slugs.** Every route checks
+      the binding before this module is asked anything, and the publish path
+      checks it again inside the transaction that stores the snapshot. An
+      operator-published slug, a legacy slug with no key, another
+      installation's slug and a slug never minted are all `not_owner`.
+
+  So the only slug an installation's first keyed publish can claim is one
+  created for that installation moments earlier, and there is nobody else it
+  could be taking it from. TOFU is back to guarding the case it was written
+  for: the owner's own machine, and a key that must not change under it.
+
+  Break-glass is never available to an installation credential - see below.
 
   ## A publish carrying no key
 
@@ -76,7 +103,16 @@ defmodule OpenResults.TournamentKeys do
   operator has to go and paste the server's master secret where a per-event
   secret belongs - so it cannot happen by accident, and it grants nothing the
   token holder could not already do by editing the database by hand. Every use
-  is logged at warning level with the slug and the action.
+  is logged at warning level with the slug and the action, and written to the
+  moderation action log with `break-glass` as the actor
+  (`OpenResults.Moderation`), where the admin panel shows it.
+
+  Only when the request authenticated with the operator token. A request that
+  authenticated with an installation key passes `break_glass: false`, and then
+  the operator token in the key header is just a wrong key. Otherwise the
+  master secret would be one header away from a credential the public holds -
+  harmless while nobody has both, and exactly the kind of property that stops
+  holding the day somebody does.
 
   Break-glass never claims a slug. Storing a hash of the server-wide token as
   a tournament key would quietly promote the master secret into a per-event
@@ -99,9 +135,16 @@ defmodule OpenResults.TournamentKeys do
 
   Writes, on the one path that is allowed to: an unclaimed slug presented with
   a key is claimed here. Everything else is a read.
+
+  ## Options
+
+    * `:break_glass` - whether the operator token in the key position
+      overrides the key. Default `true`; `false` for a request authenticated
+      with an installation key. The same option on all three functions.
   """
-  @spec authorize_publish(String.t(), String.t() | nil) :: outcome()
-  def authorize_publish(slug, presented), do: authorize(slug, presented, :publish)
+  @spec authorize_publish(String.t(), String.t() | nil, keyword()) :: outcome()
+  def authorize_publish(slug, presented, opts \\ []),
+    do: authorize(slug, presented, :publish, opts)
 
   @doc """
   May this request delete `slug`?
@@ -117,8 +160,9 @@ defmodule OpenResults.TournamentKeys do
   this whole feature is about - could never be taken down at all, which is the
   hole rather than the fix.
   """
-  @spec authorize_delete(String.t(), String.t() | nil) :: outcome()
-  def authorize_delete(slug, presented), do: authorize(slug, presented, :delete)
+  @spec authorize_delete(String.t(), String.t() | nil, keyword()) :: outcome()
+  def authorize_delete(slug, presented, opts \\ []),
+    do: authorize(slug, presented, :delete, opts)
 
   @doc """
   May this request READ `slug`'s registration queue?
@@ -133,8 +177,8 @@ defmodule OpenResults.TournamentKeys do
   the arbiter running it, and that arbiter has nothing to present. Refusing
   would strand the queue rather than protect it.
   """
-  @spec authorize_read(String.t(), String.t() | nil) :: outcome()
-  def authorize_read(slug, presented), do: authorize(slug, presented, :read)
+  @spec authorize_read(String.t(), String.t() | nil, keyword()) :: outcome()
+  def authorize_read(slug, presented, opts \\ []), do: authorize(slug, presented, :read, opts)
 
   @doc """
   Has `slug` been claimed?
@@ -188,7 +232,9 @@ defmodule OpenResults.TournamentKeys do
 
   def normalize(_absent_or_not_a_string), do: nil
 
-  defp authorize(slug, presented, action) do
+  defp authorize(slug, presented, action, opts) do
+    glass? = Keyword.get(opts, :break_glass, true)
+
     case {fetch(slug), normalize(presented)} do
       # Unclaimed and nothing presented: a legacy slug, or a client too old to
       # know about keys. Publishes as it always did, and stays unclaimed.
@@ -196,7 +242,7 @@ defmodule OpenResults.TournamentKeys do
         :ok
 
       {nil, key} ->
-        unclaimed(slug, key, action)
+        unclaimed(slug, key, action, glass?)
 
       # Claimed, and the request did not even try. Refused: this is the case
       # that stops a claimed tournament being taken over by omission.
@@ -204,17 +250,23 @@ defmodule OpenResults.TournamentKeys do
         {:error, :key_required}
 
       {%TournamentKey{} = claim, key} ->
-        compare(slug, claim, key, action)
+        compare(slug, claim, key, action, glass?)
     end
   end
 
-  defp unclaimed(slug, key, action) do
+  defp unclaimed(slug, key, action, glass?) do
     cond do
       # Checked BEFORE claiming, never after. See the moduledoc: the
       # server-wide token must never end up stored as a tournament key.
-      break_glass?(key) ->
-        warn_break_glass(slug, action, "slug is not claimed, so nothing was claimed for it")
+      master_token?(key) and glass? ->
+        break_glass(slug, action, "slug is not claimed, so nothing was claimed for it")
         :ok
+
+      # The same secret from a request that may not use it as one. Refused
+      # rather than claimed with: storing it would promote the master secret
+      # into this tournament's key, and hand it to an installation's owner.
+      master_token?(key) ->
+        {:error, :key_mismatch}
 
       # Neither deleting nor reading may CLAIM. Delete would leave a key row
       # pointing at nothing; read would let a pull silently take ownership of
@@ -224,11 +276,11 @@ defmodule OpenResults.TournamentKeys do
         :ok
 
       true ->
-        claim(slug, key)
+        claim(slug, key, glass?)
     end
   end
 
-  defp claim(slug, key) do
+  defp claim(slug, key, glass?) do
     %TournamentKey{}
     |> TournamentKey.changeset(%{
       tournament_slug: slug,
@@ -250,19 +302,19 @@ defmodule OpenResults.TournamentKeys do
       # read - a takedown landing mid-publish. Nothing is claimed and the
       # publish stands, which is the same outcome as an unclaimed slug.
       nil -> :ok
-      claim -> compare(slug, claim, key, :publish)
+      claim -> compare(slug, claim, key, :publish, glass?)
     end
   end
 
-  defp compare(slug, %TournamentKey{key_hash: stored}, key, action) do
+  defp compare(slug, %TournamentKey{key_hash: stored}, key, action, glass?) do
     cond do
       # The real key first, so an ordinary publish never trips the break-glass
       # log even in the pathological case where the two secrets are equal.
       Plug.Crypto.secure_compare(stored, hash(key)) ->
         :ok
 
-      break_glass?(key) ->
-        warn_break_glass(slug, action, "the tournament key was overridden")
+      glass? and master_token?(key) ->
+        break_glass(slug, action, "the tournament key was overridden")
         :ok
 
       true ->
@@ -270,7 +322,7 @@ defmodule OpenResults.TournamentKeys do
     end
   end
 
-  defp break_glass?(key) do
+  defp master_token?(key) do
     case Application.get_env(:openresults, :ingest_token) do
       token when is_binary(token) and token != "" ->
         # Digests for the same reason `IngestAuth` uses them: `secure_compare/2`
@@ -290,10 +342,16 @@ defmodule OpenResults.TournamentKeys do
   # it has to answer afterwards is "when did that happen and to what". The key
   # itself is never in the line - the whole point is that secrets do not get
   # written down.
-  defp warn_break_glass(slug, action, detail) do
+  #
+  # And to the moderation action log, as the actor `break-glass`, because the
+  # person who most needs to see this is the operator reading the admin panel,
+  # who is not reading journalctl.
+  defp break_glass(slug, action, detail) do
     Logger.warning(
       "BREAK-GLASS: #{action} on #{inspect(slug)} authorised with the server-wide " <>
         "ingest token instead of the tournament key - #{detail}"
     )
+
+    OpenResults.Moderation.log_break_glass(slug, action, detail)
   end
 end

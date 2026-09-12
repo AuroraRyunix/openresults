@@ -1,8 +1,13 @@
 # Public publishing: the contract
 
-Agreed 2026-09-12, not yet built. OpenResults and OpenPairings are built
-against this document in parallel, so **change this document first, then the
-code** - a disagreement between the two repos is found here or in the hall.
+Agreed 2026-09-12. OpenResults and OpenPairings are built against this
+document in parallel, so **change this document first, then the code** - a
+disagreement between the two repos is found here or in the hall.
+
+The OpenResults server side was built on 2026-09-12. Where building it found
+the document silent or ambiguous, the answer is written into the section it
+belongs to and marked **(settled in the build)**, so the other two builds can
+find every one of them by searching for that phrase.
 
 ## What changes
 
@@ -59,6 +64,7 @@ different things to an arbiter. Existing codes keep their spelling:
 | `installation_revoked` | 403 | every installation-key route except delete | |
 | `installation_key_required` | 403 | `POST /api/tournaments` called with the operator token | |
 | `not_owner` | 403 | any installation-key write or read of a slug not minted for that installation | |
+| `tournament_hidden` | 403 | publish with an installation key to its own tournament that moderation hid **(settled in the build)** | |
 | `tournament_limit` | 403 | mint | `limit` |
 | `address_blocked` | 403 | registration, mint, publish | |
 | `snapshot_too_large` | 413 | publish with an installation key | `limit_bytes` |
@@ -69,6 +75,30 @@ different things to an arbiter. Existing codes keep their spelling:
 A key that exists but is suspended or revoked gets its own 403 rather than the
 anonymous 401. That tells nothing to a stranger: only the key's holder can
 receive it.
+
+**(settled in the build)**
+
+- The anonymous 401 body is
+  `{"error": "unauthorized", "detail": "a valid credential is required"}` -
+  it gained the `detail` every error body now has. The `not_found` bodies of
+  `GET /api/tournaments/:slug` and `/history` gained a `detail` beside the
+  `slug` they already carried. Nothing was removed or renamed.
+- `tournament_hidden` is new. The visibility table says an owner may only
+  delete a hidden tournament, and none of the existing codes said so without
+  lying: `not_owner` would tell the arbiter a different installation owns it.
+  OpenPairings: red, "the results site has hidden this tournament", stop for
+  that tournament.
+- The two routes that must 404 while the environment gate is off
+  (`/api/installations`, `/api/tournaments`) answer with the framework's own
+  unmatched-route 404, byte for byte - `{"errors": {"detail": "Not Found"}}` -
+  NOT the error shape above. Being indistinguishable from a route that does
+  not exist is the point, and a route that does not exist has never had that
+  shape.
+- When several refusals apply, an installation-key request gets the first of:
+  suspended/revoked, `rate_limited`, `address_blocked`, `publishing_paused`,
+  `snapshot_too_large`, `not_owner`/`tournament_hidden`, then the tournament
+  key's own `key_required`/`key_mismatch`, then `tournament_limit` (mint).
+  Cheap checks first, so a flood costs an ETS counter before a query.
 
 ## Endpoints
 
@@ -109,6 +139,22 @@ Request: `{"client": "OpenPairings", "client_version": "0.61.0"}`
   at, last seen from. **Both addresses are nulled after 30 days.**
 - Default budgets: 10 per client address per 24 hours, 200 in total per 24
   hours.
+- **(settled in the build)** Checked in this order: address block
+  (`address_blocked`), the `registration_open` switch
+  (`registration_closed`), the per-address budget, the global budget
+  (`rate_limited`). A refusal for a block or a closed switch does not spend
+  the address's budget, so a copy that tried while registration was closed is
+  not rate limited the morning it opens.
+- **(settled in the build)** "Per client address" counts an IPv6 client by
+  its /64 - a host is normally given a whole /64 and can pick any address in
+  it - and a v4-mapped IPv6 address as the IPv4 address it carries. The
+  windows are fixed 24-hour windows (UTC days) in memory, so a restart resets
+  them.
+- **(settled in the build)** The body is advisory. `client` (up to 100
+  characters) and `client_version` (up to 50) are stored when they are
+  strings and ignored otherwise; a missing or malformed body still gets a
+  key. There is no validation error code for this route.
+- **(settled in the build)** The response carries `Cache-Control: no-store`.
 
 ### `POST /api/tournaments` - installation key
 
@@ -130,6 +176,15 @@ Mints a slug bound to this installation. Request body `{}`.
   publish within 30 days is released.
 - Counts towards `tournament_limit` (default 50 tournaments that are `pending`
   or `listed`).
+- **(settled in the build)** A mint spends the same per-installation budget as
+  a publish (30 a minute between them), and is refused while the
+  installation is suspended or revoked, while publishing is paused, and from
+  a blocked address - the same checks as a publish. Anything in the request
+  body is ignored.
+- **(settled in the build)** A minted slug that has not published yet answers
+  every public page exactly as an unknown slug does, `noindex` included (it
+  has none): nothing shows a slug was minted until something is published
+  under it.
 
 ### Existing routes, called with an installation key
 
@@ -144,11 +199,74 @@ Mints a slug bound to this installation. Request body `{}`.
   survive: an installation credential is refused on every ingest route unless
   that route explicitly opts in and checks ownership.
 - Publish budget: 30 per minute per installation.
-- Snapshot size cap for installation keys: set from measured payload sizes and
-  recorded here by the server implementation. The operator token keeps today's
-  parser limit.
+- Snapshot size cap for installation keys: **3 MiB (3,145,728 bytes)** of
+  request body, measured as read off the wire - see "Snapshot size cap" below
+  for the derivation. The operator token keeps today's parser limit
+  (8,000,000 bytes).
 - Delete is always allowed for the owner, even when suspended, revoked or
   paused: withdrawing your own tournament is never the harmful action.
+- **(settled in the build)** Delete is also allowed from a blocked address,
+  and is never rate limited: `address_blocked` and `rate_limited` are listed
+  above for registration, mint and publish only.
+- **(settled in the build)** A hidden tournament's owner may still read its
+  history and registrations. The visibility table's "delete only" row is about
+  publishing and deleting; the queue holds entries people sent the arbiter,
+  and moderation hiding the page is no reason to strand them.
+- **(settled in the build)** An installation key NEVER acts as break-glass,
+  in either position. The operator token in `X-OpenResults-Key` on a request
+  authenticated with an installation key is simply a wrong key
+  (`key_mismatch`), and is refused rather than stored when the slug is
+  unclaimed - storing it would make the master secret that tournament's key.
+  The operator token keeps break-glass exactly as before.
+- **(settled in the build)** How default-deny is enforced. A route opts in
+  in the router with `private: %{installation_access: action}`, where action
+  is `mint`, `publish`, `history`, `registrations` or `delete`; naming the
+  action is what runs that action's checks, ownership included, before the
+  controller. On any ingest route without it - or with an action nothing
+  checks - an installation key gets the anonymous 401, as if it were unknown.
+  `test/openresults_web/default_deny_test.exs` walks the router to prove it.
+
+### Snapshot size cap
+
+**3 MiB, 3,145,728 bytes.** Measured 2026-09-12, not guessed.
+
+The measuring instrument generates snapshots key for key in the shape of
+`test/fixtures/snapshot_swiss.json` (which the OpenPairings builder produced),
+encoded compactly the way OpenPairings sends them (`Jason.encode!/1`): full
+pairings every round, standings rows with tie-breaks, and per-round tie-break
+working with its absent-means-default omissions. It was checked against the
+three real measurements that exist before it was trusted:
+
+| event | measured before | generated |
+|---|---|---|
+| 128 players, 9 rounds, no working (the 2026-09-12 load test) | ~74 KB | 70 KB |
+| 300 players, 11 rounds, no working (`snapshot-schema.md`) | 173 KB | 185 KB |
+| 300 players, 11 rounds, with working (`snapshot-schema.md`) | 583 KB (x3.37) | 610 KB (x3.30) |
+
+The 583 KB measurement published working for three tie-break codes, the
+same three the fixture carries (BHC1, BH, SB). Each further code adds one
+`parts` list per player per round.
+
+Projected to the design point, a **500-player, 11-round open**:
+
+| working published | bytes | MiB |
+|---|---|---|
+| none | 309,341 | 0.30 |
+| three codes (what OpenPairings sent when 3.4x was measured) | 1,020,586 | 0.97 |
+| five codes (BHC1, BHC2, BH, SB, ARO) | 1,496,391 | 1.43 |
+
+Each code costs about 237 KB at that size, so 3 MiB holds the five-code
+event with 2.1x headroom, the three-code one with 3.1x, and a 500x11 event
+publishing working for up to eleven codes. Round robins and Keizer events are
+far smaller. A publish over the cap is refused whole with
+`snapshot_too_large` and `limit_bytes`; nothing is stored or claimed.
+
+What the cap does not bound: storage. Every changed version is kept, so an
+installation spending its whole budget on changed documents at the cap could
+write about 90 MiB a minute, and many installations many times that. Nothing
+in this contract limits a pending tournament's history or an installation's
+total bytes. **Open, not settled in the build** - decide before switching
+public publishing on.
 
 ## Tournament visibility
 
@@ -178,6 +296,23 @@ Two rows carry the design:
 A status change drops that tournament's cached pages in every locale, the same
 way a publish does.
 
+**(settled in the build)**
+
+- The surfaces this table is enforced on: the standings, cross-table, round
+  and player-card pages; the entry form, its POST and its FIDE search; the
+  report form and its POST; the open `GET /api/tournaments/:slug`; the front
+  page (including its search, which filters the page client-side); and the
+  cross-tournament player pages `/players/:fide_id`. There is no sitemap,
+  feed or other listing. "Same as an unknown slug" is tested as the same
+  status, the same body (slug aside) and the same caching and robots headers.
+- The ETag of a pending page differs from the listed page's, so a browser or
+  crawler holding the pending copy is not answered 304 after approval.
+- The report form's own pages carry `noindex` whatever the tournament's
+  status: a form is not a search result.
+- A publish with the operator token to a slug with no status yet makes it
+  `listed` with no owner; to a slug that already has one - an installation's
+  pending tournament - it changes neither status nor owner.
+
 ## Reports
 
 `GET` and `POST /t/:slug/report`, open, rate-limited by client address like the
@@ -189,6 +324,14 @@ entry form.
 - Stored with the client address, nulled after 30 days.
 - A "Report this page" link on every pending or listed tournament page,
   translated in `en`, `nl` and `fr`.
+- **(settled in the build)** The rate limit is the entry form's: 5 per 10
+  minutes per client address, in a bucket of its own (a report does not spend
+  an entry's allowance). Over it: 429 with `Retry-After` and a page saying so.
+- **(settled in the build)** Form field names are `report[reason]`,
+  `report[details]`, `report[contact_email]`. Details and email are optional;
+  the email is checked for shape and at most 254 characters.
+- **(settled in the build)** Reports survive a takedown of their tournament:
+  they are the record of why moderation acted.
 
 ## Address blocks
 
@@ -242,11 +385,58 @@ list_actions(filters)
 - Break-glass uses are written to the same log, with the actor recorded as
   break-glass.
 
+**(settled in the build)** What the panel gets back:
+
+- Mutations return `{:ok, struct}`, or `{:error, reason}` with reason one of
+  `:not_found`, `:invalid_status` (the transition is not allowed from the
+  current status), `:already_resolved`, `:installation_revoked` (transfer to
+  a revoked installation), `:unknown_setting`, `:invalid_value`. The one
+  exception is `block_address/4`, which returns `{:error, %Ecto.Changeset{}}`
+  so the form can show which field is wrong: an unparseable address or range,
+  an expiry not in the future or more than 30 days away, a missing reason.
+  `put_setting/3` returns `{:ok, settings()}`; `delete/2` returns
+  `{:ok, %{snapshots: n, registrations: n, key: n}}`.
+- An actor that is not `%{email: binary}` raises `ArgumentError`.
+- Transitions: `approve` pending to listed; `hide` pending or listed to
+  hidden; `unhide` hidden to listed; `suspend` active to suspended;
+  `unsuspend` suspended to active; `revoke` active or suspended to revoked,
+  and revoked is final. `transfer` leaves the status as it is and can adopt an
+  operator-published tournament for an installation.
+- Filters may be a map or a keyword list, with atom or string keys; unknown
+  keys are ignored. `list_tournaments`: `status`, `installation_id`,
+  `reported?` (`true` = has an open report), `search` (slug or tournament
+  name), `limit`, `offset`. `list_installations`: `status`, `search` (id,
+  client, version, either address), `limit`, `offset`. `list_reports` takes
+  `:open` / `:resolved`, or filters `status`, `slug`, `limit`, `offset`.
+  `list_actions`: `actor`, `action`, `target_type`, `target`, `limit`
+  (default 100), `offset`. All newest first; `list_blocks/0` soonest to expire
+  first, expired ones left out.
+- Tournament structs from `list_tournaments`/`get_tournament` carry virtual
+  `name` (from the current snapshot, `nil` before a publish),
+  `last_published_at` and `open_reports`; `get_tournament` preloads
+  `installation`. Installation structs from `list_installations` carry
+  `tournament_count` (pending plus listed); `get_installation` preloads
+  `tournaments`. An installation's `id` is its `in_...` identifier.
+- Action log rows: `actor` (an email, `break-glass` or `retention`), `action`
+  (`put_setting`, `approve`, `hide`, `unhide`, `delete`, `transfer`,
+  `suspend`, `unsuspend`, `revoke`, `resolve_report`, `block_address`,
+  `unblock`, `break_glass_publish`, `break_glass_delete`, `break_glass_read`,
+  `retention`), `target_type` (`setting`, `tournament`, `installation`,
+  `report`, `address_block`), `target`, `details` (a map with string keys),
+  `inserted_at`.
+
 ## Retention
 
 A daily job: nulls client addresses older than 30 days (installations,
 reports), releases minted slugs with no publish after 30 days, removes expired
 address blocks.
+
+**(settled in the build)** Each address is measured from its own timestamp
+(created from: registration time; last seen from: last-seen time; a report's:
+when it was sent). A released slug loses its owner and status row, so it is
+`not_owner` to the installation that minted it. When a run changes anything
+it writes one action-log entry with the actor `retention`. First run ten
+minutes after boot, then every 24 hours.
 
 ## Admin panel: `/admin`
 
@@ -317,6 +507,7 @@ own server, keep today's behaviour exactly.
 | `tournament_limit` | red, with the limit | stop for that tournament |
 | `snapshot_too_large` | red, with the limit | stop for that tournament |
 | `not_owner` | red: a different installation owns this tournament | stop for that tournament |
+| `tournament_hidden` | red: the results site has hidden this tournament | stop for that tournament **(settled in the build)** |
 | `registration_closed` | the results site is not accepting new installations right now | nothing sent |
 | `address_blocked` | red: contact the operator | stop |
 
@@ -338,7 +529,7 @@ Defaults live in config; each may be overridden from the environment.
 | registrations per 24 h | 200 | `OPENRESULTS_REGISTRATIONS_PER_DAY` |
 | publishes per installation per minute | 30 | `OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE` |
 | pending + listed tournaments per installation | 50 | `OPENRESULTS_INSTALLATION_MAX_TOURNAMENTS` |
-| snapshot size for installation keys | measured, recorded above | `OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES` |
+| snapshot size for installation keys | 3,145,728 bytes (3 MiB), measured - see "Snapshot size cap" | `OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES` |
 | Access team domain | none | `OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN` |
 | Access application audience | none | `OPENRESULTS_ADMIN_ACCESS_AUD` |
 | admin emails | none | `OPENRESULTS_ADMIN_EMAILS` |

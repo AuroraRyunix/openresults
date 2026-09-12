@@ -318,9 +318,16 @@ bearer token.
 
 ```
 POST /api/snapshots
-Authorization: Bearer <the server's ingest token>
+Authorization: Bearer <the server's ingest token, or an installation key>
 X-OpenResults-Key: <a random key this machine generated for this tournament>
 ```
+
+`Authorization` carries one of two credentials. The **operator token** is the
+server-wide ingest token below, unchanged. An **installation key** (`orik_`
+and 43 characters) is what an OpenPairings copy obtains for itself when public
+publishing is enabled; it reaches only tournaments minted for it. See
+"Installation keys" at the end of this section, and `docs/public-publishing.md`
+for that contract.
 
 Two questions, deliberately separated:
 
@@ -341,9 +348,12 @@ it. This server stores only a SHA-256 digest of it and can never show it back.
 
 **Trust on first use.** The first publish of a slug that carries a key claims
 it; every later publish of that slug, and any delete, must present the same
-key. It is TOFU, and that is acceptable here because nothing reaches this
-check without the server-wide ingest token - so the exposure it closes is
-*accident*, two machines picking the same obvious slug, rather than attack.
+key. It is TOFU, and that is acceptable here because with the operator token
+nothing reaches this check but a machine an operator configured - so the
+exposure it closes is *accident*, two machines picking the same obvious slug,
+rather than attack. With an installation key the claimant is the public, and
+what keeps TOFU safe there is that the server chose the slug and bound it to
+that installation before the first publish - see "Installation keys".
 
 **A publish with no key is accepted for a slug nobody has claimed.** This is
 the additive-only rule applied to authentication. Snapshots already exist from
@@ -367,6 +377,9 @@ by simply omitting the header, and the whole thing would be decorative.
 **403, not 401.** A 401 comes from the pipeline and means "you may not talk to
 this server". A 403 means "you may, but not to this tournament". An arbiter
 whose round will not publish needs to know which secret to go and check.
+
+Every error body is `{"error": "<code>", "detail": "<sentence>"}`; clients
+dispatch on `error` only (`docs/public-publishing.md`, "Error bodies").
 
 ### Taking a tournament down
 
@@ -414,6 +427,42 @@ overridden. Every use is logged at warning level with the slug and the action.
 
 It never claims a slug: storing the master secret as a tournament key would
 mean rotating the ingest token locked out every tournament claimed that way.
+
+Every use is also written to the moderation action log, with `break-glass` as
+the actor, where the admin panel shows it.
+
+Break-glass belongs to the operator token only. On a request authenticated
+with an installation key, the operator token in `X-OpenResults-Key` is just a
+wrong key - `403 key_mismatch` - and on an unclaimed slug it is refused rather
+than stored.
+
+### Installation keys
+
+Only when the server runs with `OPENRESULTS_PUBLIC_PUBLISHING=enabled`;
+otherwise an `orik_` key is an unknown token and gets the ordinary 401. The
+whole contract - registration, minting, moderation, error codes - is
+`docs/public-publishing.md`. What it changes on the routes above:
+
+| route | with an installation key |
+|---|---|
+| `POST /api/snapshots` | only to a slug minted for this installation (`403 not_owner`), not to one moderation hid (`403 tournament_hidden`), at most 3 MiB (`413 snapshot_too_large`), 30 a minute (`429 rate_limited`) |
+| `DELETE /api/tournaments/:slug` | only its own; allowed even while suspended, revoked, paused or blocked |
+| `GET /api/tournaments/:slug/history` | only its own |
+| `GET /api/tournaments/:slug/registrations` | only its own - the route with email addresses |
+
+The tournament key applies on top, exactly as in the table above: an
+installation's first keyed publish to its minted slug claims it, and every
+later one must present the same key.
+
+**The server mints the slug.** `POST /api/tournaments` returns twelve random
+characters bound to the installation; the snapshot's `tournament.slug` must
+be that value. There is no way for an installation to publish under a name it
+chose, and so no way to claim an operator's tournament, a legacy one with no
+key, or another installation's.
+
+A tournament published with an installation key starts `pending`: reachable at
+its address, carrying `noindex`, and left off the front page and the player
+pages until the operator approves it.
 
 ## Registration, the other direction
 

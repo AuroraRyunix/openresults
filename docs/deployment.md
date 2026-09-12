@@ -167,7 +167,7 @@ All read in `config/runtime.exs`.
 | `PHX_HOST` | yes | public hostname; drives generated absolute URLs |
 | `PHX_SERVER` | yes (`true`) | actually serve HTTP |
 | `PORT` | no (default 4000) | internal HTTP port - **the unit sets 4004**, see below |
-| `OPENRESULTS_INGEST_TOKEN` | effectively | the bearer token an arbiter publishes with. Unset means every publish is refused with a 401 |
+| `OPENRESULTS_INGEST_TOKEN` | effectively | the bearer token an arbiter publishes with. Unset means every publish is refused with a 401 - except with an installation key, see "Public publishing" below |
 | `POOL_SIZE` | no (default 10) | Ecto connection pool size |
 | `DNS_CLUSTER_QUERY` | no | multi-node clustering, unused here |
 
@@ -264,6 +264,43 @@ Rotating the ingest token is safe for the tournaments themselves: it is not
 stored as anybody's tournament key (break-glass deliberately never claims a
 slug), so rotating it costs each arbiter a visit to their Settings page and
 costs no tournament its claim.
+
+Every break-glass use is also written to the moderation action log with the
+actor `break-glass`.
+
+### Public publishing
+
+Lets any OpenPairings copy publish here without the ingest token, by
+obtaining an installation key of its own. The contract is
+`docs/public-publishing.md`; read its "Before switching it on" first.
+
+**Off unless `OPENRESULTS_PUBLIC_PUBLISHING=enabled`.** Unset - or set to
+anything else - `/api/installations` and `/api/tournaments` do not exist (the
+same 404 as a path nobody routed), an `orik_` key is an unknown token, and
+`GET /api/server` reports `unavailable`. Every self-hosted copy is in that
+state after upgrading. Enabling it does not yet let anybody register: the
+`registration_open` switch in the database starts `false` and is flipped
+from the admin panel.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OPENRESULTS_PUBLIC_PUBLISHING` | off | `enabled` turns the feature on; nothing else does |
+| `OPENRESULTS_OPERATOR_NAME` | none | the name OpenPairings' consent dialog asks the arbiter to trust; `null` in `GET /api/server` when unset |
+| `OPENRESULTS_TERMS_URL` | none | the terms and acceptable-use page the dialog links to |
+| `OPENRESULTS_REGISTRATIONS_PER_ADDRESS` | 10 | installations one client address may register per 24 h (an IPv6 client counts by its /64) |
+| `OPENRESULTS_REGISTRATIONS_PER_DAY` | 200 | installations the whole server registers per 24 h |
+| `OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE` | 30 | mints plus publishes per installation per minute |
+| `OPENRESULTS_INSTALLATION_MAX_TOURNAMENTS` | 50 | `pending` plus `listed` tournaments one installation may hold |
+| `OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES` | 3145728 | largest snapshot body an installation key may publish; measured, see the contract. The operator token keeps the 8 MB parser limit |
+
+The numeric ones must be whole numbers; anything else stops the app at boot,
+like `BACKUP_RETENTION`.
+
+Rate-limit windows live in memory, so a restart resets them. The daily
+retention job (`OpenResults.Retention`) runs whether or not the feature is
+enabled - ten minutes after boot, then every 24 hours - and with nothing to do
+it does nothing: it forgets client addresses older than 30 days, releases
+minted slugs that never published, and removes expired address blocks.
 
 ## Ports on this host
 

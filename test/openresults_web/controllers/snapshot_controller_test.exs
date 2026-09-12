@@ -8,6 +8,10 @@ defmodule OpenResultsWeb.SnapshotControllerTest do
 
   @token "test-ingest-token"
 
+  # One body for every failure, and it is the contract's error shape
+  # (`docs/public-publishing.md`, "Error bodies").
+  @unauthorized %{"error" => "unauthorized", "detail" => "a valid credential is required"}
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "content-type", "application/json")}
   end
@@ -30,14 +34,14 @@ defmodule OpenResultsWeb.SnapshotControllerTest do
     test "refuses a request with no authorization header", %{conn: conn} do
       conn = post(conn, ~p"/api/snapshots", Jason.encode!(SnapshotPayloads.swiss()))
 
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
       assert Snapshots.list_current() == []
     end
 
     test "refuses a wrong token", %{conn: conn} do
       conn = publish(conn, SnapshotPayloads.swiss(), "not-the-token")
 
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
       assert Snapshots.list_current() == []
     end
 
@@ -46,7 +50,7 @@ defmodule OpenResultsWeb.SnapshotControllerTest do
       # length difference tells the caller anything.
       conn = publish(conn, SnapshotPayloads.swiss(), String.slice(@token, 0..3))
 
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
     end
 
     test "refuses a header that is not a bearer scheme", %{conn: conn} do
@@ -55,13 +59,13 @@ defmodule OpenResultsWeb.SnapshotControllerTest do
         |> put_req_header("authorization", "Basic #{Base.encode64("user:#{@token}")}")
         |> post(~p"/api/snapshots", Jason.encode!(SnapshotPayloads.swiss()))
 
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
     end
 
     test "refuses an empty bearer token", %{conn: conn} do
       conn = publish(conn, SnapshotPayloads.swiss(), "")
 
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
     end
 
     test "accepts the scheme in any case, as RFC 7235 requires", %{conn: conn} do
@@ -82,7 +86,7 @@ defmodule OpenResultsWeb.SnapshotControllerTest do
 
       # Fails closed, and with the same body as a wrong token: a caller must
       # not be able to tell "wrong token" from "no token set".
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
     end
   end
 

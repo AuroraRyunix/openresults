@@ -21,6 +21,7 @@ defmodule OpenResultsWeb.TournamentKeyTest do
   @token "test-ingest-token"
   @key "3f1c9a6d4b8e2705aa91cc0d6e5f4318"
   @other_key "beefcafe00112233445566778899aabb"
+  @unauthorized %{"error" => "unauthorized", "detail" => "a valid credential is required"}
 
   setup do
     {:ok, payload: SnapshotPayloads.swiss()}
@@ -296,7 +297,7 @@ defmodule OpenResultsWeb.TournamentKeyTest do
 
       conn = delete(build_conn(), ~p"/api/tournaments/#{slug}")
 
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
       assert Snapshots.latest(slug).payload == payload
     end
 
@@ -415,7 +416,7 @@ defmodule OpenResultsWeb.TournamentKeyTest do
       # accepting `nil` as a matching override.
       conn = publish(SnapshotPayloads.republished(payload), key: @token)
 
-      assert json_response(conn, 401) == %{"error" => "unauthorized"}
+      assert json_response(conn, 401) == @unauthorized
       assert Snapshots.latest(slug).payload == payload
     end
   end

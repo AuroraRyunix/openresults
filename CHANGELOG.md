@@ -27,6 +27,51 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Public publishing, switched off until the operator turns it
+  on.** With `OPENRESULTS_PUBLIC_PUBLISHING=enabled`, any copy of OpenPairings
+  can publish here without the server's master token: it asks for an
+  installation key of its own (`POST /api/installations`), asks the server for
+  a tournament address (`POST /api/tournaments`), and publishes as before.
+  `GET /api/server` says whether this server takes installations and who runs
+  it. A self-hosted copy that upgrades without setting the variable looks
+  exactly as it did - the new routes are not there. The contract, and every
+  question the build had to settle, is `docs/public-publishing.md`.
+- [Feature] **Tournaments now have a visibility: pending, listed or hidden.**
+  Everything already published is listed and stays exactly where it was. A
+  tournament published with an installation key starts pending: its own
+  pages work from the first publish, so an event never waits for approval,
+  but it carries `noindex` and stays off the front page and off players'
+  cross-tournament history pages until the operator approves it - otherwise
+  anybody could put invented results on a real player's history. A hidden
+  tournament answers every page, form and API read with the same "not found"
+  as an address nobody ever published.
+- [Feature] **"Report this page"**, at the foot of every tournament page, in
+  English, Dutch and French. It sends a short report - wrong or invented
+  results, personal data, spam, or something else - to the operator of this
+  site, not to the arbiter, and changes nothing until somebody has read it.
+  Rate-limited like the entry form.
+- [Feature] The moderation behind all of that (`OpenResults.Moderation`):
+  approving, hiding and transferring tournaments, suspending and revoking
+  installations, resolving reports, temporary address blocks, the two
+  runtime switches, and an action log of who did what - including every use
+  of the master token as break-glass. The admin panel that drives it arrives
+  separately. A daily job forgets client addresses after 30 days, releases
+  tournament addresses that were handed out and never used, and removes
+  expired blocks.
+- [Security] **An installation key can touch only the tournaments created
+  for it, and nothing it was not explicitly allowed.** Publishing, deleting,
+  reading the history and reading the entry queue - the one route with email
+  addresses - are refused for an operator's tournament, one published before
+  keys existed, another installation's, or an address never handed out. On
+  any write route that has not opted in, an installation key gets the same
+  answer as an unknown one, and a test walks the router to keep it that way.
+  It never acts as the break-glass master key in either header. Snapshots
+  published with one are capped at 3 MiB, a size measured against a
+  500-player, 11-round open with its tie-break working.
+- [Change] Every API error now carries a `detail` sentence beside its
+  `error` code, including the 401. Clients that read `error` - which is all
+  of them - see no difference.
+
 - [Fix] **Sorting and filtering the standings did nothing on a tournament
   that opened before round 1** until the page was reloaded. The script that
   wires the sort buttons and the filter lived inside the standings table,

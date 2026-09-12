@@ -30,6 +30,14 @@ defmodule OpenResultsWeb.PlayerHistory do
   judgement call: the tournament's OWN page (`/t/:slug`) stays reachable
   either way, exactly as unlisting already promises: see `Tournament.listed?/1`.
 
+  **Pending and hidden tournaments.** Moderation's filter, beside the
+  arbiter's. A hidden one is simply not there. A PENDING one is reachable at
+  its own address but kept off these pages until it is approved, and this is
+  the row public publishing rests on: otherwise anybody could register an
+  installation, publish a tournament full of real FIDE ids and invented
+  results, and have those results appear on real players' histories before a
+  person had looked at it. See `OpenResults.Tournaments`.
+
   **A withheld placing.** When `display.standings` is off, the entry still
   appears - the tournament happened and this player played in it - but
   carries no rank, no points and no field size, the same withholding the
@@ -77,7 +85,8 @@ defmodule OpenResultsWeb.PlayerHistory do
   """
   @spec for_fide_id(integer()) :: [entry()]
   def for_fide_id(fide_id) when is_integer(fide_id) do
-    Snapshots.list_current()
+    [listed_only: true]
+    |> Snapshots.list_current()
     |> Enum.filter(&Tournament.listed?(&1.payload))
     |> Enum.map(&entry_for(&1.payload, fide_id))
     |> Enum.reject(&is_nil/1)

@@ -52,6 +52,9 @@ defmodule OpenResultsWeb.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
+    # Counts the bytes read, for the installation-key snapshot cap - see
+    # `OpenResultsWeb.BodyReader`. Reads exactly as the default does.
+    body_reader: {OpenResultsWeb.BodyReader, :read_body, []},
     json_decoder: Phoenix.json_library()
 
   plug Plug.MethodOverride

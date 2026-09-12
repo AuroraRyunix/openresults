@@ -72,6 +72,34 @@ config :openresults,
        :public_frame_ancestors,
        System.get_env("PUBLIC_FRAME_ANCESTORS") || "*"
 
+# Public publishing - `docs/public-publishing.md`. Nothing here is required.
+# Only the exact value `enabled` switches the feature on: a typo leaves it off,
+# which is the safe direction for a switch that opens the server to anybody.
+if public_publishing = System.get_env("OPENRESULTS_PUBLIC_PUBLISHING") do
+  config :openresults, :public_publishing, public_publishing == "enabled"
+end
+
+if operator_name = System.get_env("OPENRESULTS_OPERATOR_NAME") do
+  config :openresults, :operator_name, operator_name
+end
+
+if terms_url = System.get_env("OPENRESULTS_TERMS_URL") do
+  config :openresults, :terms_url, terms_url
+end
+
+for {variable, key} <- [
+      {"OPENRESULTS_REGISTRATIONS_PER_ADDRESS", :registrations_per_address},
+      {"OPENRESULTS_REGISTRATIONS_PER_DAY", :registrations_per_day},
+      {"OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE", :installation_publishes_per_minute},
+      {"OPENRESULTS_INSTALLATION_MAX_TOURNAMENTS", :installation_max_tournaments},
+      {"OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES", :installation_max_snapshot_bytes}
+    ],
+    value = System.get_env(variable) do
+  # Raises at boot on something that is not a number, like BACKUP_RETENTION
+  # above: a limit silently read as something else is worse than a loud start.
+  config :openresults, key, String.to_integer(value)
+end
+
 if lookup = System.get_env("FIDE_LOOKUP_ENDPOINT") do
   config :openresults, :fide_lookup_endpoint, lookup
 end

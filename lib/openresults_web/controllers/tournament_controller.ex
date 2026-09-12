@@ -16,6 +16,7 @@ defmodule OpenResultsWeb.TournamentController do
   use OpenResultsWeb, :controller
 
   alias OpenResults.Snapshots
+  alias OpenResults.Tournaments
   alias OpenResultsWeb.Meta
   alias OpenResultsWeb.Tournament
 
@@ -36,7 +37,14 @@ defmodule OpenResultsWeb.TournamentController do
     # a presentation one. A storage function that silently omits rows is a
     # trap for the next caller - a takedown sweep or an admin view would
     # quietly skip every unlisted tournament and give no reason.
-    listed = Enum.filter(Snapshots.list_current(), &Tournament.listed?(&1.payload))
+    #
+    # Two filters, with two different owners: `listed?` is the ARBITER'S
+    # choice, carried in the payload, and `listed_only` is MODERATION'S - a
+    # pending tournament has not been approved for an audience yet, and a
+    # hidden one is not there at all. See `OpenResults.Tournaments`.
+    listed =
+      Enum.filter(Snapshots.list_current(listed_only: true), &Tournament.listed?(&1.payload))
+
     grouped = Enum.group_by(listed, &Tournament.status(&1.payload))
 
     render(conn, :index,
@@ -54,7 +62,7 @@ defmodule OpenResultsWeb.TournamentController do
   `GET /t/:slug` - the standings, exactly as the arbiter computed them.
   """
   def standings(conn, %{"slug" => slug}) do
-    with_payload(conn, slug, fn payload ->
+    with_payload(conn, slug, fn conn, payload ->
       if Tournament.show?(payload, "standings") do
         render_standings(conn, payload, slug)
       else
@@ -81,7 +89,7 @@ defmodule OpenResultsWeb.TournamentController do
   two ticks did it. See `Tournament.crosstable?/1`.
   """
   def crosstable(conn, %{"slug" => slug}) do
-    with_payload(conn, slug, fn payload ->
+    with_payload(conn, slug, fn conn, payload ->
       if Tournament.crosstable?(payload) do
         render_crosstable(conn, payload, slug)
       else
@@ -109,7 +117,7 @@ defmodule OpenResultsWeb.TournamentController do
   what that renders.
   """
   def round(conn, %{"slug" => slug, "n" => n} = params) do
-    with_payload(conn, slug, fn payload ->
+    with_payload(conn, slug, fn conn, payload ->
       if Tournament.show?(payload, "pairings") do
         render_round(conn, payload, slug, n, display?(params))
       else
@@ -161,7 +169,7 @@ defmodule OpenResultsWeb.TournamentController do
   is the point.
   """
   def player(conn, %{"slug" => slug, "no" => no}) do
-    with_payload(conn, slug, fn payload ->
+    with_payload(conn, slug, fn conn, payload ->
       # Links to a page the arbiter has switched off are not rendered, but a
       # link is a courtesy and a bookmarked or guessed URL is not. This is the
       # enforcement, and it is why every page in the `:pages` group is checked
@@ -228,15 +236,23 @@ defmodule OpenResultsWeb.TournamentController do
     end
   end
 
+  # `public_latest/1` rather than `Snapshots.latest/1`: a hidden tournament
+  # gets this same 404, word for word, as a slug that never published.
+  #
+  # The report link goes on here and only here - on a page of a tournament the
+  # public can see, withheld pages included - so a 404 for an unknown slug
+  # cannot carry one and differ from a hidden one's by it.
   defp with_payload(conn, slug, render_fun) do
-    case Snapshots.latest(slug) do
+    case Tournaments.public_latest(slug) do
       nil ->
         not_found(conn, gettext("No tournament has published under %{slug}.", slug: slug),
           back: ~p"/"
         )
 
       snapshot ->
-        render_fun.(snapshot.payload)
+        conn
+        |> assign(:report_path, ~p"/t/#{slug}/report")
+        |> render_fun.(snapshot.payload)
     end
   end
 

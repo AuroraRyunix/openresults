@@ -113,15 +113,19 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   end
 
   defp revalidate(conn, slug) do
-    case Snapshots.latest_id(slug) do
-      nil ->
-        # Nothing published under this slug. The 404 that follows is not a
-        # thing to cache, and there is no version to name.
+    visibility = visibility(conn, slug)
+
+    case visibility in [:none, :hidden] || Snapshots.latest_id(slug) do
+      # Nothing published under this slug - or something is, and moderation
+      # hid it, which must look exactly the same from here: no ETag, no 304,
+      # no cached page. The 404 that follows is not a thing to cache, and
+      # there is no version to name.
+      absent when absent in [true, nil] ->
         conn
 
       id ->
         locale = locale(conn)
-        etag = etag_for(conn, id, locale)
+        etag = etag_for(conn, id, locale, visibility)
 
         # Computed ahead of the `cond` rather than inside one of its clauses:
         # `&&`/`and` each open their own scope for the value they short
@@ -192,6 +196,13 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   # the thing that breaks if it is ever mounted somewhere that one is not.
   defp locale(conn), do: conn.assigns[:locale] || OpenResultsWeb.Locale.default()
 
+  # Set by `OpenResultsWeb.Plugs.Visibility`, mounted ahead of this one. Looked
+  # up here when it is not, for the same reason as the locale above - and
+  # looked up rather than assumed `listed`, because assuming would serve a
+  # hidden tournament's cached page from any scope that forgot the plug.
+  defp visibility(conn, slug),
+    do: conn.assigns[:tournament_visibility] || OpenResultsWeb.Plugs.Visibility.visibility(slug)
+
   # Only a plain 200 of HTML. A redirect, a 404 or an error page is not this
   # document and must never be served in its place.
   defp keep(%{status: 200} = conn, slug, id, locale, etag) do
@@ -238,18 +249,25 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   # id and the locale stay readable in front of it: they are already separate
   # parts of the cache key, and a tag one can read at a glance is worth
   # keeping for the afternoon somebody is reading a header dump.
-  defp etag_for(conn, id, locale), do: ~s("#{id}-#{locale}-#{digest(conn)}")
+  #
+  # And the VISIBILITY, inside the MAC. Approving a pending tournament changes
+  # its page (the `noindex` goes) without changing its snapshot id, so without
+  # this a crawler holding the pending page would be answered 304 for ever and
+  # never learn it may index it. `Page.forget/1` drops the stored bodies on the
+  # same change; this is the half that reaches the reader's own cache.
+  defp etag_for(conn, id, locale, visibility),
+    do: ~s("#{id}-#{locale}-#{digest(conn, visibility)}")
 
   # `term_to_binary` rather than joining with a separator, because a separator
   # has to be a character that can appear in neither half, and this settles
   # that by construction. 16 bytes of a SHA-256 MAC: 128 bits is beyond any
   # collision search, and the rest would only make a header longer.
-  defp digest(conn) do
+  defp digest(conn, visibility) do
     :hmac
     |> :crypto.mac(
       :sha256,
       secret(),
-      :erlang.term_to_binary({conn.request_path, conn.query_string})
+      :erlang.term_to_binary({conn.request_path, conn.query_string, visibility})
     )
     |> binary_part(0, 16)
     |> Base.url_encode64(padding: false)

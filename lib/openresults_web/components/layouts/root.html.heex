@@ -26,6 +26,10 @@
     <meta property="og:site_name" content="OpenResults" />
     <meta property="og:locale" content={OpenResultsWeb.Locale.og_locale(locale(assigns))} />
     <meta name="twitter:card" content="summary" />
+    <%!-- A tournament that is reachable but not yet approved for an audience -
+          see `OpenResultsWeb.Plugs.Visibility`, which sends the same thing as
+          `X-Robots-Tag`. --%>
+    <meta :if={assigns[:noindex]} name="robots" content="noindex" />
     <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
     <link rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!--
@@ -194,6 +198,12 @@
           aria-live="polite"
         ></span>
         <span class="spacer"></span>
+        <%!-- Only on a tournament page the public can see - the controller
+              sets it after finding the tournament, so a 404 never carries
+              one. See `OpenResultsWeb.ReportController`. --%>
+        <a :if={assigns[:report_path]} class="report-link" href={assigns[:report_path]}>
+          {gettext("Report this page")}
+        </a>
         <%!-- In the footer of a site with no login, because the person asking
               "did my deploy land" is looking at this from outside. A version
               number could not answer it: this app reported the same 0.1.0 for
@@ -299,11 +309,12 @@
         // which on a 200-player standings table means losing your place while
         // reading it - worse than the problem.
         //
-        // Deliberately does nothing at all on the entry form: replacing the
-        // DOM under somebody who is typing would clear what they had written.
+        // Deliberately does nothing at all on the entry form or the report
+        // form: replacing the DOM under somebody who is typing would clear
+        // what they had written.
         const live = document.getElementById("live-region");
         const status = document.getElementById("live-status");
-        const isForm = !!document.querySelector("#registration-form");
+        const isForm = !!document.querySelector("#registration-form, #report-form");
         // The projector view runs its own refresh, on its own slower clock,
         // that swaps only its board rows - see the round template. This one
         // replaces the whole region, which would wipe out which page is

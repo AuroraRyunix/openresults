@@ -116,6 +116,26 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
     ArgumentError -> :ok
   end
 
+  @doc """
+  Drops every stored page of ONE tournament, in every language - the same
+  sweep a publish triggers in `put/5`, for the one change that alters a page
+  without changing its snapshot id: moderation changing a tournament's
+  visibility (`OpenResults.Tournaments`). A pending page carries `noindex`
+  and a listed one does not, so the old body must not be served under the
+  new status.
+  """
+  def forget(slug) do
+    case :ets.whereis(@table) do
+      :undefined ->
+        :ok
+
+      table ->
+        :ets.match_delete(table, {{slug, :_, :_, :_}, :_})
+        :ets.delete(table, version_key(slug))
+        :ok
+    end
+  end
+
   @doc "Forgets everything, every tournament included. For tests, and for anything deleting rows behind us."
   def clear do
     case :ets.whereis(@table) do

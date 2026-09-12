@@ -1,0 +1,18 @@
+<header class="masthead">
+  <h1>{gettext("Too many reports")}</h1>
+</header>
+
+<section>
+  <p class="empty">
+    {gettext(
+      "Several reports have already arrived from this connection, so this one was not sent."
+    )}
+    {ngettext(
+      "Try again in about %{count} minute.",
+      "Try again in about %{count} minutes.",
+      @minutes
+    )}
+  </p>
+
+  <p><a href={@back}>{gettext("Back")}</a></p>
+</section>

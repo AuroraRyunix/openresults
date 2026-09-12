@@ -8,10 +8,11 @@
 ## date. Leave "msgstr"s empty as changing them here has no
 ## effect: edit them in PO (.po) files instead.
 #
-## The entry form's validation messages.
+## The entry form's and the report form's validation messages.
 ##
-## These are NOT extracted: they are `:message` options on the changeset in
-## `OpenResults.Registrations.Entry`, which Ecto carries and
+## These are NOT extracted: they are `:message` options on the changesets in
+## `OpenResults.Registrations.Entry` and `OpenResults.Reports.Report`, which
+## Ecto carries and
 ## `OpenResultsWeb.CoreComponents.translate_error/1` looks up here. So they
 ## are maintained by hand, and a message reworded over there has to be
 ## reworded here too or it falls back to English.
@@ -69,4 +70,10 @@ msgid "a club name is at most 100 characters"
 msgstr ""
 
 msgid "this tournament is not taking bye requests"
+msgstr ""
+
+msgid "choose what is wrong with this page"
+msgstr ""
+
+msgid "please keep the details to 2000 characters"
 msgstr ""

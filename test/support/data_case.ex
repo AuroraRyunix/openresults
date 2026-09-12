@@ -67,6 +67,10 @@ defmodule OpenResults.DataCase do
   def reset_shared_caches do
     OpenResults.Snapshots.clear_cache()
     OpenResultsWeb.Plugs.Revalidate.Page.clear()
+    # Visibility, for the same reason as the two above - and it matters more
+    # here, because a status cached by one test's rolled-back row would make a
+    # tournament in the next test hidden for no reason anybody could find.
+    OpenResults.Tournaments.StatusCache.clear()
   end
 
   @doc """
