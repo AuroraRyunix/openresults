@@ -183,6 +183,59 @@ defmodule OpenResultsWeb.StandingsSortFilterTest do
     end
   end
 
+  describe "the script re-registers on the refresher regardless of which table renders" do
+    # `standings_table/1` (the sortable table) only renders once standings
+    # exist - `starting_rank_table/1` renders instead until then. The sort
+    # and filter script used to live inside `standings_table/1`'s own
+    # template, so a page that opened before round 1 never ran it and never
+    # registered `document.addEventListener("openresults:updated", init)` -
+    # the one thing that lets it react to the 20-second refresher swapping
+    # in the real table once the arbiter publishes. See
+    # `TournamentHTML.standings_script/1`'s moduledoc.
+    defp script_containing(document, marker) do
+      document
+      |> LazyHTML.query("script")
+      |> Enum.find(&(LazyHTML.text(&1) =~ marker))
+    end
+
+    test "a tournament with players but no standings yet still ships the listener", %{conn: conn} do
+      slug = "gent-preround-2026"
+
+      payload =
+        SnapshotPayloads.swiss()
+        |> put_in(["tournament", "slug"], slug)
+        |> put_in(["standings", "rows"], [])
+
+      {:ok, _} = Snapshots.ingest(payload)
+
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+
+      # The starting-rank table renders instead of the sortable one - no
+      # sort buttons or filter controls exist on this render at all.
+      assert LazyHTML.query(document, "table.standings") |> Enum.empty?()
+      assert LazyHTML.query(document, "table.starting-rank") |> Enum.count() == 1
+
+      # The sort/filter script still ships and still registers its
+      # listener, ready for the moment a later refresh brings the real
+      # table in.
+      script = script_containing(document, "data-standings-panel")
+      assert script, "expected the standings sort/filter script to render even before round 1"
+      assert LazyHTML.text(script) =~ "addEventListener(\"openresults:updated\", init)"
+    end
+
+    test "an ordinary standings page ships that same script exactly once", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+
+      matching =
+        document
+        |> LazyHTML.query("script")
+        |> Enum.filter(&(LazyHTML.text(&1) =~ "data-standings-panel"))
+
+      assert Enum.count(matching) == 1
+    end
+  end
+
   describe "the cache" do
     # The standings panel itself - the table a sort or filter script acts on
     # - rather than the whole document. `og:url` and the language picker's

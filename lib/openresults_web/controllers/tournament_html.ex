@@ -196,8 +196,10 @@ defmodule OpenResultsWeb.TournamentHTML do
       page's HTML lands and before the script has run.
 
   The filters ARE reflected in the URL (`?club=...&federation=...`), so a
-  link to "this club's players" can be copied and shared - see the script
-  below. That reflection is `history.replaceState`, a browser-local rewrite
+  link to "this club's players" can be copied and shared - see
+  `standings_script/1`, rendered alongside this component by
+  `standings.html.heex` rather than nested inside it (its own moduledoc says
+  why). That reflection is `history.replaceState`, a browser-local rewrite
   with no request behind it, so it creates nothing for the cache to hold. A
   reader who then opens that URL fresh gets the ordinary, unfiltered page
   from the server, and the same script reads the query string back out on
@@ -415,7 +417,35 @@ defmodule OpenResultsWeb.TournamentHTML do
         </table>
       </div>
     </div>
+    """
+  end
 
+  @doc """
+  The standings table's sort/filter script, on its own and rendered
+  unconditionally by `standings.html.heex` - NOT nested inside
+  `standings_table/1` above, even though that is the only markup it acts on.
+
+  This used to be part of `standings_table/1`'s own template, which is only
+  rendered `:if={not starting_rank?}` - see `standings.html.heex`. That was
+  the bug: a spectator who opens a tournament's page before round 1, while
+  `starting_rank_table/1` renders instead, gets a page whose FIRST render
+  never runs this script at all, so `document.addEventListener
+  ("openresults:updated", init)` is never registered. When the arbiter then
+  publishes round 1 and the 20-second refresher swaps in the real
+  `standings_table` markup - sort buttons, filter selects and all - nothing
+  is listening for that swap, and the newly-arrived controls sit there
+  inert until the reader reloads the page by hand.
+
+  Hoisting the script here, so it renders on every visit to this page
+  regardless of which table is showing, fixes that: `init()` already
+  tolerates the table's absence (`if (!tbody) { return; }`), so on the
+  starting-rank render it simply registers the listener and does nothing
+  else, and is ready the moment a later swap brings the real table in - the
+  same pattern `index.html.heex`'s own script already uses for the front
+  page's search box before the first tournament is published.
+  """
+  def standings_script(assigns) do
+    ~H"""
     <script>
       (() => {
         // Runs once, from the very first render of THIS page - a script
@@ -424,7 +454,8 @@ defmodule OpenResultsWeb.TournamentHTML do
         // live DOM every time it runs rather than closing over elements from
         // one render, which is what lets the SAME registration below survive
         // that swap - see the root layout's own comment on the event it
-        // dispatches.
+        // dispatches. It also tolerates the standings table not existing yet
+        // at all - see the moduledoc above for why that matters.
         const init = () => {
           const panel = document.querySelector("[data-standings-panel]");
           const table = panel && panel.querySelector("[data-standings-table]");
@@ -485,13 +516,22 @@ defmodule OpenResultsWeb.TournamentHTML do
             }
 
             // A local rewrite, not a request - see the moduledoc above for
-            // why that is what keeps this safe for the page cache.
-            const next = new URLSearchParams(location.search);
-            for (const [name, value] of Object.entries(wanted)) {
-              if (value) { next.set(name, value); } else { next.delete(name); }
+            // why that is what keeps this safe for the page cache. Wrapped:
+            // a page embedded in a sandboxed iframe (no allow-same-origin)
+            // has this throw a SecurityError, and unguarded that took the
+            // sort buttons below down with it - they are wired up only
+            // after this function's first call succeeds.
+            try {
+              const next = new URLSearchParams(location.search);
+              for (const [name, value] of Object.entries(wanted)) {
+                if (value) { next.set(name, value); } else { next.delete(name); }
+              }
+              const query = next.toString();
+              history.replaceState(null, "", location.pathname + (query ? `?${query}` : "") + location.hash);
+            } catch (_) {
+              // The filter still applies to the rows on screen; only the
+              // shareable-URL side effect is unavailable here.
             }
-            const query = next.toString();
-            history.replaceState(null, "", location.pathname + (query ? `?${query}` : "") + location.hash);
           };
 
           for (const select of Object.values(selects)) {
