@@ -1,5 +1,13 @@
 defmodule OpenResults.SnapshotsTest do
-  use OpenResults.DataCase, async: true
+  # Not async: every test here can publish the very same fixture payload
+  # under the very same slug, and the snapshot cache is a plain ETS table -
+  # shared across every test process regardless of the Ecto Sandbox, which
+  # only isolates the database. Two of these tests running at once could
+  # see each other's cached "latest" and short-circuit a genuinely new
+  # publish as an unchanged repeat. See `OpenResults.DataCase.setup_sandbox/1`
+  # and `reset_shared_caches/0`, and this module's own moduledoc's warning
+  # against async on a non-Postgres database.
+  use OpenResults.DataCase, async: false
 
   alias OpenResults.SnapshotPayloads
   alias OpenResults.Snapshots

@@ -29,6 +29,7 @@ defmodule OpenResults.DataCase do
 
   setup tags do
     OpenResults.DataCase.setup_sandbox(tags)
+    OpenResults.DataCase.reset_shared_caches()
     :ok
   end
 
@@ -38,6 +39,34 @@ defmodule OpenResults.DataCase do
   def setup_sandbox(tags) do
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(OpenResults.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+  end
+
+  @doc """
+  Empties the snapshot id/body cache and the rendered-page cache before a
+  test runs.
+
+  These three ETS tables are now supervised (see `OpenResults.Application`
+  and the moduledocs of `OpenResults.Snapshots.LatestIdCache` and
+  `OpenResults.Snapshots.BodyCache`) so that they survive for the life of
+  the node rather than dying with whichever connection happened to create
+  them - which is the fix a 2026-09-12 load-test re-run found necessary. The
+  Ecto Sandbox undoes a test's own database writes, but it has no idea
+  these ETS tables exist, and several tests publish the very same fixture
+  payload under the very same slug - so without this, a snapshot cached by
+  an earlier test looks, to a later one, exactly like the tournament it is
+  about to publish, and `Snapshots.store/3`'s idempotent-repeat check
+  collapses a genuinely new insert into "unchanged", silently, at whichever
+  test happens to run second.
+
+  Not a fix for `async: true` tests that share a slug and genuinely run at
+  the same time - clearing at the start of a test cannot stop a sibling
+  test's write arriving mid-run. `OpenResults.SnapshotsTest` is `async:
+  false` for exactly that reason, matching this module's own moduledoc
+  advice against `async: true` on a database that is not Postgres.
+  """
+  def reset_shared_caches do
+    OpenResults.Snapshots.clear_cache()
+    OpenResultsWeb.Plugs.Revalidate.Page.clear()
   end
 
   @doc """

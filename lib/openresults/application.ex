@@ -30,6 +30,16 @@ defmodule OpenResults.Application do
       # whichever request happens to arrive first. See
       # `OpenResults.Snapshots.LatestIdCache`.
       OpenResults.Snapshots.LatestIdCache,
+      # Own the ETS tables behind the decoded-snapshot cache and the
+      # rendered-page cache, for the same reason and by the same fix as
+      # LatestIdCache just above - see `OpenResults.Snapshots.BodyCache`'s
+      # moduledoc for the load-test-confirmed failure this closes: left
+      # lazy, either table's lifetime was tied to whichever connection
+      # process happened to create it, and that process exiting (an
+      # ordinary event under load) silently reopened the exact DB-pool
+      # exhaustion LatestIdCache exists to prevent.
+      OpenResults.Snapshots.BodyCache,
+      OpenResultsWeb.Plugs.Revalidate.PageTable,
       # Start to serve requests, typically the last entry
       OpenResults.Backup.Scheduler,
       OpenResultsWeb.Endpoint

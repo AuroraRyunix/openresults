@@ -33,6 +33,7 @@ defmodule OpenResultsWeb.ConnCase do
 
   setup tags do
     OpenResults.DataCase.setup_sandbox(tags)
+    OpenResults.DataCase.reset_shared_caches()
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end
