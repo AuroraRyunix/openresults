@@ -25,6 +25,37 @@ Each entry is tagged so a version can be skimmed:
 | [Security] | a vulnerability closed, or judged not to apply |
 | [Verified] | checked against a reference, no code change |
 
+## [Unreleased]
+
+- [Fix] **Three messages on the entry form were answered in English on
+  Dutch and French pages**, even though all three had been translated since
+  the day the site learned to speak them: the ones about a name being
+  between 2 and 100 characters, an address being too long, and a club name
+  being at most 100. The translations were fine; the site was looking them
+  up the wrong way, as though they were the kind of sentence that changes
+  with a number in it. The form is the one place here where a visitor is
+  told they got something wrong, so it is the last place that should have
+  been saying it in a language they did not ask for.
+- [Fix] **Four French sentences said something other than their English
+  originals.** The cross-table's key had the score coming from the
+  opponent's side of the board rather than the player's; the player card
+  called the arbiter's total "official", which is a claim this site does not
+  make anywhere else; the player-history line was missing a word and read as
+  broken French; and the hint under the entry form's Elo box used the same
+  word this site uses for the standings, so it read as "the standings you
+  play under".
+- [Fix] **French punctuation spacing.** Fourteen French sentences could
+  break a line and leave a colon or a question mark stranded at the start of
+  the next one. They now hold the space French typography asks for.
+- [Verified] First audit of the translations themselves - all three
+  languages, both catalogues, read end to end. Written up in
+  `docs/translations-audit-2026-09-12.md`, including what was checked and
+  found correct (the page cache serves each language its own pages; every
+  placeholder matches; French and Dutch chess vocabulary is the right
+  vocabulary) and what is a decision rather than a defect - scores still
+  print `5.5` rather than `5,5`, and dates still print `2026-08-29`, in
+  every language.
+
 ## [0.13.0] - 2026-09-12
 
 - [Feature] **The version number in the footer is now a link to this

@@ -480,9 +480,35 @@ defmodule OpenResultsWeb.CoreComponents do
   The changeset messages this reaches are the entry form's - the only place
   on this site where a visitor is told they got something wrong - so they go
   through the `errors` catalogue like any other string a reader sees.
+
+  ## Why the plural branch asks about the sentence and not the options
+
+  The scaffold's version of this function branched on `opts[:count]` alone,
+  and that was wrong here in a way that shipped three English sentences into
+  every Dutch and French form.
+
+  `Ecto.Changeset.validate_length/3` puts `count:` in the error's options
+  whatever its message says, because ECTO'S OWN message is count-sensitive:
+  "should be at most %{count} character(s)". Every message on this form is
+  overridden (see `OpenResults.Registrations.Entry`) with a sentence that
+  names its own limit - "a name is between 2 and 100 characters" - and so
+  carries no `%{count}` and has no plural to choose between. It is a
+  SINGULAR entry in `errors.pot`, which is the right shape for it.
+
+  A singular msgid looked up with `dngettext/6` is a miss: gettext keys
+  plural messages by `{msgid, msgid_plural}` and never falls back to the
+  singular catalogue, so it interpolated the English msgid and returned it.
+  Silently, on a translated page, for the three `validate_length` messages
+  only - `:name`, `:email` and `:club`.
+
+  So the question is whether THE SENTENCE is plural-sensitive, which is
+  exactly what `%{count}` appearing in it says. Ecto's own defaults still
+  reach the plural branch, because theirs do contain it.
   """
   def translate_error({msg, opts}) do
-    if count = opts[:count] do
+    count = opts[:count]
+
+    if count && String.contains?(msg, "%{count}") do
       Gettext.dngettext(OpenResultsWeb.Gettext, "errors", msg, msg, count, opts)
     else
       Gettext.dgettext(OpenResultsWeb.Gettext, "errors", msg, opts)
