@@ -129,54 +129,54 @@
   "schema": "openresults/snapshot",
   "source": {
     "app": "openpairings",
-    "version": "0.59.0-dev"
+    "version": "0.60.0-dev"
   },
   "standings": {
-    "after_round": 2,
+    "after_round": 1,
     "rows": [
       {
         "category": null,
-        "player": 1,
-        "points": 17.0,
+        "player": 6,
+        "points": 8.0,
         "rank": 1,
-        "score": 2.0,
+        "score": 1.0,
         "value": 12
       },
       {
         "category": null,
-        "player": 5,
-        "points": 12.0,
+        "player": 1,
+        "points": 7.0,
         "rank": 2,
-        "score": 1.5,
+        "score": 1.0,
         "value": 11
       },
       {
         "category": null,
         "player": 2,
-        "points": 9.5,
+        "points": 4.5,
         "rank": 3,
-        "score": 1.0,
+        "score": 0.5,
         "value": 10
       },
       {
         "category": null,
-        "player": 6,
-        "points": 7.0,
+        "player": 5,
+        "points": 5.0,
         "rank": 4,
-        "score": 1.0,
+        "score": 0.5,
         "value": 9
       },
       {
         "category": null,
-        "player": 4,
-        "points": 5.0,
+        "player": 3,
+        "points": 0.0,
         "rank": 5,
-        "score": 0.5,
+        "score": 0.0,
         "value": 8
       },
       {
         "category": null,
-        "player": 3,
+        "player": 4,
         "points": 0.0,
         "rank": 6,
         "score": 0.0,
