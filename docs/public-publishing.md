@@ -287,8 +287,14 @@ own server, keep today's behaviour exactly.
 
 - In local (desktop) mode the endpoint and public base default to
   `https://openresults.zerotwo.cloud`.
-- **Public mode** applies when the endpoint has no operator token configured.
-  When the arbiter turns publishing on for a tournament:
+- **Public mode** applies only in local (desktop) mode, and only when no
+  operator token is configured. **Hosted OpenPairings never registers**: a
+  server registering itself would put every one of its users' tournaments
+  under one installation key, shared by strangers. With no token, hosted
+  mode keeps today's "needs a token from its operator" message.
+- Nothing is sent to the public server until an arbiter turns publishing on
+  for a tournament - not a connection probe, not `GET /api/server`. When
+  they do:
   1. `GET /api/server`. If `public_registration` is `unavailable`, explain that
      this server needs a token from its operator - today's message.
   2. No installation key stored: a consent dialog, once per installation,
@@ -306,6 +312,10 @@ own server, keep today's behaviour exactly.
   5. Publish as today.
 - Rotating the public link in public mode mints a new slug and deletes the
   copy published under the old one.
+- **Handing a tournament to another machine** (OpenPairings' existing
+  handoff) is not covered in this version: the receiving installation is not
+  the owner and gets `not_owner`. The arbiter is told to ask the operator for
+  a transfer, which the admin panel does in one step.
 - Error handling dispatches on `error`:
 
 | Code | What the arbiter sees | Queue |
