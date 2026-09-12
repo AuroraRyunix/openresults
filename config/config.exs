@@ -18,6 +18,12 @@ config :openresults,
 # is refused, which is the right way for this to fail.
 config :openresults, :ingest_token, nil
 
+# Which environment this node was configured as, for the checks that must
+# know at runtime - today only the admin panel's development bypass, which
+# `OpenResultsWeb.AdminAccess.Config` refuses outside dev and test and which
+# stops a production boot outright. Read as `:prod` when absent.
+config :openresults, :environment, config_env()
+
 # Configure the endpoint
 config :openresults, OpenResultsWeb.Endpoint,
   url: [host: "localhost"],

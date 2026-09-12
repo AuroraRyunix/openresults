@@ -7,6 +7,13 @@ defmodule OpenResults.Application do
 
   @impl true
   def start(_type, _args) do
+    # Before anything else starts: a production node with the admin panel's
+    # development bypass configured must not come up at all, because it would
+    # come up with an admin panel anyone can open. See
+    # `OpenResultsWeb.AdminAccess.Config.check_boot!/0`.
+    OpenResultsWeb.AdminAccess.Config.check_boot!()
+    OpenResultsWeb.AdminAccess.Config.log_boot_state()
+
     # The value every page's ETag is keyed with. Drawn here rather than
     # lazily, so it is one value for the whole node from before the first
     # request instead of whichever of two racing requests got there first -
@@ -40,6 +47,10 @@ defmodule OpenResults.Application do
       # exhaustion LatestIdCache exists to prevent.
       OpenResults.Snapshots.BodyCache,
       OpenResultsWeb.Plugs.Revalidate.PageTable,
+      # Cloudflare Access's signing keys for the admin gate. Owns its table
+      # and does every fetch itself, so a burst of admin requests with an
+      # unknown key waits on one fetch instead of each making its own.
+      OpenResultsWeb.AdminAccess.KeyCache,
       # Start to serve requests, typically the last entry
       OpenResults.Backup.Scheduler,
       OpenResultsWeb.Endpoint

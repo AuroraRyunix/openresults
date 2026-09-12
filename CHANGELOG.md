@@ -27,6 +27,32 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **The admin panel's front door: `/admin`, behind Cloudflare
+  Access and checked again by the site itself.** Signing in goes through
+  Cloudflare Access and Keycloak; the site then verifies the token Access
+  attaches (its signature against Cloudflare's published keys, that it was
+  issued for this application and this team, that it is current) and checks
+  the email against its own list. A mistake in either place alone opens
+  nothing. For now the panel is a dashboard saying who is signed in and a
+  sign-out link; the moderation pages come with public publishing. It
+  exists only when `OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN`,
+  `OPENRESULTS_ADMIN_ACCESS_AUD` and `OPENRESULTS_ADMIN_EMAILS` are all set -
+  otherwise, and for anyone without a valid Access token, `/admin` is the
+  same "Not Found" as a page that does not exist. Setup, checks and
+  troubleshooting are in `docs/admin.md`.
+- [Security] **Admin pages are never stored, framed, indexed or scripted,
+  and destructive actions will always ask first.** Every admin response is
+  `Cache-Control: no-store`, refuses to be put in a frame, asks search
+  engines to stay away and runs no JavaScript; none of it passes through the
+  page cache that serves public pages. Anything that deletes or revokes goes
+  through a confirmation page and a form protected against cross-site
+  forgery. The public pages keep all of their own behaviour: still
+  embeddable, still cached between publishes.
+- [Security] **The public site now cannot set a session cookie even by
+  mistake.** The session machinery used to be switched on for every
+  request, and the public pages stayed cookie-free only because nothing on
+  them happened to use it. It now exists on `/admin` alone, in a cookie of its
+  own that the browser sends nowhere else.
 - [Fix] **Sorting and filtering the standings did nothing on a tournament
   that opened before round 1** until the page was reloaded. The script that
   wires the sort buttons and the filter lived inside the standings table,

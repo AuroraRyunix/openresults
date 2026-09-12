@@ -72,6 +72,23 @@ config :openresults,
        :public_frame_ancestors,
        System.get_env("PUBLIC_FRAME_ANCESTORS") || "*"
 
+# The admin panel - see `OpenResultsWeb.Plugs.AdminAuth` and docs/admin.md.
+# All three or the panel does not exist: any one missing and every `/admin`
+# path answers 404, the same as a route that was never written. Outside the
+# prod block like the ingest token, so a dev box can be pointed at a real
+# Access application.
+if team_domain = System.get_env("OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN") do
+  config :openresults, :admin_access_team_domain, team_domain
+end
+
+if access_aud = System.get_env("OPENRESULTS_ADMIN_ACCESS_AUD") do
+  config :openresults, :admin_access_aud, access_aud
+end
+
+if admin_emails = System.get_env("OPENRESULTS_ADMIN_EMAILS") do
+  config :openresults, :admin_emails, admin_emails
+end
+
 if lookup = System.get_env("FIDE_LOOKUP_ENDPOINT") do
   config :openresults, :fide_lookup_endpoint, lookup
 end

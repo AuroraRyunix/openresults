@@ -4,6 +4,12 @@ import Config
 # Worthless anywhere else - dev binds to loopback only.
 config :openresults, :ingest_token, "dev-ingest-token"
 
+# `/admin` on a laptop, where no Cloudflare Access sits in front to sign
+# anybody in. Skips the token check and signs in as this address. Dev and
+# test configuration only, never an environment variable: a production node
+# with this set refuses to boot - see `OpenResultsWeb.AdminAccess.Config`.
+config :openresults, :admin_dev_bypass, email: "admin@localhost"
+
 # Configure your database
 config :openresults, OpenResults.Repo,
   database: Path.expand("../openresults_dev.db", __DIR__),

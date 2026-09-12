@@ -265,6 +265,30 @@ stored as anybody's tournament key (break-glass deliberately never claims a
 slug), so rotating it costs each arbiter a visit to their Settings page and
 costs no tournament its claim.
 
+### Admin panel
+
+`/admin` exists only when all three of these are set; with any one missing,
+every `/admin` path answers 404 exactly like a page that does not exist.
+Setting up the Cloudflare Access application and the Keycloak group they
+refer to, and checking the result, is in [`admin.md`](admin.md).
+
+| Variable | Required in prod? | Purpose |
+| --- | --- | --- |
+| `OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN` | for the panel | the Zero Trust team domain, `<team-name>.cloudflareaccess.com`: where the app fetches Access's signing keys and the issuer it accepts |
+| `OPENRESULTS_ADMIN_ACCESS_AUD` | for the panel | the Access application's Application Audience (AUD) tag |
+| `OPENRESULTS_ADMIN_EMAILS` | for the panel | comma-separated addresses allowed in, compared case-insensitively |
+
+Hand-managed, so they belong in a drop-in under
+`/etc/systemd/system/openresults.service.d/`, not in the unit the deploy
+rewrites. This app still talks to no identity provider itself: Keycloak signs
+admins in for Cloudflare Access, and the app only verifies the token Access
+attaches.
+
+The panel is the one place this app now sets a session cookie
+(`_openresults_admin`, `Path=/admin`), and makes an outbound request of its
+own besides the FIDE search: Access's keys, from the team domain, at most
+once every 30 seconds.
+
 ## Ports on this host
 
 Nothing is reachable from the internet except SSH - firewalld's public zone

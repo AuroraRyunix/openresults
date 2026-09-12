@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<%!-- English only, deliberately: two users. Do not wrap this text in gettext. --%>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%!-- Access keeps crawlers out and the response says the same in
+          `X-Robots-Tag`; this is the copy that survives a saved page. --%>
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title(assigns)}</title>
+    <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
+    <link rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!-- No script tag, and the response's CSP says `script-src 'none'`:
+          everything in the panel is a link or a plain form post. --%>
+  </head>
+  <body class="admin">
+    <header class="admin-bar">
+      <a class="admin-brand" href={~p"/admin"}>
+        <.logo /> OpenResults <span class="admin-badge">Admin</span>
+      </a>
+      <div class="admin-who">
+        <span id="admin-signed-in">Signed in as <strong>{@admin.email}</strong></span>
+        <%!-- Cloudflare's own logout, answered at its edge for this hostname:
+              it ends the Access session, so the next visit to /admin goes
+              back through Access's sign-in (docs/admin.md says what Keycloak
+              does with that). Not offered under the development bypass, where
+              nothing sits in front to answer it. --%>
+        <a
+          :if={@admin_via == :cloudflare_access}
+          id="admin-sign-out"
+          href="/cdn-cgi/access/logout"
+        >
+          Sign out
+        </a>
+      </div>
+    </header>
+
+    <p :if={@admin_via == :dev_bypass} id="admin-dev-bypass" class="admin-bypass" role="note">
+      Development bypass: this page was not checked against Cloudflare Access.
+    </p>
+
+    <div class="admin-page">
+      <nav class="admin-nav" aria-label="Admin sections">
+        <a
+          :for={item <- nav_items(@conn)}
+          href={item.path}
+          class={["admin-nav-item", item.current? && "is-current"]}
+          aria-current={item.current? && "page"}
+        >
+          {item.label}
+        </a>
+      </nav>
+
+      <main class="admin-main">
+        <p
+          :for={{kind, message} <- flash_messages(assigns)}
+          class={["admin-flash", "admin-flash-#{kind}"]}
+          role={if(kind == "error", do: "alert", else: "status")}
+        >
+          {message}
+        </p>
+        {@inner_content}
+      </main>
+    </div>
+  </body>
+</html>
