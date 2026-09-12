@@ -27,6 +27,14 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **Sorting and filtering the standings did nothing on a tournament
+  that opened before round 1** until the page was reloaded. The script that
+  wires the sort buttons and the filter lived inside the standings table,
+  which only renders once there are standings, so a page first opened on the
+  starting list never ran it - and the 20-second refresh that later swapped
+  in the real table found nothing listening. The script now renders on every
+  standings page, and a sandboxed frame that forbids `history.replaceState`
+  no longer stops it wiring the buttons.
 - [Fix] **Three messages on the entry form were answered in English on
   Dutch and French pages**, even though all three had been translated since
   the day the site learned to speak them: the ones about a name being
