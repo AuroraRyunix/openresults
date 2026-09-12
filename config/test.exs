@@ -5,6 +5,17 @@ import Config
 # server had no token configured either.
 config :openresults, :ingest_token, "test-ingest-token"
 
+# No development bypass here: the admin tests exercise the real Cloudflare
+# Access check, with keys they generate, and switch the bypass on only in the
+# tests that are about it.
+#
+# A harmless confirm-then-POST route under `/admin`, compiled into the
+# router in this environment only, so the confirmation pattern and the CSRF
+# check can be proven through the real pipeline without a fake action ever
+# reaching a production route table. See
+# `OpenResultsWeb.Admin.ConfirmationProbeController` in test/support.
+config :openresults, :admin_confirmation_probe, true
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used

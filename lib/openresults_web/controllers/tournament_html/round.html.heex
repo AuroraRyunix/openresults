@@ -13,7 +13,7 @@
     <h2>
       {Tournament.round_heading(@payload, @round["number"])}
       <span :if={Tournament.show?(@payload, "dates") && @round["date"]} class="quiet">
-        {@round["date"]}
+        {date(@round["date"])}
       </span>
     </h2>
 

@@ -1734,3 +1734,163 @@ a.xt-opp:hover {
   background: var(--accent);
   border-color: var(--accent);
 }
+
+/* ---------------------------------------------------------------------------
+   The admin panel
+
+   Same palette and type as the public site, so it is recognisably the same
+   system - but an inverted bar across the top and an ADMIN badge, so nobody
+   with both open ever mistakes one for the other. Every colour below is one
+   of the theme variables, per the rule at the top of this file; the panel has
+   no theme picker and follows the device's light or dark setting.
+
+   No inline `style` anywhere in the panel's markup: its CSP is `default-src
+   'self'`, which refuses inline styles as well as scripts.
+   --------------------------------------------------------------------------- */
+
+.admin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.875rem;
+}
+
+.admin-bar a {
+  color: var(--bg);
+}
+
+.admin-brand {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.admin-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.admin-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+}
+
+/* Loud on purpose: a page that skipped the Access check should look like it. */
+.admin-bypass {
+  margin: 0;
+  padding: 0.45rem 1rem;
+  border-bottom: 2px dashed var(--accent);
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.admin-page {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 2rem;
+  max-width: 90rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+@media (max-width: 40rem) {
+  .admin-page {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+@media (max-width: 40rem) {
+  .admin-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.admin-nav-item {
+  padding: 0.35rem 0.6rem;
+  border-left: 3px solid transparent;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.admin-nav-item:hover {
+  border-left-color: var(--rule);
+}
+
+.admin-nav-item.is-current {
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.admin-main {
+  min-width: 0;
+}
+
+.admin-flash {
+  margin: 0 0 1.25rem;
+  border-left: 3px solid var(--quiet);
+  padding: 0.35rem 0.75rem;
+  background: var(--panel);
+}
+
+.admin-flash-error {
+  border-left-color: var(--accent);
+}
+
+.admin-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.4rem 1.5rem;
+  margin: 1.25rem 0 0;
+}
+
+.admin-facts dt {
+  color: var(--quiet);
+  font-size: 0.875rem;
+}
+
+.admin-facts dd {
+  margin: 0;
+}
+
+.admin-confirm {
+  max-width: 40rem;
+}
+
+.admin-consequence {
+  max-width: 52rem;
+}
+
+/* The destructive button is outlined in the accent rather than filled, so
+   the eye does not land on it before it has read what it does. */
+.admin-confirm.is-danger .actions button {
+  background: transparent;
+  color: var(--accent);
+  border-width: 2px;
+}

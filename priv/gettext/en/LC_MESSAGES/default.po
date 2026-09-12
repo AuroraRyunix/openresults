@@ -1229,3 +1229,75 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your email address"
 msgstr ""
+
+#: lib/openresults_web/format.ex:158
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "April"
+msgstr ""
+
+#: lib/openresults_web/format.ex:162
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "August"
+msgstr ""
+
+#: lib/openresults_web/format.ex:166
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "December"
+msgstr ""
+
+#: lib/openresults_web/format.ex:156
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "February"
+msgstr ""
+
+#: lib/openresults_web/format.ex:155
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "January"
+msgstr ""
+
+#: lib/openresults_web/format.ex:161
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "July"
+msgstr ""
+
+#: lib/openresults_web/format.ex:160
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "June"
+msgstr ""
+
+#: lib/openresults_web/format.ex:157
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "March"
+msgstr ""
+
+#: lib/openresults_web/format.ex:159
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "May"
+msgstr ""
+
+#: lib/openresults_web/format.ex:165
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "November"
+msgstr ""
+
+#: lib/openresults_web/format.ex:164
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "October"
+msgstr ""
+
+#: lib/openresults_web/format.ex:163
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "September"
+msgstr ""

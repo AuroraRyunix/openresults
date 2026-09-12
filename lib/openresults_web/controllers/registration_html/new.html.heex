@@ -4,7 +4,7 @@
   <h2>
     {gettext("Enter this tournament")}
     <span :if={Tournament.info(@payload)["start_date"]} class="quiet">
-      {gettext("starts %{date}", date: Tournament.info(@payload)["start_date"])}
+      {gettext("starts %{date}", date: date(Tournament.info(@payload)["start_date"]))}
     </span>
   </h2>
 

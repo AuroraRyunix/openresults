@@ -72,6 +72,49 @@ Each entry is tagged so a version can be skimmed:
   `error` code, including the 401. Clients that read `error` - which is all
   of them - see no difference.
 
+- [Feature] **Dutch and French pages now write numbers and dates the way
+  those languages do** - `5,5` rather than `5.5` for every score, tiebreak
+  value and Keizer value on the site, and `29 augustus 2026` / `29 août
+  2026` rather than `2026-08-29` for every date, including the projector
+  screen and the entry form, with French's `1er` for the first of the
+  month. This is the fix for the two things
+  `docs/translations-audit-2026-09-12.md` found were not translated at all
+  (findings 2 and 3) - **English is untouched**, still `5.5` and still
+  `2026-08-29`. A tournament's own date range now reads idiomatically
+  rather than as two dates joined by a word - `1-5 maart 2026` within one
+  month, `30 augustus - 2 september 2026` across two - and a date this
+  cannot parse still renders rather than taking the page down, exactly as
+  an old snapshot's missing date always has. Nothing a script reads
+  changed: the standings sort's `data-*` attributes keep the point, in
+  every language, which is what lets the sort and filter script go on
+  reading them with a plain `parseFloat`.
+
+- [Feature] **The admin panel's front door: `/admin`, behind Cloudflare
+  Access and checked again by the site itself.** Signing in goes through
+  Cloudflare Access and Keycloak; the site then verifies the token Access
+  attaches (its signature against Cloudflare's published keys, that it was
+  issued for this application and this team, that it is current) and checks
+  the email against its own list. A mistake in either place alone opens
+  nothing. For now the panel is a dashboard saying who is signed in and a
+  sign-out link; the moderation pages come with public publishing. It
+  exists only when `OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN`,
+  `OPENRESULTS_ADMIN_ACCESS_AUD` and `OPENRESULTS_ADMIN_EMAILS` are all set -
+  otherwise, and for anyone without a valid Access token, `/admin` is the
+  same "Not Found" as a page that does not exist. Setup, checks and
+  troubleshooting are in `docs/admin.md`.
+- [Security] **Admin pages are never stored, framed, indexed or scripted,
+  and destructive actions will always ask first.** Every admin response is
+  `Cache-Control: no-store`, refuses to be put in a frame, asks search
+  engines to stay away and runs no JavaScript; none of it passes through the
+  page cache that serves public pages. Anything that deletes or revokes goes
+  through a confirmation page and a form protected against cross-site
+  forgery. The public pages keep all of their own behaviour: still
+  embeddable, still cached between publishes.
+- [Security] **The public site now cannot set a session cookie even by
+  mistake.** The session machinery used to be switched on for every
+  request, and the public pages stayed cookie-free only because nothing on
+  them happened to use it. It now exists on `/admin` alone, in a cookie of its
+  own that the browser sends nowhere else.
 - [Fix] **Sorting and filtering the standings did nothing on a tournament
   that opened before round 1** until the page was reloaded. The script that
   wires the sort buttons and the filter lived inside the standings table,
@@ -105,9 +148,9 @@ Each entry is tagged so a version can be skimmed:
   `docs/translations-audit-2026-09-12.md`, including what was checked and
   found correct (the page cache serves each language its own pages; every
   placeholder matches; French and Dutch chess vocabulary is the right
-  vocabulary) and what is a decision rather than a defect - scores still
-  print `5.5` rather than `5,5`, and dates still print `2026-08-29`, in
-  every language.
+  vocabulary) and what was left for a separate decision - scores printing
+  `5.5` and dates printing `2026-08-29` in every language, since fixed for
+  Dutch and French (the entry at the top of this section).
 
 ## [0.13.0] - 2026-09-12
 

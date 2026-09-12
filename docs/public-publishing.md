@@ -455,17 +455,46 @@ minutes after boot, then every 24 hours.
     small leeway;
   - the `email` claim is in `OPENRESULTS_ADMIN_EMAILS` (comma-separated,
     case-insensitive).
+- Settled while building it (2026-09-12), where the lines above left room:
+  - `alg` must be exactly `RS256`, checked before any key is looked up; `exp`,
+    `nbf` and `iat` are all required; the leeway is 60 seconds.
+  - The team domain is accepted with or without `https://` and a trailing
+    slash. A value that is not a plain host name counts as unset, as does an
+    email list with no address in it.
+  - Keys: refetched on an unknown `kid` and when the held set is over an hour
+    old, **never more than once per 30 seconds**, and kept through a failed
+    fetch.
 - **If any of those three variables is unset, every `/admin` path 404s**,
   indistinguishable from a route that does not exist.
-- Session and CSRF protection on `/admin` only. The cookie is scoped
-  `Path=/admin`, `Secure`, `HttpOnly`, `SameSite=Strict`. Public responses
-  never gain a `Set-Cookie` from this.
+- Who gets what, once the three are set:
+
+  | Request | Answer |
+  |---|---|
+  | no token, or a token that fails any check above except the email | 404, the router's own unknown-route response (same status, body and headers) |
+  | valid token, email not in `OPENRESULTS_ADMIN_EMAILS` (or no email, as a service token has) | 403, plain text naming the token's email, `no-store` |
+  | valid token, listed email | the page; the admin is `%{email: ...}`, the `actor` shape below |
+
+  A request with no valid token did not come through this application's
+  Access policy, so it is not told the panel exists. Someone with a valid
+  token already passed Access; a 403 tells them nothing new and is the one
+  answer that lets a wrong address be noticed.
+- An `/admin/...` path with no route is the router's ordinary 404, for admins
+  and strangers alike.
+- Session and CSRF protection on `/admin` only. The cookie is
+  `_openresults_admin`, scoped `Path=/admin`, `Secure`, `HttpOnly`,
+  `SameSite=Strict`, with no `Max-Age`. Public responses never gain a
+  `Set-Cookie` from this; `Plug.Session` is no longer in the endpoint at all.
 - `Cache-Control: no-store` on every admin response; admin routes bypass
-  `Revalidate` and the page cache.
+  `Revalidate` and the page cache. Admin responses are also never framed
+  (`frame-ancestors 'none'`, `X-Frame-Options: DENY`), run no script
+  (`script-src 'none'`) and carry `X-Robots-Tag: noindex, nofollow`.
 - Destructive actions go through a confirmation page and a CSRF-checked POST.
-  No JavaScript is required.
-- A development bypass exists only in dev and test config; a prod boot with it
-  enabled refuses to start.
+  No JavaScript is required. One path, two verbs: GET shows the confirmation,
+  POST to the same path acts, and only when the form's hidden `confirm` field
+  names that path (`OpenResultsWeb.Admin.Confirmation`).
+- A development bypass exists only in dev and test config
+  (`config :openresults, :admin_dev_bypass, email: "..."`), is ignored in any
+  other environment, and a prod boot with it enabled refuses to start.
 - Pages: dashboard (both switches, counts, recent actions), tournaments,
   installations, reports, address blocks, action log.
 - English only: it has two users. Do not wrap it in gettext.
@@ -477,8 +506,14 @@ own server, keep today's behaviour exactly.
 
 - In local (desktop) mode the endpoint and public base default to
   `https://openresults.zerotwo.cloud`.
-- **Public mode** applies when the endpoint has no operator token configured.
-  When the arbiter turns publishing on for a tournament:
+- **Public mode** applies only in local (desktop) mode, and only when no
+  operator token is configured. **Hosted OpenPairings never registers**: a
+  server registering itself would put every one of its users' tournaments
+  under one installation key, shared by strangers. With no token, hosted
+  mode keeps today's "needs a token from its operator" message.
+- Nothing is sent to the public server until an arbiter turns publishing on
+  for a tournament - not a connection probe, not `GET /api/server`. When
+  they do:
   1. `GET /api/server`. If `public_registration` is `unavailable`, explain that
      this server needs a token from its operator - today's message.
   2. No installation key stored: a consent dialog, once per installation,
@@ -496,6 +531,10 @@ own server, keep today's behaviour exactly.
   5. Publish as today.
 - Rotating the public link in public mode mints a new slug and deletes the
   copy published under the old one.
+- **Handing a tournament to another machine** (OpenPairings' existing
+  handoff) is not covered in this version: the receiving installation is not
+  the owner and gets `not_owner`. The arbiter is told to ask the operator for
+  a transfer, which the admin panel does in one step.
 - Error handling dispatches on `error`:
 
 | Code | What the arbiter sees | Queue |

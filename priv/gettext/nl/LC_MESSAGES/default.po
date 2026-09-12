@@ -1229,3 +1229,75 @@ msgstr "Welke uitslagen, welke speler, wat er niet hoort te staan. Maximaal 2000
 #, elixir-autogen, elixir-format
 msgid "Your email address"
 msgstr "Uw e-mailadres"
+
+#: lib/openresults_web/format.ex:158
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "April"
+msgstr "april"
+
+#: lib/openresults_web/format.ex:162
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "August"
+msgstr "augustus"
+
+#: lib/openresults_web/format.ex:166
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "December"
+msgstr "december"
+
+#: lib/openresults_web/format.ex:156
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "February"
+msgstr "februari"
+
+#: lib/openresults_web/format.ex:155
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "January"
+msgstr "januari"
+
+#: lib/openresults_web/format.ex:161
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "July"
+msgstr "juli"
+
+#: lib/openresults_web/format.ex:160
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "June"
+msgstr "juni"
+
+#: lib/openresults_web/format.ex:157
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "March"
+msgstr "maart"
+
+#: lib/openresults_web/format.ex:159
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "May"
+msgstr "mei"
+
+#: lib/openresults_web/format.ex:165
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "November"
+msgstr "november"
+
+#: lib/openresults_web/format.ex:164
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "October"
+msgstr "oktober"
+
+#: lib/openresults_web/format.ex:163
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "September"
+msgstr "september"

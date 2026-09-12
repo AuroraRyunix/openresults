@@ -37,6 +37,12 @@ config :openresults, :installation_max_snapshot_bytes, 3_145_728
 # How often `OpenResults.Retention` runs. `:disabled` in test.
 config :openresults, :retention_interval, :timer.hours(24)
 
+# Which environment this node was configured as, for the checks that must
+# know at runtime - today only the admin panel's development bypass, which
+# `OpenResultsWeb.AdminAccess.Config` refuses outside dev and test and which
+# stops a production boot outright. Read as `:prod` when absent.
+config :openresults, :environment, config_env()
+
 # Configure the endpoint
 config :openresults, OpenResultsWeb.Endpoint,
   url: [host: "localhost"],

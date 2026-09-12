@@ -1229,3 +1229,75 @@ msgstr "Quels résultats, quel joueur, ce qui ne devrait pas y figurer. 2000 car
 #, elixir-autogen, elixir-format
 msgid "Your email address"
 msgstr "Votre adresse e-mail"
+
+#: lib/openresults_web/format.ex:158
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "April"
+msgstr "avril"
+
+#: lib/openresults_web/format.ex:162
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "August"
+msgstr "août"
+
+#: lib/openresults_web/format.ex:166
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "December"
+msgstr "décembre"
+
+#: lib/openresults_web/format.ex:156
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "February"
+msgstr "février"
+
+#: lib/openresults_web/format.ex:155
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "January"
+msgstr "janvier"
+
+#: lib/openresults_web/format.ex:161
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "July"
+msgstr "juillet"
+
+#: lib/openresults_web/format.ex:160
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "June"
+msgstr "juin"
+
+#: lib/openresults_web/format.ex:157
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "March"
+msgstr "mars"
+
+#: lib/openresults_web/format.ex:159
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "May"
+msgstr "mai"
+
+#: lib/openresults_web/format.ex:165
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "November"
+msgstr "novembre"
+
+#: lib/openresults_web/format.ex:164
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "October"
+msgstr "octobre"
+
+#: lib/openresults_web/format.ex:163
+#, elixir-autogen, elixir-format
+msgctxt "month"
+msgid "September"
+msgstr "septembre"
