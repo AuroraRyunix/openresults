@@ -15,7 +15,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
 
   use OpenResultsWeb, :html
 
-  import OpenResultsWeb.TournamentHTML, only: [masthead: 1, anchor: 2, escaped: 1]
+  import OpenResultsWeb.TournamentHTML, only: [masthead: 1, anchor: 2, escaped: 1, date: 1]
 
   alias OpenResults.Registrations.Entry
   alias OpenResultsWeb.Tournament

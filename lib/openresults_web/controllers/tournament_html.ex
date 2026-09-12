@@ -12,6 +12,7 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   use OpenResultsWeb, :html
 
+  alias OpenResultsWeb.Format
   alias OpenResultsWeb.Tournament
 
   embed_templates "tournament_html/*"
@@ -123,16 +124,28 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   @doc """
   The tournament's dates, as one span or two.
+
+  `en` renders exactly as it always has - the ISO string or strings,
+  verbatim. `nl` and `fr` go through `OpenResultsWeb.Format`, which is
+  where the day-month-year form and the idiomatic range come from; see
+  its moduledoc for why a date it cannot parse still renders rather than
+  crashing the page.
   """
   def dates(info) do
     case {info["start_date"], info["end_date"]} do
       {nil, nil} -> nil
-      {start, nil} -> start
-      {nil, finish} -> finish
-      {same, same} -> same
-      {start, finish} -> gettext("%{start} to %{finish}", start: start, finish: finish)
+      {start, nil} -> date(start)
+      {nil, finish} -> date(finish)
+      {same, same} -> date(same)
+      {start, finish} -> Format.date_range(start, finish)
     end
   end
+
+  @doc """
+  One date on its own - a round's date, the entry form's start date -
+  formatted the same way `dates/1` formats the tournament's own range.
+  """
+  def date(iso), do: Format.date(iso)
 
   @doc """
   A front-page group's own heading - see `Tournament.status/2` for how a
@@ -1285,7 +1298,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               shows is the round's, which the "dates" tick covers. --%>
         <p class="projector-round">
           {Tournament.round_heading(@payload, @round["number"])}
-          <span :if={@show.dates && @round["date"]}>{@round["date"]}</span>
+          <span :if={@show.dates && @round["date"]}>{date(@round["date"])}</span>
         </p>
       </header>
 
@@ -2127,20 +2140,29 @@ defmodule OpenResultsWeb.TournamentHTML do
   defp note_label(other), do: other
 
   @doc """
-  A number as a scoreboard prints it: `2.5`, `17`, `22.25`.
+  A number as a scoreboard prints it: `2.5`, `17`, `22.25` - `2,5`, `17`,
+  `22,25` in `nl` and `fr`, per `OpenResultsWeb.Format.number/1`.
 
   Trailing `.0` goes, because JSON has one number type and an arbiter writing
   17 Keizer points did not mean 17.0. Anything that is not a number comes back
   as `nil` and leaves the cell empty - a tiebreak value of the wrong shape is
   worth one blank cell, not a crashed page.
+
+  This is the one function behind every score, tiebreak value and Keizer
+  value on the site, so the locale swap lives here rather than at each of
+  its call sites - see the 2026-09-12 translations audit, finding 2.
   """
   def number(value) when is_integer(value), do: Integer.to_string(value)
 
   def number(value) when is_float(value) do
-    if trunc(value) == value, do: Integer.to_string(trunc(value)), else: Float.to_string(value)
+    if trunc(value) == value do
+      Integer.to_string(trunc(value))
+    else
+      value |> Float.to_string() |> Format.number()
+    end
   end
 
-  def number(value) when is_binary(value), do: value
+  def number(value) when is_binary(value), do: Format.number(value)
   def number(_not_a_number), do: nil
 
   @doc """
