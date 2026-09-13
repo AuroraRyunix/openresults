@@ -191,6 +191,8 @@ Mints a slug bound to this installation. Request body `{}`.
 `POST /api/snapshots`, `DELETE /api/tournaments/:slug`,
 `GET /api/tournaments/:slug/history`, `GET /api/tournaments/:slug/registrations`:
 
+- **(settled in the desktop build)** An installation key is presented exactly
+  where the operator token is: `Authorization: Bearer <key>`.
 - The slug must be minted for this installation, otherwise `not_owner`. This
   matters most on `registrations`, the one route that returns email addresses.
 - Tournament-key rules apply on top, exactly as today.
@@ -362,6 +364,13 @@ transfer(slug, installation_id, actor)
   # rebinds ownership and clears the stored tournament key, so the target
   # installation's next keyed publish claims it - what break-glass is used for
   # today when an arbiter's laptop dies
+transfer_all(from_installation_id, to_installation_id, actor)
+  # (settled in the desktop build) every pending, listed and hidden tournament
+  # of one installation, in one action and one transaction, each exactly as
+  # transfer/3 would, one action-log row per tournament plus one for the
+  # whole move. The restore case: an OpenPairings backup never carries the
+  # installation key, so a laptop restored from backup registers as a new
+  # installation and the operator moves everything across in one step.
 
 list_installations(filters)        # status, search
 get_installation(id)
@@ -520,15 +529,28 @@ own server, keep today's behaviour exactly.
      naming `operator` (or the host name when `operator` is null) and linking
      `terms_url` when present. Declining sends nothing and leaves publishing
      off.
-  3. `POST /api/installations`; store the key. It is never shown again, never
-     written into a backup or export, and never carried by a restore onto
-     another machine - the same custody rules as a tournament's
-     `openresults_key`.
+  3. `POST /api/installations`; store the key. It is never shown again, and
+     **(settled in the desktop build)** it is held more strictly than a
+     tournament's `openresults_key`, which OpenPairings deliberately keeps in
+     backups so a restored machine can still withdraw its tournaments. The
+     installation key is in no backup and no export at all, so a leaked
+     backup can publish nothing. After any restore, even onto the same
+     machine, the installation registers again and the operator moves its
+     tournaments across with `transfer_all/3`.
   4. `POST /api/tournaments`; the minted slug becomes the tournament's
-     `public_slug`. **Until that has succeeded, no public link or QR code is
-     shown or printed for the tournament**, because a link printed with a
-     local slug would be dead.
-  5. Publish as today.
+     `public_slug`.
+  5. Publish as today. **(settled in the desktop build)** **Until the first
+     publish under the minted slug has succeeded, no public link or QR code is
+     shown or printed for the tournament.** Not merely until the mint: the
+     server answers a minted slug with no snapshot exactly like an unknown one
+     (404), so a link shown after a mint whose first publish was refused -
+     too large, paused, offline between the two requests - would be dead.
+- **(settled in the desktop build)** A tournament whose minted slug has
+  **never** had a successful publish, and that gets `not_owner`, mints a new
+  slug and carries on, silently. That is the slug released after 30 days
+  without a publish (Retention). Re-minting is invisible to everyone, because
+  step 5 means no link to the old slug was ever shown. A tournament that HAS
+  published and gets `not_owner` is the real case below: ask the operator.
 - Rotating the public link in public mode mints a new slug and deletes the
   copy published under the old one.
 - **Handing a tournament to another machine** (OpenPairings' existing
