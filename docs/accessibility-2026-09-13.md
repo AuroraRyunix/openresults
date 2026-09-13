@@ -247,6 +247,83 @@ that set `nowrap` are unaffected). Tables scroll inside `.scroller`, which WCAG
 `CHANGELOG.md`'s own "# Changelog" rendered under the page's heading of the
 same name. `OpenResults.Changelog` drops the file's title.
 
+## Contrast, per theme
+
+Every pairing the stylesheet draws, computed from the tokens with the WCAG 2.2
+formula (`test/openresults_web/contrast_test.exs` holds each at its ratio).
+Each row is the worse of the page (`--bg`) and a card or field (`--panel`);
+before is `main` as of this pass, and a cross marks a failure. Match device
+follows Paper in a light OS and Night in a dark one, with the same values.
+
+### Paper (and Match device, light)
+
+| Pairing (worse of page and panel) | Needs | Before | After |
+|---|---|---|---|
+| Body text | 4.5 | 16.65 | 16.65 |
+| Secondary text (details, table headings, hints, footer) | 4.5 | 5.23 | 5.23 |
+| Links, current round, errors | 4.5 | 9.07 | 9.07 |
+| Withheld (unpublished rounds, uncounted rows, results not in) | 4.5 | 2.30 ✗ | 4.54 |
+| Button and badge text on the accent | 4.5 | 9.07 | 9.07 |
+| Inverted text on ink | 4.5 | 16.65 | 16.65 |
+| Focus ring | 3.0 | 9.07 | 9.07 |
+| Edge of a text box (before: --rule) | 3.0 | 1.33 ✗ | 5.23 |
+
+### Night (and Match device, dark)
+
+| Pairing (worse of page and panel) | Needs | Before | After |
+|---|---|---|---|
+| Body text | 4.5 | 13.57 | 13.57 |
+| Secondary text (details, table headings, hints, footer) | 4.5 | 5.92 | 5.92 |
+| Links, current round, errors | 4.5 | 7.58 | 7.58 |
+| Withheld (unpublished rounds, uncounted rows, results not in) | 4.5 | 2.83 ✗ | 4.53 |
+| Button and badge text on the accent | 4.5 | 8.23 | 8.23 |
+| Inverted text on ink | 4.5 | 14.73 | 14.73 |
+| Focus ring | 3.0 | 7.58 | 7.58 |
+| Edge of a text box (before: --rule) | 3.0 | 1.31 ✗ | 5.92 |
+
+### Board
+
+| Pairing (worse of page and panel) | Needs | Before | After |
+|---|---|---|---|
+| Body text | 4.5 | 12.64 | 12.64 |
+| Secondary text (details, table headings, hints, footer) | 4.5 | 4.64 | 4.64 |
+| Links, current round, errors | 4.5 | 6.45 | 6.45 |
+| Withheld (unpublished rounds, uncounted rows, results not in) | 4.5 | 2.40 ✗ | 4.54 |
+| Button and badge text on the accent | 4.5 | 6.45 | 6.45 |
+| Inverted text on ink | 4.5 | 12.64 | 12.64 |
+| Focus ring | 3.0 | 6.45 | 6.45 |
+| Edge of a text box (before: --rule) | 3.0 | 1.40 ✗ | 4.64 |
+
+### Slate
+
+| Pairing (worse of page and panel) | Needs | Before | After |
+|---|---|---|---|
+| Body text | 4.5 | 12.89 | 12.89 |
+| Secondary text (details, table headings, hints, footer) | 4.5 | 5.79 | 5.79 |
+| Links, current round, errors | 4.5 | 7.33 | 7.33 |
+| Withheld (unpublished rounds, uncounted rows, results not in) | 4.5 | 2.80 ✗ | 4.53 |
+| Button and badge text on the accent | 4.5 | 8.12 | 8.12 |
+| Inverted text on ink | 4.5 | 14.28 | 14.28 |
+| Focus ring | 3.0 | 7.33 | 7.33 |
+| Edge of a text box (before: --rule) | 3.0 | 1.32 ✗ | 5.79 |
+
+### High contrast
+
+| Pairing (worse of page and panel) | Needs | Before | After |
+|---|---|---|---|
+| Body text | 4.5 | 21.00 | 21.00 |
+| Secondary text (details, table headings, hints, footer) | 4.5 | 12.63 | 12.63 |
+| Links, current round, errors | 4.5 | 11.22 | 11.22 |
+| Withheld (unpublished rounds, uncounted rows, results not in) | 4.5 | 7.46 | 7.46 |
+| Button and badge text on the accent | 4.5 | 11.22 | 11.22 |
+| Inverted text on ink | 4.5 | 21.00 | 21.00 |
+| Focus ring | 3.0 | 11.22 | 11.22 |
+| Edge of a text box (before: --rule) | 3.0 | 21.00 | 12.63 |
+
+The edge of a text box was `--rule` before and is `--quiet` now; on High
+contrast `--rule` was already black, and `--quiet` still clears 3:1 four times
+over.
+
 ## Recommended, not built
 
 ### R1. Let a reader pause live updates, and change less of the page when they arrive
