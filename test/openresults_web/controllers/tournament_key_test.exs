@@ -480,9 +480,16 @@ defmodule OpenResultsWeb.TournamentKeyTest do
 
       slug |> pull() |> json_response(200)
 
+      # And with a key. A pull carrying none has nothing it COULD claim with,
+      # so on its own the refute below held whatever the read path did.
+      slug |> pull(key: @key) |> json_response(200)
+
       # A pull silently taking ownership of a tournament this machine never
       # published is the opposite of what a read should do.
       refute OpenResults.TournamentKeys.claimed?(slug)
+
+      # So the machine that does publish it still claims it with its own key.
+      assert %{"status" => "ok"} = json_response(publish(payload, key: @other_key), 200)
     end
 
     test "break-glass reads a claimed tournament", %{payload: payload} do
