@@ -193,18 +193,40 @@ Each was confirmed by breaking the code under it and watching it stay green.
 
 ### Weak or odd, listed and not changed
 
-- `DisplayRulesTest` "each disappears on its own without taking the others"
-  checks that the rest of the row survives with `html =~ "GER"` and
-  `html =~ "GM"`, bare strings that other text on the page can satisfy. Its
-  `refute html =~ "SF Berlin"`, the part that matters, is sound.
-- `DisplayRulesTest` several tests assert `html =~ "Standings"` as their
-  "the page still works" half, which any page of the site satisfies. The
-  refutes beside them are the real checks, and the values they refute (2601,
-  2033, "SF Berlin", "Category A" once rendered) are all in the fixture.
 - `AdminActionsTest` "and so does a query string" and `AdminPagesTest` "filters
   that make no sense are ignored rather than fatal" assert only the status. That
   is the property ("does not crash"), so they are not weak.
-- `ModerationTest` compiles with an unused-variable warning (line 304).
+
+### Weak or odd, fixed in a second pass (2026-09-13)
+
+Confirmed weak by breaking the code and watching the test stay green, then
+strengthened and the mutation re-run to see it fail. Commit `43bb8c5` on
+`weak-tests`.
+
+- `DisplayRulesTest` "each disappears on its own without taking the others"
+  checked that the rest of the row survives with `html =~ "GER"` and
+  `html =~ "GM"`, bare strings that other text on the page can satisfy. Its
+  `refute html =~ "SF Berlin"`, the part that mattered, was already sound and
+  is unchanged. The two `assert`s now parse the page with `LazyHTML` and scope
+  each to the element that actually carries it: `#player-summary h2
+  span.title` for the title, `#player-summary p.details` for the federation
+  (the same paragraph that would have carried the now-hidden club). Proven by
+  hard-coding the federation span's `:if` to `false`: the scoped `GER`
+  assertion failed exactly as expected; reverted.
+- `DisplayRulesTest` three tests asserted `html =~ "Standings"` as their "the
+  page still works" half, which any page of the site (the masthead's own nav
+  link) satisfies even with zero standings rows rendered. All three now count
+  `table.standings > tbody > tr` (a *direct*-child selector - each tiebreak
+  cell can carry its own nested `table.working-table` breakdown, which a bare
+  descendant selector picked up too, inflating the count 10x) and assert
+  exactly 10, one per fixture player. Proven by rendering the standings
+  `tbody` from `Enum.take(@rows, 0)`: all three assertions failed with a row
+  count of 0; reverted.
+- `ModerationTest`'s unused-variable warning (previously reported around line
+  304) was already fixed upstream, in `e1077bf` ("a transfer test stops
+  binding a count it never reads") - before this branch's base commit. `mix
+  test test/openresults/moderation_test.exs --warnings-as-errors` and the
+  whole-suite `mix precommit` both compile clean. Nothing left to do here.
 
 ### Skipped, tagged, and swallowed
 
