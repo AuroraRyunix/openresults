@@ -1294,6 +1294,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 </td>
                 <td :if={@results?} class="num">
                   <.match_score match={match} />
+                  <.forfeit_decision match={match} teams={@teams} />
                 </td>
                 <td class={match_white?(match, :b) && "pairing-match"}>
                   <.team_link slug={@slug} teams={@teams} no={match["team_b"]} />
@@ -1376,6 +1377,38 @@ defmodule OpenResultsWeb.TournamentHTML do
       <% _other -> %>
         <span class="quiet">-</span>
     <% end %>
+    """
+  end
+
+  @doc """
+  "Awarded to Team A by the arbiter", for a match the arbiter forfeited by
+  decision (`Tournament.forfeit_decision_to/1`). Nothing for any other match.
+
+  Shown only beside match points that are shown: OpenPairings sends the
+  decision exactly when it sends the match points, and a page that met one
+  without the other would be reading a payload that broke that promise, so
+  it says nothing rather than half a result. The match's boards stay listed
+  as they are - a decision taken after games were played leaves those games
+  on the page.
+  """
+  attr :match, :map, required: true
+  attr :teams, :map, required: true
+
+  def forfeit_decision(assigns) do
+    to = Tournament.forfeit_decision_to(assigns.match)
+    shown? = to != nil and is_map(assigns.match["match_points"])
+
+    assigns =
+      assigns
+      |> assign(:shown?, shown?)
+      |> assign(:team, to && Map.get(assigns.teams, to))
+
+    ~H"""
+    <span :if={@shown?} class="match-forfeit">
+      {gettext("Awarded to %{team} by the arbiter",
+        team: if(@team, do: Tournament.team_label(@team), else: gettext("?"))
+      )}
+    </span>
     """
   end
 

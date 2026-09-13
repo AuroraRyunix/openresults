@@ -1308,6 +1308,20 @@ defmodule OpenResultsWeb.Tournament do
     end
   end
 
+  @doc """
+  The team number the arbiter awarded `match` to by decision
+  (`matches[].forfeit_decision`), or `nil` - for a match decided on its
+  boards, for a decision withheld with the match points, and for a payload
+  from a publisher older than the field. Read, never worked out: a match
+  whose boards all show forfeits is not taken to be a decision.
+  """
+  def forfeit_decision_to(match) do
+    case Map.get(match, "forfeit_decision") do
+      %{"to" => no} when is_integer(no) -> no
+      _ -> nil
+    end
+  end
+
   @doc "Which team has White on board 1 of `match` (see `matches[].board1_white_team`)."
   def match_white_team(match), do: Map.get(match, "board1_white_team")
 

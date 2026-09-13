@@ -27,6 +27,13 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **A match the arbiter forfeited by decision says so.** On a
+  round page's match line and in a team page's match history, such a match
+  reads "Awarded to Team A by the arbiter" under its score, and its boards
+  stay listed as they are. It is shown only when OpenPairings sends the
+  decision (`matches[].forfeit_decision`, withheld with the match points) -
+  a match whose boards merely all show forfeits is not labelled. In Dutch
+  and French too.
 - [Feature] **Team tournaments have public pages.** A team event's tournament
   page now shows the team standings - rank, match points, game points and
   the configured team tie-breaks, each with the same expandable "working" a

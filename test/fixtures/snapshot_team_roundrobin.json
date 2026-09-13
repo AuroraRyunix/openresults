@@ -206,6 +206,7 @@
             2
           ],
           "bye": false,
+          "forfeit_decision": null,
           "game_points": {
             "a": 1.5,
             "b": 0.5
@@ -225,6 +226,7 @@
             4
           ],
           "bye": false,
+          "forfeit_decision": null,
           "game_points": {
             "a": 0.0,
             "b": 2.0

@@ -284,6 +284,15 @@ h2 {
   font-size: 0.875rem;
 }
 
+/* A match the arbiter forfeited by decision: its own line under the score,
+   in the body colour and weight, so it is not mistaken for a footnote. */
+.match-forfeit {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: normal;
+}
+
 .rounds {
   display: flex;
   flex-wrap: wrap;

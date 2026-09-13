@@ -376,7 +376,8 @@ before they existed.
           "board1_white_team": 1,
           "boards": [1, 2],
           "game_points": { "a": 2.5, "b": 1.5 },
-          "match_points": { "a": 2.0, "b": 0.0 }
+          "match_points": { "a": 2.0, "b": 0.0 },
+          "forfeit_decision": null
         }
       ]
     }
@@ -454,6 +455,25 @@ additionally `null` until every board in the match has a result - a
 half-reported match has game points and no match points yet, exactly as
 `PairingsEngine.TeamStandings` computes it. Never recomputed here: both
 numbers are OpenPairings' own arithmetic.
+
+**`matches[].forfeit_decision`** - added with match forfeits by decision.
+`{ "to": <team no> }` when the arbiter forfeited the match as a whole to one
+team (OpenPairings' *Forfeit by decision*: every board becomes that team's
+forfeit win), `null` for a match decided on its boards. **Absent means
+none** - a payload from a publisher older than the field is read exactly as a
+`null`. Withheld exactly when `match_points` is: `null` while the round's
+results are not public, and `null` while the match is incomplete, because it
+says who won the match. The match's `game_points`/`match_points` already
+reflect the decision (the boards carry the forfeit results), and a decision
+taken after games were played leaves those boards in `boards[]` with their
+forfeit results. Never inferred here: a match whose boards all show
+forfeits is not a decision unless this field says so.
+
+```json
+{ "number": 2, "team_a": 2, "team_b": 3, "bye": false, "board1_white_team": 2,
+  "boards": [3, 4], "game_points": { "a": 2.0, "b": 0.0 },
+  "match_points": { "a": 2.0, "b": 0.0 }, "forfeit_decision": { "to": 2 } }
+```
 
 **`team_standings`** - the same shape as `standings`, one level up, for
 teams: `after_round`, `tiebreaks` (declared once, `rows[].tiebreaks`

@@ -92,7 +92,10 @@
               />
             <% end %>
           </td>
-          <td class="num"><.match_score match={match} /></td>
+          <td class="num">
+            <.match_score match={match} />
+            <.forfeit_decision match={match} teams={teams} />
+          </td>
         </tr>
       </tbody>
     </table>

@@ -103,6 +103,128 @@ defmodule OpenResultsWeb.TeamPagesTest do
     end
   end
 
+  describe "a match forfeited by decision (matches[].forfeit_decision)" do
+    # The fixture's round 1 with its second match - Brugse SK against
+    # Charleroi - carrying `forfeit` as that match's `forfeit_decision`, the
+    # first match `null`, under its own slug. `forfeit: :absent` deletes the
+    # key from every match, as a publisher older than the field sends it.
+    defp forfeit_payload(payload, slug, forfeit, round_fun \\ & &1) do
+      rounds =
+        Enum.map(payload["rounds"], fn round ->
+          matches =
+            round
+            |> Map.get("matches", [])
+            |> Enum.map(fn match ->
+              cond do
+                forfeit == :absent -> Map.delete(match, "forfeit_decision")
+                match["number"] == 2 -> Map.put(match, "forfeit_decision", forfeit)
+                true -> Map.put(match, "forfeit_decision", nil)
+              end
+            end)
+
+          round_fun.(Map.put(round, "matches", matches))
+        end)
+
+      payload
+      |> Map.put("rounds", rounds)
+      |> put_in(["tournament", "slug"], slug)
+    end
+
+    defp ingest!(payload), do: {:ok, _} = Snapshots.ingest(payload)
+
+    defp charleroi(payload), do: Enum.find(payload["teams"], &(&1["name"] == "Charleroi"))
+
+    test "present: the round page's match line and both teams' histories say so, boards still listed",
+         %{conn: conn, team_rr: payload} do
+      to = charleroi(payload)["no"]
+      ingest!(forfeit_payload(payload, "forfeit-present", %{"to" => to}))
+
+      document = conn |> get(~p"/t/forfeit-present/round/1") |> doc()
+      assert texts(document, ".match-forfeit") == ["Awarded to Charleroi by the arbiter"]
+      # The match's boards are still there to expand.
+      assert Enum.count(LazyHTML.query(document, "table.matches details")) == 2
+
+      for team_no <- [to, Enum.find(payload["teams"], &(&1["name"] == "Brugse SK"))["no"]] do
+        document = conn |> get(~p"/t/forfeit-present/team/#{team_no}") |> doc()
+        assert texts(document, ".match-forfeit") == ["Awarded to Charleroi by the arbiter"]
+      end
+
+      # A team whose match was decided on its boards shows no such line.
+      antwerp = Enum.find(payload["teams"], &(&1["name"] == "Antwerp Knights"))
+      document = conn |> get(~p"/t/forfeit-present/team/#{antwerp["no"]}") |> doc()
+      assert texts(document, ".match-forfeit") == []
+    end
+
+    test "present, in Dutch and in French", %{conn: conn, team_rr: payload} do
+      ingest!(forfeit_payload(payload, "forfeit-locales", %{"to" => charleroi(payload)["no"]}))
+
+      nl = conn |> get(~p"/t/forfeit-locales/round/1?lang=nl") |> doc()
+      assert texts(nl, ".match-forfeit") == ["Door de arbiter toegekend aan Charleroi"]
+
+      fr = conn |> get(~p"/t/forfeit-locales/round/1?lang=fr") |> doc()
+      assert texts(fr, ".match-forfeit") == ["Attribué à Charleroi par l'arbitre"]
+    end
+
+    test "null: a match decided on its boards says nothing",
+         %{conn: conn, team_rr: payload} do
+      ingest!(forfeit_payload(payload, "forfeit-null", nil))
+
+      html = conn |> get(~p"/t/forfeit-null/round/1") |> html_response(200)
+      refute html =~ "match-forfeit"
+      refute html =~ "Awarded to"
+    end
+
+    test "absent: an older publisher's payload renders as before", %{conn: conn, team_rr: payload} do
+      ingest!(forfeit_payload(payload, "forfeit-absent", :absent))
+
+      html = conn |> get(~p"/t/forfeit-absent/round/1") |> html_response(200)
+      assert html =~ "table class=\"matches\""
+      refute html =~ "Awarded to"
+
+      html =
+        conn |> get(~p"/t/forfeit-absent/team/#{charleroi(payload)["no"]}") |> html_response(200)
+
+      refute html =~ "Awarded to"
+    end
+
+    test "withheld: results not public, so neither the score nor the decision shows",
+         %{conn: conn, team_rr: payload} do
+      withhold = fn round ->
+        round
+        |> Map.put("results_public", false)
+        |> Map.update!("matches", fn matches ->
+          Enum.map(matches, &Map.merge(&1, %{"game_points" => nil, "match_points" => nil}))
+        end)
+      end
+
+      ingest!(forfeit_payload(payload, "forfeit-withheld", nil, withhold))
+
+      html =
+        conn
+        |> get(~p"/t/forfeit-withheld/team/#{charleroi(payload)["no"]}")
+        |> html_response(200)
+
+      assert html =~ "not yet published"
+      refute html =~ "Awarded to"
+
+      # A payload that broke the promise - a decision without match points -
+      # is not half-shown either.
+      broken = fn round ->
+        withhold.(round)
+        |> Map.update!("matches", fn ms ->
+          Enum.map(ms, &Map.put(&1, "forfeit_decision", %{"to" => charleroi(payload)["no"]}))
+        end)
+      end
+
+      ingest!(forfeit_payload(payload, "forfeit-broken", :absent, broken))
+
+      html =
+        conn |> get(~p"/t/forfeit-broken/team/#{charleroi(payload)["no"]}") |> html_response(200)
+
+      refute html =~ "Awarded to"
+    end
+  end
+
   describe "GET /t/:slug/board-prizes" do
     test "one table per board", %{conn: conn, rr_slug: slug} do
       document = conn |> get(~p"/t/#{slug}/board-prizes") |> doc()
