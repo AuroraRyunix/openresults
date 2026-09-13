@@ -86,11 +86,13 @@ defmodule OpenResultsWeb.Admin.Confirmation do
   Options: `:title`, `:action` (the path the form posts to - by the pattern
   above, the path of this very page), `:button` and `:cancel` are required;
   `:consequences` (a list of sentences), `:hidden` (a map of extra hidden
-  fields) and `:danger` (default `true`) are optional.
+  fields), `:danger` (default `true`), `:error` (a sentence about input the
+  last attempt could not use) and `:status` (default 200) are optional.
   """
   @spec render_page(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def render_page(conn, opts) do
     conn
+    |> put_status(Keyword.get(opts, :status, :ok))
     |> Phoenix.Controller.put_view(html: ConfirmationHTML)
     |> Phoenix.Controller.render(:page,
       page_title: Keyword.fetch!(opts, :title),
@@ -100,14 +102,29 @@ defmodule OpenResultsWeb.Admin.Confirmation do
       cancel: Keyword.fetch!(opts, :cancel),
       consequences: Keyword.get(opts, :consequences, []),
       hidden: Keyword.get(opts, :hidden, %{}),
-      danger: Keyword.get(opts, :danger, true)
+      danger: Keyword.get(opts, :danger, true),
+      error: Keyword.get(opts, :error)
     )
   end
 
   defp refuse(conn) do
+    # Back to this path's confirmation page when a GET route is there - which
+    # the pattern gives every action but one whose confirmation is rendered
+    # elsewhere - and to the dashboard otherwise, so the link never leads to
+    # a route that does not exist.
+    {back, label} =
+      case Phoenix.Router.route_info(OpenResultsWeb.Router, "GET", conn.request_path, conn.host) do
+        %{} -> {conn.request_path, "Go to the confirmation page"}
+        :error -> {"/admin", "Back to the dashboard"}
+      end
+
     conn
     |> put_status(:bad_request)
     |> Phoenix.Controller.put_view(html: ConfirmationHTML)
-    |> Phoenix.Controller.render(:unconfirmed, page_title: "Not confirmed")
+    |> Phoenix.Controller.render(:unconfirmed,
+      page_title: "Not confirmed",
+      back: back,
+      back_label: label
+    )
   end
 end

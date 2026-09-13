@@ -50,6 +50,7 @@ defmodule OpenResults.Moderation do
   alias OpenResults.Installations.Installation
   alias OpenResults.Moderation.Action
   alias OpenResults.QueryFilters
+  alias OpenResults.Registrations.Registration
   alias OpenResults.Repo
   alias OpenResults.Reports
   alias OpenResults.Reports.Report
@@ -63,6 +64,11 @@ defmodule OpenResults.Moderation do
 
   @break_glass "break-glass"
   @retention "retention"
+
+  # For `counts/0`. Spelled out rather than converted, so no atom is ever made
+  # from a stored string.
+  @installation_statuses %{"active" => :active, "suspended" => :suspended, "revoked" => :revoked}
+  @tournament_statuses %{"pending" => :pending, "listed" => :listed, "hidden" => :hidden}
 
   # ---------------------------------------------------------------------------
   # Switches
@@ -233,7 +239,9 @@ defmodule OpenResults.Moderation do
   Rebinds a tournament to another installation and clears its stored
   tournament key, so that installation's next keyed publish claims it - what
   break-glass is used for today when an arbiter's laptop dies. Status is
-  unchanged. Refused for a revoked target.
+  unchanged. Refused for a revoked target, and for a suspended one for the
+  reason `transfer_all/3` gives: a tournament moved to a key that cannot
+  publish stops updating.
   """
   @spec transfer(String.t(), String.t(), actor()) :: {:ok, Tournament.t()} | {:error, atom()}
   def transfer(slug, installation_id, actor) do
@@ -243,8 +251,8 @@ defmodule OpenResults.Moderation do
       nil ->
         {:error, :not_found}
 
-      %Installation{status: "revoked"} ->
-        {:error, :installation_revoked}
+      %Installation{status: status} = installation when status in ["revoked", "suspended"] ->
+        can_receive(installation)
 
       %Installation{id: target} ->
         transaction(fn ->
@@ -265,6 +273,82 @@ defmodule OpenResults.Moderation do
         end)
     end
   end
+
+  @doc """
+  Moves every tournament an installation owns - pending, listed and hidden -
+  to another installation, in one transaction, each exactly as `transfer/3`
+  moves one: ownership rebound, stored tournament key released, status
+  unchanged. Writes one `transfer` row per tournament (the same row
+  `transfer/3` writes) and one `transfer_all` row for the whole move, targeted
+  at the installation the tournaments left.
+
+  The restore case: an OpenPairings backup never carries the installation
+  key, so a laptop restored from backup registers as a new installation, and
+  its tournaments have to follow it.
+
+  `{:ok, %{from: id, to: id, slugs: [slug]}}`, or `{:error, reason}` with
+  nothing moved and nothing logged:
+
+    * `:same_installation` - `from` and `to` are one installation;
+    * `:not_found` - either installation does not exist;
+    * `:installation_revoked` - `to` is revoked, as `transfer/3` refuses;
+    * `:installation_suspended` - `to` is suspended: moving tournaments to
+      a key that cannot publish would stop every one of them updating, which
+      is never what a restore wants. Unsuspend it first. `transfer/3`
+      refuses the same;
+    * `:no_tournaments` - `from` owns none, so there is nothing to move and
+      nothing worth a log row.
+
+  All or nothing: a failure on any one tournament rolls back every move and
+  every row.
+  """
+  @spec transfer_all(String.t(), String.t(), actor()) :: {:ok, map()} | {:error, atom()}
+  def transfer_all(from_id, to_id, actor) do
+    email = actor!(actor)
+    from_id = to_string(from_id)
+    to_id = to_string(to_id)
+
+    with :ok <- different(from_id, to_id),
+         {%Installation{}, %Installation{} = target} <-
+           {Repo.get(Installation, from_id), Repo.get(Installation, to_id)},
+         :ok <- can_receive(target) do
+      transaction(fn ->
+        slugs =
+          from(t in Tournament,
+            where: t.installation_id == ^from_id,
+            order_by: [asc: t.inserted_at, asc: t.slug],
+            select: t.slug
+          )
+          |> Repo.all()
+
+        if slugs == [], do: Repo.rollback(:no_tournaments)
+
+        for slug <- slugs do
+          case Tournaments.transfer(slug, to_id) do
+            {:ok, _tournament} ->
+              log!(email, "transfer", "tournament", slug, %{from: from_id, to: to_id})
+
+            {:error, reason} ->
+              Repo.rollback(reason)
+          end
+        end
+
+        log!(email, "transfer_all", "installation", from_id, %{to: to_id, slugs: slugs})
+
+        %{from: from_id, to: to_id, slugs: slugs}
+      end)
+    else
+      {:error, reason} -> {:error, reason}
+      {_from, _to} -> {:error, :not_found}
+    end
+  end
+
+  defp different(same, same), do: {:error, :same_installation}
+  defp different(_from, _to), do: :ok
+
+  defp can_receive(%Installation{status: "revoked"}), do: {:error, :installation_revoked}
+  defp can_receive(%Installation{status: "suspended"}), do: {:error, :installation_suspended}
+  defp can_receive(%Installation{}), do: :ok
 
   # ---------------------------------------------------------------------------
   # Installations
@@ -442,6 +526,172 @@ defmodule OpenResults.Moderation do
   """
   @spec installations_seen_from(String.t()) :: non_neg_integer()
   def installations_seen_from(ip_or_cidr), do: Installations.seen_from(ip_or_cidr)
+
+  @doc """
+  An unsaved block, validated exactly as `block_address/4` would validate it -
+  for the panel's confirmation page, which has to show the normalised range
+  and `installations_seen_from/1` for it BEFORE anything is stored. Writes
+  nothing and logs nothing. Its `cidr` field is the canonical range when the
+  address parsed.
+  """
+  @spec change_block(term(), term(), term(), actor()) :: Ecto.Changeset.t()
+  def change_block(ip_or_cidr, expires_at, reason, actor) do
+    email = actor!(actor)
+
+    %Block{}
+    |> Block.changeset(
+      %{cidr: ip_or_cidr, expires_at: expires_at, reason: reason, created_by: email},
+      DateTime.utc_now()
+    )
+    |> Map.put(:action, :validate)
+  end
+
+  # ---------------------------------------------------------------------------
+  # What the panel shows beside the lists
+
+  @doc "One report by id, or `nil`."
+  @spec get_report(term()) :: Report.t() | nil
+  def get_report(id), do: Reports.get(id)
+
+  @doc """
+  The dashboard's numbers. Every status is present, zero included:
+
+      %{
+        installations: %{active: n, suspended: n, revoked: n},
+        tournaments: %{pending: n, listed: n, hidden: n},
+        open_reports: n,
+        address_blocks: n    # live ones
+      }
+  """
+  @spec counts() :: map()
+  def counts do
+    %{
+      installations: by_status(Installation, @installation_statuses),
+      tournaments: by_status(Tournament, @tournament_statuses),
+      open_reports: Repo.aggregate(from(r in Report, where: r.status == "open"), :count),
+      address_blocks: length(AddressBlocks.list_active())
+    }
+  end
+
+  defp by_status(schema, statuses) do
+    stored =
+      from(x in schema, group_by: x.status, select: {x.status, count()})
+      |> Repo.all()
+      |> Map.new()
+
+    Map.new(statuses, fn {text, atom} -> {atom, Map.get(stored, text, 0)} end)
+  end
+
+  @doc """
+  What published tournaments cost in disk, server-wide:
+
+      %{
+        snapshots: n,             # stored versions, every tournament
+        snapshot_bytes: n,        # their payloads, as stored
+        tournaments: n,           # slugs holding at least one version
+        database_bytes: n         # the SQLite file's pages, free ones included
+      }
+
+  Payload bytes are the stored JSON's length in bytes. Every version is kept,
+  so this is the number public publishing grows. Reads every row's length, so
+  it is for a page an admin opens, not for a request path.
+  """
+  @spec storage() :: map()
+  def storage do
+    {snapshots, bytes, tournaments} =
+      from(s in Snapshot,
+        select:
+          {count(s.id), coalesce(sum(fragment("length(CAST(? AS BLOB))", s.payload)), 0),
+           count(s.tournament_slug, :distinct)}
+      )
+      |> Repo.one()
+
+    %{
+      snapshots: snapshots,
+      snapshot_bytes: bytes,
+      tournaments: tournaments,
+      database_bytes: database_bytes()
+    }
+  end
+
+  defp database_bytes do
+    case Repo.query("SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()") do
+      {:ok, %{rows: [[bytes]]}} when is_integer(bytes) -> bytes
+      _unavailable -> nil
+    end
+  end
+
+  @doc """
+  The stored versions of the tournaments an installation owns now:
+  `%{tournaments: n, snapshots: n, snapshot_bytes: n}`. A transferred
+  tournament counts for its new owner.
+  """
+  @spec installation_storage(String.t()) :: map()
+  def installation_storage(id) when is_binary(id) do
+    {snapshots, bytes, tournaments} =
+      from(s in Snapshot,
+        join: t in Tournament,
+        on: t.slug == s.tournament_slug,
+        where: t.installation_id == ^id,
+        select:
+          {count(s.id), coalesce(sum(fragment("length(CAST(? AS BLOB))", s.payload)), 0),
+           count(s.tournament_slug, :distinct)}
+      )
+      |> Repo.one()
+
+    %{tournaments: tournaments, snapshots: snapshots, snapshot_bytes: bytes}
+  end
+
+  @doc """
+  One tournament's publishing record, for its detail page and its delete
+  confirmation:
+
+      %{
+        snapshots: n,                  # stored versions
+        snapshot_bytes: n,             # all of them
+        current_bytes: n | nil,        # the version the public sees
+        first_published_at: DateTime | nil,
+        last_published_at: DateTime | nil,
+        registrations: n               # entries waiting, with email addresses
+      }
+
+  First and last are the first and newest stored versions by insertion, as
+  everywhere else here, so a clock that stepped backwards cannot swap them.
+  """
+  @spec tournament_stats(String.t()) :: map()
+  def tournament_stats(slug) when is_binary(slug) do
+    {snapshots, bytes, first_id, last_id} =
+      from(s in Snapshot,
+        where: s.tournament_slug == ^slug,
+        select:
+          {count(s.id), coalesce(sum(fragment("length(CAST(? AS BLOB))", s.payload)), 0),
+           min(s.id), max(s.id)}
+      )
+      |> Repo.one()
+
+    {first_at, _} = version(first_id)
+    {last_at, current_bytes} = version(last_id)
+
+    %{
+      snapshots: snapshots,
+      snapshot_bytes: bytes,
+      current_bytes: current_bytes,
+      first_published_at: first_at,
+      last_published_at: last_at,
+      registrations:
+        Repo.aggregate(from(r in Registration, where: r.tournament_slug == ^slug), :count)
+    }
+  end
+
+  defp version(nil), do: {nil, nil}
+
+  defp version(id) do
+    from(s in Snapshot,
+      where: s.id == ^id,
+      select: {s.received_at, fragment("length(CAST(? AS BLOB))", s.payload)}
+    )
+    |> Repo.one()
+  end
 
   # ---------------------------------------------------------------------------
   # The log

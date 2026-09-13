@@ -1,15 +1,22 @@
 defmodule OpenResultsWeb.Admin.DashboardController do
   @moduledoc """
-  The panel's front page.
-
-  For now it proves the gate: who is signed in, how that was established, and
-  which build is answering. The switches, counts and recent actions the
-  contract lists (`docs/public-publishing.md`) arrive with
-  `OpenResults.Moderation`.
+  The panel's front page: both switches, the counts that say whether
+  anything needs looking at, what publishing costs in disk, and the most
+  recent actions.
   """
   use OpenResultsWeb, :controller
 
+  alias OpenResults.Moderation
+  alias OpenResults.PublicPublishing
+
   def show(conn, _params) do
-    render(conn, :show, page_title: "Dashboard")
+    render(conn, :show,
+      page_title: "Dashboard",
+      settings: Moderation.settings(),
+      counts: Moderation.counts(),
+      storage: Moderation.storage(),
+      actions: Moderation.list_actions(%{limit: 10}),
+      public_publishing?: PublicPublishing.enabled?()
+    )
   end
 end

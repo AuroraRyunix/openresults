@@ -239,6 +239,49 @@ one-off messages. It says nothing about who you are and ends with the browser
 session; who is signed in is re-checked from Cloudflare's token on every
 request.
 
+## Using the panel
+
+Everything that changes something goes through a confirmation page that says
+what will happen, then a button. Nothing needs JavaScript. Every change is
+written to the action log with your address.
+
+- **Dashboard.** The two switches, what needs attention (pending tournaments,
+  open reports), what published tournaments take on disk, and the latest
+  actions. **Pausing public publishing takes arbiters' live updates offline
+  in the middle of their events**: every tournament published from
+  OpenPairings desktop stops updating until you resume. Tournaments published
+  with the operator token are not affected. When
+  `OPENRESULTS_PUBLIC_PUBLISHING` is not enabled the dashboard says so, and
+  the switches are stored but change nothing.
+- **Tournaments.** Filter by status, open reports or a search. A tournament's
+  page shows its owner, first and last publish, snapshot sizes, its reports
+  and what has been done to it. Approve (pending to listed), hide, unhide,
+  transfer to another installation by its `in_...` id (this clears the
+  tournament key, so that installation's next publish claims it), or delete
+  (every stored version and the entry list with its email addresses; it
+  cannot be undone).
+- **Installations.** Suspend (its key stops publishing until unsuspended),
+  unsuspend, or revoke (final; you choose whether to hide its tournaments
+  too). Addresses show as "forgotten after 30 days" once retention has
+  cleared them.
+- **A laptop restored from backup** comes back as a new installation, because
+  no OpenPairings backup carries the installation key. On the old
+  installation's page, **Move all tournaments to another installation…** takes
+  the new one's id and shows its client, version and when and where it was
+  last seen, so you can check it is the right laptop, then moves every
+  tournament at once. Each one's tournament key is cleared, so the new
+  laptop's next publish claims it. A suspended or revoked installation cannot
+  receive them.
+- **Reports.** The open queue, each report with a link to its tournament,
+  and Resolve with a written resolution. Resolving does not change the
+  tournament; hide or delete it separately.
+- **Address blocks.** An address or CIDR range, for a number of hours or days
+  (at most 30), with a reason. Before you confirm, the page shows how many
+  installations were seen from that range in the last 30 days: a club's wifi
+  can be many people.
+- **Action log.** Everything above, plus break-glass uses of the operator
+  token and retention runs, filterable by who, what and target.
+
 ## When it does not work
 
 Every refusal of a configured panel is logged with its reason (never with the

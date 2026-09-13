@@ -245,10 +245,58 @@ defmodule OpenResultsWeb.Router do
   # (`OpenResultsWeb.Admin.Layouts.nav_items/1`), so a section appears there
   # the moment its route is added here. An `/admin/...` path with no route
   # is the router's ordinary 404, for admins and strangers alike.
+  #
+  # Every action is a pair on ONE path: GET is its confirmation page, POST
+  # carries it out, and the controller plugs `OpenResultsWeb.Admin.Confirmation`
+  # on the POST so it acts only when sent from that page. The one POST that
+  # changes nothing is `address-blocks/new`, which checks a block and shows
+  # its confirmation. `test/openresults_web/admin_actions_test.exs` walks
+  # these routes to hold every other POST to that rule.
   scope "/admin", OpenResultsWeb.Admin do
     pipe_through :admin
 
     get "/", DashboardController, :show
+
+    get "/switches/:key", SwitchController, :confirm
+    post "/switches/:key", SwitchController, :update
+
+    get "/tournaments", TournamentController, :index
+    get "/tournaments/:slug", TournamentController, :show
+    get "/tournaments/:slug/approve", TournamentController, :confirm_approve
+    post "/tournaments/:slug/approve", TournamentController, :approve
+    get "/tournaments/:slug/hide", TournamentController, :confirm_hide
+    post "/tournaments/:slug/hide", TournamentController, :hide
+    get "/tournaments/:slug/unhide", TournamentController, :confirm_unhide
+    post "/tournaments/:slug/unhide", TournamentController, :unhide
+    get "/tournaments/:slug/delete", TournamentController, :confirm_delete
+    post "/tournaments/:slug/delete", TournamentController, :delete
+    get "/tournaments/:slug/transfer", TournamentController, :confirm_transfer
+    post "/tournaments/:slug/transfer", TournamentController, :transfer
+
+    get "/installations", InstallationController, :index
+    get "/installations/:id", InstallationController, :show
+    get "/installations/:id/suspend", InstallationController, :confirm_suspend
+    post "/installations/:id/suspend", InstallationController, :suspend
+    get "/installations/:id/unsuspend", InstallationController, :confirm_unsuspend
+    post "/installations/:id/unsuspend", InstallationController, :unsuspend
+    get "/installations/:id/revoke", InstallationController, :confirm_revoke
+    post "/installations/:id/revoke", InstallationController, :revoke
+    get "/installations/:id/move-tournaments", InstallationController, :confirm_move
+    post "/installations/:id/move-tournaments", InstallationController, :move
+
+    get "/reports", ReportController, :index
+    get "/reports/:id", ReportController, :show
+    get "/reports/:id/resolve", ReportController, :confirm_resolve
+    post "/reports/:id/resolve", ReportController, :resolve
+
+    get "/address-blocks", AddressBlockController, :index
+    get "/address-blocks/new", AddressBlockController, :new
+    post "/address-blocks/new", AddressBlockController, :preview
+    post "/address-blocks", AddressBlockController, :create
+    get "/address-blocks/:id/unblock", AddressBlockController, :confirm_unblock
+    post "/address-blocks/:id/unblock", AddressBlockController, :unblock
+
+    get "/action-log", ActionLogController, :index
 
     # Test-only: a harmless confirmation page and the POST behind it, so the
     # confirmation pattern and the CSRF check are proven through this exact

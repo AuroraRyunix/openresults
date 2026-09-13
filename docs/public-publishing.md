@@ -191,6 +191,8 @@ Mints a slug bound to this installation. Request body `{}`.
 `POST /api/snapshots`, `DELETE /api/tournaments/:slug`,
 `GET /api/tournaments/:slug/history`, `GET /api/tournaments/:slug/registrations`:
 
+- **(settled in the desktop build)** An installation key is presented exactly
+  where the operator token is: `Authorization: Bearer <key>`.
 - The slug must be minted for this installation, otherwise `not_owner`. This
   matters most on `registrations`, the one route that returns email addresses.
 - Tournament-key rules apply on top, exactly as today.
@@ -266,7 +268,10 @@ installation spending its whole budget on changed documents at the cap could
 write about 90 MiB a minute, and many installations many times that. Nothing
 in this contract limits a pending tournament's history or an installation's
 total bytes. **Open, not settled in the build** - decide before switching
-public publishing on.
+public publishing on. The admin panel shows the figures that decision needs:
+stored snapshot bytes server-wide and the database file on the dashboard, per
+installation on its page, and per tournament (current snapshot and all
+versions) on the tournament's page.
 
 ## Tournament visibility
 
@@ -362,6 +367,13 @@ transfer(slug, installation_id, actor)
   # rebinds ownership and clears the stored tournament key, so the target
   # installation's next keyed publish claims it - what break-glass is used for
   # today when an arbiter's laptop dies
+transfer_all(from_installation_id, to_installation_id, actor)
+  # (settled in the desktop build) every pending, listed and hidden tournament
+  # of one installation, in one action and one transaction, each exactly as
+  # transfer/3 would, one action-log row per tournament plus one for the
+  # whole move. The restore case: an OpenPairings backup never carries the
+  # installation key, so a laptop restored from backup registers as a new
+  # installation and the operator moves everything across in one step.
 
 list_installations(filters)        # status, search
 get_installation(id)
@@ -379,6 +391,59 @@ installations_seen_from(ip_or_cidr) :: non_neg_integer
 
 list_actions(filters)
 ```
+
+**(settled in the build)** Added for the admin panel's pages, 2026-09-13. None
+of them writes the action log; `change_block/4` is the only one that takes an
+actor, because it validates exactly as `block_address/4` does.
+
+```elixir
+change_block(ip_or_cidr, expires_at, reason, actor) :: Ecto.Changeset.t()
+  # validates like block_address/4 and stores nothing; `cidr` is the
+  # normalised range - the block confirmation page shows it, and
+  # installations_seen_from/1 for it, before anything is stored
+get_report(id) :: Report.t() | nil
+counts() :: %{
+  installations: %{active: n, suspended: n, revoked: n},
+  tournaments: %{pending: n, listed: n, hidden: n},
+  open_reports: n,
+  address_blocks: n                    # live ones
+}
+storage() :: %{snapshots: n, snapshot_bytes: n, tournaments: n,
+               database_bytes: n | nil}
+installation_storage(id) :: %{tournaments: n, snapshots: n, snapshot_bytes: n}
+tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
+                            current_bytes: n | nil,
+                            first_published_at: DateTime.t() | nil,
+                            last_published_at: DateTime.t() | nil,
+                            registrations: n}
+```
+
+- Snapshot bytes are the stored payload's length in bytes (every kept
+  version, not only the current one), so they are the figure public
+  publishing grows. `database_bytes` is the SQLite file's pages, free pages
+  included. `installation_storage/1` counts the tournaments the installation
+  owns now; a transfer moves them.
+- First and last publish are the first and newest stored versions by
+  insertion, as everywhere else here.
+
+**(settled in the build)** `transfer_all/3`, as built:
+
+- Returns `{:ok, %{from: id, to: id, slugs: [slug]}}`, the slugs in the order
+  they moved (oldest first). The rows it writes: one `transfer` per
+  tournament, exactly the row `transfer/3` writes (target the slug, details
+  `from` and `to`), then one `transfer_all` with target type `installation`,
+  target the installation the tournaments left, and details `to` and `slugs`.
+- Refusals, each with nothing moved and nothing logged: `:same_installation`;
+  `:not_found` for an unknown `from` or `to`; `:installation_revoked` for a
+  revoked `to`, as `transfer/3`; **`:installation_suspended` for a suspended
+  `to`**, also as `transfer/3` - moving tournaments to a key that cannot
+  publish would stop them updating, which no restore wants, so the operator
+  unsuspends first; and
+  `:no_tournaments` when `from` owns none. Any `from` status is accepted: the
+  old laptop's installation may already be suspended or revoked.
+- All or nothing: one transaction, so a failure on any one tournament undoes
+  every move and every row before it. Status and cached pages are untouched,
+  as with `transfer/3`.
 
 - `actor` is `%{email: String.t()}`.
 - Every mutating function writes the action log: who, what, target, when.
@@ -419,7 +484,8 @@ list_actions(filters)
   `tournaments`. An installation's `id` is its `in_...` identifier.
 - Action log rows: `actor` (an email, `break-glass` or `retention`), `action`
   (`put_setting`, `approve`, `hide`, `unhide`, `delete`, `transfer`,
-  `suspend`, `unsuspend`, `revoke`, `resolve_report`, `block_address`,
+  `transfer_all` **(settled in the build)**, `suspend`, `unsuspend`, `revoke`,
+  `resolve_report`, `block_address`,
   `unblock`, `break_glass_publish`, `break_glass_delete`, `break_glass_read`,
   `retention`), `target_type` (`setting`, `tournament`, `installation`,
   `report`, `address_block`), `target`, `details` (a map with string keys),
@@ -497,6 +563,38 @@ minutes after boot, then every 24 hours.
   other environment, and a prod boot with it enabled refuses to start.
 - Pages: dashboard (both switches, counts, recent actions), tournaments,
   installations, reports, address blocks, action log.
+- **(settled in the build)** The routes, all under `/admin`. Each action is
+  a GET (its confirmation page) and a POST (the action) on the same path:
+
+  | Page | Routes |
+  |---|---|
+  | dashboard | `/`; switches `/switches/:key` (`registration_open`, `public_publishing_paused`) |
+  | tournaments | `/tournaments?status=&reported=true&search=&page=`, `/tournaments/:slug`, and `/approve`, `/hide`, `/unhide`, `/delete`, `/transfer` beneath it |
+  | installations | `/installations?status=&search=&page=`, `/installations/:id`, and `/suspend`, `/unsuspend`, `/revoke`, `/move-tournaments` beneath it (GET the form; GET with `?to=in_...` the confirmation; POST the move) |
+  | reports | `/reports?status=open\|resolved&page=`, `/reports/:id`, `/reports/:id/resolve` |
+  | address blocks | `/address-blocks`; `/address-blocks/new` (GET the form, POST checks it and shows the confirmation); `POST /address-blocks` creates; `/address-blocks/:id/unblock` |
+  | action log | `/action-log?actor=&action=&target_type=&target=&page=` |
+
+  - A switch's confirmation posts the value it offered (`value=true`), never
+    "toggle", so two admins confirming the same flip agree on the result.
+  - Revoking asks what happens to the installation's tournaments and has no
+    default answer.
+  - Moving every tournament (`transfer_all/3`) confirms on a page that lists
+    each tournament that will move and the target installation's client,
+    version and when and where it was last seen, so the operator can tell it
+    is the right laptop.
+  - Adding a block is two steps because the confirmation has to count: the
+    check posts the form (a POST, so the reason stays out of URLs), shows the
+    normalised range and `installations_seen_from/1` for it, and carries the
+    exact expiry instant it displayed into the confirmed POST. Expiry is
+    entered as a whole number of hours or days.
+  - Input the action cannot use - an unparseable address or range, an expiry
+    past 30 days, a missing reason, an unknown or revoked installation for a
+    transfer, no choice on a revoke, an empty resolution - re-renders the same
+    form with a sentence and status 422. A slug, id or switch that does not
+    exist is the panel's own 404 page; an action that no longer applies (it
+    changed since its confirmation page loaded) changes nothing and says so.
+  - Lists show 50 rows a page, newest first.
 - English only: it has two users. Do not wrap it in gettext.
 
 ## OpenPairings desktop
@@ -520,15 +618,28 @@ own server, keep today's behaviour exactly.
      naming `operator` (or the host name when `operator` is null) and linking
      `terms_url` when present. Declining sends nothing and leaves publishing
      off.
-  3. `POST /api/installations`; store the key. It is never shown again, never
-     written into a backup or export, and never carried by a restore onto
-     another machine - the same custody rules as a tournament's
-     `openresults_key`.
+  3. `POST /api/installations`; store the key. It is never shown again, and
+     **(settled in the desktop build)** it is held more strictly than a
+     tournament's `openresults_key`, which OpenPairings deliberately keeps in
+     backups so a restored machine can still withdraw its tournaments. The
+     installation key is in no backup and no export at all, so a leaked
+     backup can publish nothing. After any restore, even onto the same
+     machine, the installation registers again and the operator moves its
+     tournaments across with `transfer_all/3`.
   4. `POST /api/tournaments`; the minted slug becomes the tournament's
-     `public_slug`. **Until that has succeeded, no public link or QR code is
-     shown or printed for the tournament**, because a link printed with a
-     local slug would be dead.
-  5. Publish as today.
+     `public_slug`.
+  5. Publish as today. **(settled in the desktop build)** **Until the first
+     publish under the minted slug has succeeded, no public link or QR code is
+     shown or printed for the tournament.** Not merely until the mint: the
+     server answers a minted slug with no snapshot exactly like an unknown one
+     (404), so a link shown after a mint whose first publish was refused -
+     too large, paused, offline between the two requests - would be dead.
+- **(settled in the desktop build)** A tournament whose minted slug has
+  **never** had a successful publish, and that gets `not_owner`, mints a new
+  slug and carries on, silently. That is the slug released after 30 days
+  without a publish (Retention). Re-minting is invisible to everyone, because
+  step 5 means no link to the old slug was ever shown. A tournament that HAS
+  published and gets `not_owner` is the real case below: ask the operator.
 - Rotating the public link in public mode mints a new slug and deletes the
   copy published under the old one.
 - **Handing a tournament to another machine** (OpenPairings' existing
