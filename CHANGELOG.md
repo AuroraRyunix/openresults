@@ -27,6 +27,47 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **Restoring a backup is now a written, rehearsed procedure - and the
+  commands this site used to print for it could restore nothing.**
+  `mix openresults.backup --restore` said to move the database file aside and
+  the recovered one in. It never mentioned the database's `-wal` and `-shm`
+  files: after a service that crashed or was killed rather than stopped,
+  those hold the newest writes, and left beside the recovered file SQLite
+  reads them into it. The 2026-09-13 drill got a database that never existed -
+  the old action log, the backup's tournaments - with the integrity check
+  saying "ok". The task now prints a swap that moves all three files together,
+  restores ownership and runs `mix ecto.migrate` before the start (a backup
+  older than the code otherwise boots and answers 500 on every page); the
+  whole procedure, and what a restore undoes, is in `docs/deployment.md`.
+- [Change] **What a restore undoes is now written down, with a way to find
+  it.** A restore rolls moderation back with the data: a revoked installation
+  key works again, closed registration is open, blocks are gone, and a
+  tournament its arbiter withdrew is back online with its entry form open -
+  while the arbiter's machine has already thrown its key away. The deployment
+  guide has a read-only script that compares the restored and the replaced
+  database and lists exactly that, and how to take a resurrected tournament
+  down again. Details and the privacy side (backups hold client addresses up
+  to about two months old) in `docs/restore-drill-2026-09-13.md`.
+- [Fix] **`--verify` reads every page.** It checked that three tables existed,
+  so a backup of a database with one damaged table verified and restored.
+  It now runs SQLite's integrity check and refuses, before anything is written.
+- [Security] **An encrypted backup can no longer ask for an absurd key-stretching
+  count.** The iteration count is read from the file before its tag can be
+  checked; a header asking for billions of iterations wedged `--verify` and
+  `--restore` for hours (twenty million took 7.6 s). The same bound
+  OpenPairings has applied since its 2026-09-01 sweep.
+- [Fix] **Verifying a backup no longer leaves a decrypted copy of the database
+  in the temp directory.** On Windows every verify did; on any system a refused
+  one did. The copy is now removed on every path.
+- [Fix] **`BACKUP_RETENTION` of 0 or less no longer deletes the newest
+  backups.** 0 deleted every backup, the one just written included, and a
+  negative count kept the oldest and deleted the rest. Retention never keeps
+  fewer than one, and a value below 1 now stops the boot with a message.
+- [Fix] **The first start after a restore no longer logs `database is
+  locked`.** A recovered database is switched to WAL before it is handed over,
+  instead of every connection of the next boot racing to do it.
+- [Change] `mix openresults.backup --verify` and `--restore` accept a backup's
+  name exactly as `--list` prints it.
 - [Feature] **Public publishing, switched off until the operator turns it
   on.** With `OPENRESULTS_PUBLIC_PUBLISHING=enabled`, any copy of OpenPairings
   can publish here without the server's master token: it asks for an

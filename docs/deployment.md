@@ -154,7 +154,269 @@ except for `ecto.migrate` applying new migrations.
 The data here is not precious in the way the arbiter's database is - every
 snapshot came from an arbiter's machine, which remains the source of truth
 and can republish. The registration queue is the exception: an entry a
-spectator typed in exists only here until an arbiter pulls it.
+spectator typed in exists only here until an arbiter pulls it. Since public
+publishing, so is moderation - who is suspended or revoked, what is hidden,
+what was taken down - and that is the part a restore gets wrong without
+help; see "What a restore undoes" below.
+
+## Backups
+
+`OpenResults.Backup.Scheduler` writes one five minutes after every boot and
+then every 24 hours; `mix openresults.backup` writes one on demand. Each is
+`openresults-<UTC time>.orbak` in `backups/` beside the database
+(`/var/lib/openresults/backups`), and is a whole copy of the database - every
+table, the public-publishing ones included (checked table by table in the
+2026-09-13 drill) - gzip-compressed.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `BACKUP_DIR` | `backups/` beside the database | where they are written |
+| `BACKUP_RETENTION` | 30 | how many files are kept; a whole number of at least 1, or the app refuses to boot |
+| `OPENRESULTS_BACKUP_PASSPHRASE` | none | encrypts them (AES-256-GCM); the same value is needed to verify or restore one |
+
+**The deploy script sets none of these**, so on this host backups are
+unencrypted, and they carry the entry form's email addresses, report contact
+emails, and client addresses (see "Privacy" below).
+
+Retention is a count, not an age, and every boot and every manual run spends
+one. Thirty files are thirty days only on a box that is never restarted: the
+drill's instance had four backups inside twenty minutes - three boots, one of
+them the restore, and a manual run.
+
+A backup on the same disk survives a bad deploy, not the disk. Nothing here
+copies one off the box. And keep the copy you mean to restore from **outside**
+`backups/`: the scheduler's prune counts everything in there, and an older
+file dropped in among thirty newer ones is deleted five minutes after the
+next boot.
+
+## Restoring a backup
+
+Rehearsed on 2026-09-13 - `docs/restore-drill-2026-09-13.md` has the run, the
+timings and what broke. Every step below is there because the drill failed
+without it. The commands take about ten seconds; `mix` starting is most of
+that, so allow a minute on the box.
+
+Before you start: read "What a restore undoes", and if the current database
+still opens, do not delete it. It is the only record of what happened after
+the backup.
+
+All as root.
+
+**1. Give your shell the service's environment**, and a way to run `mix` as
+the service account. The tasks need `DATABASE_PATH` and `SECRET_KEY_BASE`
+(`config/runtime.exs` refuses to load without them) and the unit's
+`MIX_HOME`/`HEX_HOME`; running them as the service account keeps anything
+they write from being owned by root.
+
+```bash
+unit=/etc/systemd/system/openresults.service
+for k in MIX_ENV DATABASE_PATH SECRET_KEY_BASE MIX_HOME HEX_HOME PATH PORT BACKUP_DIR OPENRESULTS_BACKUP_PASSPHRASE; do
+  v=$(cat "$unit" "$unit".d/*.conf 2>/dev/null | sed -n "s|^Environment=\"$k=\(.*\)\"\$|\1|p" | tail -1)
+  [ -n "$v" ] && export "$k=$v"
+done
+app() { (cd /apps/web/openresults && runuser --preserve-environment -u openresults -- mix "$@"); }
+```
+
+The values are read line by line and exported, never sourced, for the reason
+OpenPairings' `app-role` wrapper gives: a value with a space in it would run
+its own tail as a command. Drop-ins are read after the
+unit, so they win, as they do for systemd - but only in the quoted
+`Environment="KEY=value"` form.
+
+**2. Choose and check the file.**
+
+```bash
+app openresults.backup --list
+app openresults.backup --verify openresults-2026-09-13T00-23-22Z.orbak   # a name as listed, or any path
+```
+
+`--verify` decrypts, decompresses, and reads every page of the database
+(`PRAGMA integrity_check`) on a copy in the temp directory, which it then
+deletes. It refuses a damaged database; before the drill it only counted
+tables, and passed a backup with a damaged `installations` table.
+
+**3. Recover it beside the live database.**
+
+```bash
+app openresults.backup --restore openresults-2026-09-13T00-23-22Z.orbak
+```
+
+This writes `/var/lib/openresults/openresults.db.restored`, already switched
+to WAL, and prints steps 4 to 7 with this box's paths. The live database is
+not touched.
+
+**4. Stop the service, and make sure it stopped.**
+
+```bash
+systemctl stop openresults
+systemctl is-active openresults          # must print: inactive
+```
+
+**5. Swap - moving the WAL with the database.**
+
+```bash
+cd /var/lib/openresults
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+for f in openresults.db openresults.db-wal openresults.db-shm; do
+  [ -e "$f" ] && mv "$f" "${f/openresults.db/openresults.db.before-restore-$stamp}"
+done
+mv openresults.db.restored openresults.db
+chown --reference=. openresults.db
+```
+
+After a clean stop there is no `-wal` or `-shm`. After a crash, an OOM kill,
+or a stop that ran into systemd's timeout, there is, and the newest writes
+are in it. Moving the `.db` alone - which is what `--restore` used to print -
+does two kinds of damage, both reproduced in the drill: the `before-restore`
+copy lacks everything in the WAL, and the WAL left behind is read INTO the
+restored file, because SQLite has no way to tell that it belongs to another
+database. In the drill that gave a database that never existed - the action
+log from the old one, the tournaments from the backup - with `PRAGMA
+integrity_check` saying `ok`. Renamed together,
+`openresults.db.before-restore-<stamp>` and its `-wal` still open as one
+database.
+
+`chown`: a recovered file written by root is root's, and SQLite opens a file
+it cannot write read-only - pages load and every publish fails. `--reference=.`
+takes the owner of the directory, which the deploy gives the service account.
+
+If the database file is gone altogether, the loop moves nothing, and that is
+fine.
+
+**6. Migrate.**
+
+```bash
+app ecto.migrate
+```
+
+The service runs `mix phx.server`, which does not migrate - only a release
+does. A backup older than the code therefore boots, answers `/changelog`, and
+fails everything else: the drill restored a backup from before 2026-09-12 and
+every tournament page, `GET /api/server` and every publish returned 500 with
+`no such table: tournaments`. Migrating also runs that migration's backfill,
+which lists every tournament published before visibility existed.
+
+**7. Start, and check.**
+
+```bash
+systemctl start openresults
+curl -s -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:${PORT:-4004}/"   # 200
+journalctl -u openresults -n 20 --no-pager
+```
+
+Then work through "What a restore undoes" before telling anybody it is done,
+and keep the `before-restore` files until you have.
+
+## What a restore undoes
+
+Everything written after the backup. On most apps that means data; on this
+one it also means authority.
+
+| After the backup, somebody... | After the restore |
+| --- | --- |
+| revoked or suspended an installation | its key works again - the drill minted a slug with a key revoked after the backup |
+| closed `registration_open`, or paused publishing | open, unpaused |
+| blocked an address | the block is gone - the drill registered a new installation from inside it |
+| hid, approved, or deleted a tournament | as it was; a deleted one is back with its history and its entry-form registrations |
+| **withdrew their own tournament from OpenPairings** | **back online with its entry form open - and that arbiter's machine threw its key away when the withdrawal succeeded**, so it cannot withdraw it again. Only the operator token can (below). |
+| published a tournament for the first time | gone, and its key claim with it; the next publish that carries a key claims the address again |
+| sent an entry or a report | lost |
+| had a client address forgotten by retention | the address is back |
+
+The action log is restored to the same moment, so it cannot say what to
+re-apply, and an arbiter's withdrawal was never in it (only break-glass is,
+and at `info` level no request line reaches the journal either). While the
+old database still opens, this lists every difference that matters, and
+reads the old file's `-wal` with it:
+
+```bash
+cd /var/lib/openresults
+runuser -u openresults -- python3 - openresults.db openresults.db.before-restore-$stamp <<'EOF'
+import sqlite3, sys
+db = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+db.execute("ATTACH ? AS old", (f"file:{sys.argv[2]}?mode=ro",))
+slugs = "SELECT slug FROM {0}.tournaments UNION SELECT tournament_slug FROM {0}.snapshots"
+def show(title, sql):
+    rows = db.execute(sql).fetchall()
+    print(f"\n{title}: {len(rows)}")
+    for r in rows: print("  ", *r)
+show("BACK ONLINE - withdrawn or deleted after the backup; take them down again",
+     f"SELECT s.slug, ifnull(t.status, 'listed') FROM ({slugs.format('main')}) s "
+     f"LEFT JOIN main.tournaments t USING (slug) WHERE s.slug NOT IN ({slugs.format('old')})")
+show("GONE - created or first published after the backup; their claims went with them",
+     f"SELECT slug FROM ({slugs.format('old')}) WHERE slug NOT IN ({slugs.format('main')})")
+show("status or owner differs",
+     "SELECT m.slug, m.status || ' -> ' || o.status, ifnull(m.installation_id, '-') || ' -> ' || ifnull(o.installation_id, '-') "
+     "FROM main.tournaments m JOIN old.tournaments o USING (slug) "
+     "WHERE m.status IS NOT o.status OR m.installation_id IS NOT o.installation_id")
+show("installation status differs - a revoked or suspended key works again",
+     "SELECT m.id, m.status || ' -> ' || o.status FROM main.installations m JOIN old.installations o USING (id) WHERE m.status <> o.status")
+show("switches that differ (restored -> before)",
+     "SELECT k, ifnull((SELECT value FROM main.settings WHERE key = k), 0) || ' -> ' || ifnull((SELECT value FROM old.settings WHERE key = k), 0) "
+     "FROM (SELECT key AS k FROM main.settings UNION SELECT key FROM old.settings) "
+     "WHERE ifnull((SELECT value FROM main.settings WHERE key = k), 0) <> ifnull((SELECT value FROM old.settings WHERE key = k), 0)")
+show("address blocks placed after the backup", "SELECT cidr, expires_at, reason FROM old.address_blocks WHERE cidr NOT IN (SELECT cidr FROM main.address_blocks)")
+show("moderation actions after the backup",
+     "SELECT inserted_at, actor, action, target FROM old.moderation_actions WHERE id > (SELECT ifnull(max(id), 0) FROM main.moderation_actions) ORDER BY id")
+EOF
+```
+
+It opens both files read-only, as the service account: SQLite may still
+create a `-shm` beside a WAL database it only reads, and one created by root
+is one the service cannot open. In the drill it listed, exactly, the two
+tournaments withdrawn or deleted after the backup, the two published after it,
+the revoked installation, both switches, the block and the five moderation
+actions.
+
+Re-apply moderation from the admin panel. Take a tournament that is back
+online down again with the operator token, in the tournament-key position -
+it is logged as break-glass:
+
+```bash
+curl -X DELETE "http://127.0.0.1:${PORT:-4004}/api/tournaments/<slug>" \
+  -H "Authorization: Bearer $OPENRESULTS_INGEST_TOKEN" \
+  -H "X-OpenResults-Key: $OPENRESULTS_INGEST_TOKEN"
+```
+
+(`OPENRESULTS_INGEST_TOKEN` is in the unit; step 1 did not export it, on
+purpose.)
+
+For a tournament that is gone: if it was published with the operator token -
+hosted OpenPairings, or any copy configured with a token - its arbiter's
+next publish claims the address back with the key that machine still holds;
+the drill's came back that way. If it was minted for an installation, the
+address no longer belongs to one, and by the contract's ownership rule that
+installation's publishes to it are refused as `not_owner` until it takes a
+new address (not exercised in the drill).
+
+If the old database is gone too, the table above is a checklist to work
+through by hand, starting with every takedown and revocation you know of.
+
+### Privacy
+
+What a backup holds, measured in the drill rather than assumed:
+
+- **Client addresses** on installations and reports, up to about 31 days old
+  when it is written: the scheduled backup runs five minutes before the daily
+  retention job, which forgets addresses at 30 days. With 30 backups kept one
+  a day, the oldest is about 30 days old, so **the backup set can hold
+  addresses about two months old**.
+- **Addresses retention never reaches**: every `block_address` and `unblock`
+  row in the action log keeps the address or range it named, for good.
+- **Email addresses**: every entry-form registration, and a report's optional
+  contact email, which no retention job touches.
+
+A restore puts back every address retention had already forgotten. The
+retention job forgets the ones past 30 days ten minutes after boot - but the
+first backup after a restore is written at five minutes, so it keeps them for
+another full retention cycle. The drill measured exactly that: an address
+forgotten before the restore was back in the database, and in the backup
+written five minutes after it.
+
+Whether backups should be encrypted, kept for less than a month, or stripped
+of addresses older than 30 days before they are written is a decision for the
+operator, not something this guide settles. `docs/restore-drill-2026-09-13.md`
+sets out the options.
 
 ## Configuration (environment variables)
 
@@ -168,6 +430,7 @@ All read in `config/runtime.exs`.
 | `PHX_SERVER` | yes (`true`) | actually serve HTTP |
 | `PORT` | no (default 4000) | internal HTTP port - **the unit sets 4004**, see below |
 | `OPENRESULTS_INGEST_TOKEN` | effectively | the bearer token an arbiter publishes with. Unset means every publish is refused with a 401 - except with an installation key, see "Public publishing" below |
+| `BACKUP_DIR` / `BACKUP_RETENTION` / `OPENRESULTS_BACKUP_PASSPHRASE` | no | see "Backups" above |
 | `POOL_SIZE` | no (default 10) | Ecto connection pool size |
 | `DNS_CLUSTER_QUERY` | no | multi-node clustering, unused here |
 

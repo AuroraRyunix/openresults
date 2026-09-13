@@ -59,7 +59,18 @@ if passphrase = System.get_env("OPENRESULTS_BACKUP_PASSPHRASE") do
 end
 
 if keep = System.get_env("BACKUP_RETENTION") do
-  config :openresults, :backup_retention, String.to_integer(keep)
+  # A whole number of at least one, or the app does not start. 0 used to delete
+  # every backup - the one just written included - on every run, and a
+  # negative count deleted the NEWEST ones (`OpenResults.Backup.prune/1` now
+  # refuses to keep fewer than one regardless; this says so at boot instead of
+  # quietly keeping one).
+  case Integer.parse(keep) do
+    {n, ""} when n >= 1 ->
+      config :openresults, :backup_retention, n
+
+    _ ->
+      raise "BACKUP_RETENTION must be a whole number of at least 1, got: #{inspect(keep)}"
+  end
 end
 
 # Who may put these pages in an iframe - a CSP `frame-ancestors` source list.

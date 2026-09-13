@@ -27,8 +27,36 @@ defmodule OpenResults.Backup do
 
   A SQLite file cannot be replaced underneath an open connection pool without
   risking the thing being recovered. `restore/1` writes the recovered database
-  beside the live one and returns the path; stopping, swapping and starting is
-  three commands and cannot go wrong halfway.
+  beside the live one and returns the path. The swap is the operator's, and it
+  is more than the three commands this once claimed - `docs/deployment.md`,
+  "Restoring a backup", is the procedure, and the 2026-09-13 drill
+  (`docs/restore-drill-2026-09-13.md`) is why each step is there:
+
+    * the live database's `-wal` and `-shm` files move WITH it. SQLite pairs a
+      database with whatever `-wal` sits beside it and has no way to tell that
+      one belongs to a different file: the drill put a restored database next
+      to the old one's WAL and read back a mixture of the two - the old action
+      log, the backup's tournaments - with the integrity check saying "ok".
+    * `mix ecto.migrate` runs before the start. `mix phx.server` does not
+      migrate, and a backup older than the code boots, answers HTTP, and
+      fails every page that touches a newer table.
+
+  ## What verify/1 checks
+
+  That the file is ours, that it decrypts and decompresses, that the tables no
+  version of this app has run without are there, and that every page of the
+  database reads back - `PRAGMA integrity_check`. The last one was missing
+  until the drill: a backup of a database with one damaged table verified,
+  restored, and failed its first query against that table.
+
+  ## What a restore undoes
+
+  Everything written after the backup, and on this server that includes
+  moderation: a revoked installation key works again, a closed registration
+  switch is open, an address block is gone, a hidden or deleted tournament is
+  back - and so is a tournament its arbiter withdrew, whose key that arbiter's
+  machine has already thrown away. The action log is restored to the same
+  moment, so it cannot say what to re-apply. See the deployment guide.
   """
 
   @magic "ORBAK1"
@@ -79,10 +107,16 @@ defmodule OpenResults.Backup do
 
   A count rather than an age: a server that was off for a fortnight should
   still have its last backups when it comes back.
+
+  Never fewer than one, whatever it is given. `Enum.drop(list, 0)` is the
+  whole list, so a count of 0 deleted every backup including the one the
+  scheduler had just written, and a negative count drops from the other end -
+  it kept the OLDEST and deleted the newest. Both were a `BACKUP_RETENTION`
+  typo away.
   """
   @spec prune(keyword()) :: non_neg_integer()
   def prune(opts \\ []) do
-    keep = Keyword.get(opts, :keep, retention())
+    keep = opts |> Keyword.get(:keep, retention()) |> at_least_one()
 
     list(opts)
     |> Enum.drop(keep)
@@ -92,20 +126,24 @@ defmodule OpenResults.Backup do
     end)
   end
 
-  @doc "Unpacks `path` and checks it is a database this app could run on."
+  @doc """
+  Unpacks `path` and checks it is a database this app could run on.
+
+  The check runs on a staging copy in the temp directory, and that copy is the
+  whole database - decrypted, for an encrypted backup - so it is deleted on
+  every path out, refusals included. It used to survive both: a refusal never
+  closed its connection, and on Windows even an accepted file stayed behind,
+  because the connection was closed with statements still open and SQLite
+  kept the file until they were collected.
+  """
   @spec verify(Path.t()) :: {:ok, map()} | {:error, String.t()}
   def verify(path) do
     with {:ok, bytes} <- unpack(path) do
       tmp = Path.join(System.tmp_dir!(), "orbak-verify-#{System.unique_integer([:positive])}.db")
 
       try do
-        with :ok <- File.write(tmp, bytes) |> normalise("could not stage the file"),
-             {:ok, conn} <- open(tmp),
-             {:ok, tables} <- tables(conn),
-             :ok <- require_tables(tables),
-             {:ok, snapshots} <- scalar(conn, "SELECT COUNT(*) FROM snapshots") do
-          Exqlite.Sqlite3.close(conn)
-          {:ok, %{tables: tables, snapshots: snapshots}}
+        with :ok <- File.write(tmp, bytes) |> normalise("could not stage the file") do
+          inspect_database(tmp)
         end
       after
         File.rm(tmp)
@@ -113,16 +151,55 @@ defmodule OpenResults.Backup do
     end
   end
 
-  @doc "Recovers `path` beside the live database and returns where."
+  defp inspect_database(path) do
+    with {:ok, conn} <- open(path) do
+      try do
+        with {:ok, tables} <- tables(conn),
+             :ok <- require_tables(tables),
+             :ok <- integrity(conn),
+             {:ok, snapshots} <- scalar(conn, "SELECT COUNT(*) FROM snapshots") do
+          {:ok, %{tables: tables, snapshots: snapshots}}
+        end
+      after
+        Exqlite.Sqlite3.close(conn)
+      end
+    end
+  end
+
+  @doc """
+  Recovers `path` beside the live database and returns where.
+
+  The recovered file is switched to WAL before it is handed over, on one
+  connection. `VACUUM INTO` writes a rollback-journal database, and the first
+  boot on one had every pooled connection trying to make that switch at once:
+  the losers logged "database is locked", on exactly the boot an operator is
+  watching most closely.
+  """
   @spec restore(Path.t()) :: {:ok, Path.t()} | {:error, String.t()}
   def restore(path) do
     with {:ok, _info} <- verify(path),
          {:ok, bytes} <- unpack(path) do
       target = database_path() <> ".restored"
 
-      case File.write(target, bytes) do
-        :ok -> {:ok, target}
-        {:error, reason} -> {:error, "could not write #{target}: #{:file.format_error(reason)}"}
+      # A `-wal` left beside an earlier `.restored` - somebody opened it to
+      # look - would be replayed into the fresh copy the moment it is opened.
+      Enum.each(["-wal", "-shm"], &File.rm(target <> &1))
+
+      with :ok <- File.write(target, bytes) |> normalise("could not write #{target}"),
+           :ok <- to_wal(target) do
+        {:ok, target}
+      end
+    end
+  end
+
+  defp to_wal(path) do
+    with {:ok, conn} <- open(path) do
+      result = Exqlite.Sqlite3.execute(conn, "PRAGMA journal_mode = WAL")
+      Exqlite.Sqlite3.close(conn)
+
+      case result do
+        :ok -> :ok
+        {:error, reason} -> {:error, "could not switch #{path} to WAL: #{reason_text(reason)}"}
       end
     end
   end
@@ -133,8 +210,15 @@ defmodule OpenResults.Backup do
       Path.join(Path.dirname(database_path()), "backups")
   end
 
-  @doc "How many are kept."
-  def retention, do: Application.get_env(:openresults, :backup_retention, 30)
+  @doc "How many are kept - never fewer than one, see `prune/1`."
+  def retention do
+    case Application.get_env(:openresults, :backup_retention, 30) do
+      n when is_integer(n) -> at_least_one(n)
+      _not_a_count -> 30
+    end
+  end
+
+  defp at_least_one(n) when is_integer(n), do: max(n, 1)
 
   @doc "Whether backups are written encrypted."
   def encrypted?, do: not is_nil(passphrase())
@@ -280,23 +364,50 @@ defmodule OpenResults.Backup do
            "OPENRESULTS_BACKUP_PASSPHRASE to the one it was written with"}
 
       secret ->
-        salt = Base.decode64!(crypto["salt"])
-        iv = Base.decode64!(crypto["iv"])
-        tag = Base.decode64!(crypto["tag"])
-        iterations = crypto["iterations"] || @pbkdf2_iterations
-        key = :crypto.pbkdf2_hmac(:sha256, secret, salt, iterations, @key_bytes)
+        with {:ok, iterations} <- checked_iterations(crypto["iterations"]) do
+          salt = Base.decode64!(crypto["salt"])
+          iv = Base.decode64!(crypto["iv"])
+          tag = Base.decode64!(crypto["tag"])
+          key = :crypto.pbkdf2_hmac(:sha256, secret, salt, iterations, @key_bytes)
 
-        case :crypto.crypto_one_time_aead(@cipher, key, iv, payload, @magic, tag, false) do
-          :error ->
-            {:error, "wrong passphrase, or the backup has been altered since it was written"}
+          case :crypto.crypto_one_time_aead(@cipher, key, iv, payload, @magic, tag, false) do
+            :error ->
+              {:error, "wrong passphrase, or the backup has been altered since it was written"}
 
-          plain ->
-            {:ok, plain}
+            plain ->
+              {:ok, plain}
+          end
         end
     end
   end
 
   defp decrypt(_header, payload), do: {:ok, payload}
+
+  # The iteration count comes out of the file's own header, which is read
+  # BEFORE the AEAD tag can be checked - it derives the key the tag is checked
+  # with - so it is the file's word, not ours. Too low weakens a passphrase the
+  # file was never written with; too high wedges `--verify`/`--restore` in a
+  # PBKDF2 loop with no early exit and no cancel (20 million iterations took
+  # 7.6 s in the 2026-09-13 drill; the header will happily say 5 billion).
+  # OpenPairings bounded this after its 2026-09-01 sweep (L5) and this copy of
+  # the format never learned it. The range is deliberately wide: it has to go
+  # on accepting every count this app has written (@pbkdf2_iterations) and
+  # leave room for that to rise.
+  @min_pbkdf2_iterations 10_000
+  @max_pbkdf2_iterations 2_000_000
+
+  defp checked_iterations(nil), do: {:ok, @pbkdf2_iterations}
+
+  defp checked_iterations(n)
+       when is_integer(n) and n >= @min_pbkdf2_iterations and n <= @max_pbkdf2_iterations,
+       do: {:ok, n}
+
+  defp checked_iterations(n) do
+    {:error,
+     "this backup's header asks for #{inspect(n)} PBKDF2 iterations, which is outside " <>
+       "the accepted range (#{@min_pbkdf2_iterations}-#{@max_pbkdf2_iterations}) - " <>
+       "the file is corrupt or has been tampered with"}
+  end
 
   defp summarise(path) do
     with {:ok, raw} <- File.read(path),
@@ -319,31 +430,75 @@ defmodule OpenResults.Backup do
   defp open(path) do
     case Exqlite.Sqlite3.open(path) do
       {:ok, conn} -> {:ok, conn}
-      {:error, reason} -> {:error, "could not open the database: #{inspect(reason)}"}
+      {:error, reason} -> {:error, "could not open the database: #{reason_text(reason)}"}
+    end
+  end
+
+  # Every statement is released before its rows are returned. A connection
+  # closed with a statement still prepared is not closed: SQLite defers it
+  # until the statement is finalised, which here meant until the garbage
+  # collector got round to it - and until then the file stayed open, so the
+  # staging copy could not be deleted on Windows.
+  defp rows(conn, sql) do
+    case Exqlite.Sqlite3.prepare(conn, sql) do
+      {:ok, statement} ->
+        try do
+          Exqlite.Sqlite3.fetch_all(conn, statement)
+        after
+          Exqlite.Sqlite3.release(conn, statement)
+        end
+
+      {:error, _} = error ->
+        error
     end
   end
 
   defp tables(conn) do
-    with {:ok, statement} <-
-           Exqlite.Sqlite3.prepare(
-             conn,
-             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
-           ),
-         {:ok, rows} <- Exqlite.Sqlite3.fetch_all(conn, statement) do
-      {:ok, Enum.map(rows, fn [name] -> name end)}
-    else
-      {:error, reason} -> {:error, "could not read the file's tables: #{inspect(reason)}"}
+    case rows(conn, "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name") do
+      {:ok, rows} -> {:ok, Enum.map(rows, fn [name] -> name end)}
+      {:error, reason} -> {:error, "could not read the file's tables: #{reason_text(reason)}"}
     end
   end
 
   defp scalar(conn, sql) do
-    with {:ok, statement} <- Exqlite.Sqlite3.prepare(conn, sql),
-         {:ok, [[value]]} <- Exqlite.Sqlite3.fetch_all(conn, statement) do
-      {:ok, value}
-    else
+    case rows(conn, sql) do
+      {:ok, [[value]]} -> {:ok, value}
       _ -> {:error, "the file opened but did not answer a simple query"}
     end
   end
+
+  # Every page, not the handful the checks above touch: the drill's damaged
+  # `tournament_keys` table passed them all. `integrity_check` is the thorough
+  # form - it also cross-checks every index - and it only ever runs from the
+  # command line, on a file that is about to become the live database.
+  defp integrity(conn) do
+    case rows(conn, "PRAGMA integrity_check") do
+      {:ok, [["ok"]]} ->
+        :ok
+
+      {:ok, problems} ->
+        first = problems |> List.flatten() |> Enum.take(3) |> Enum.join("; ")
+
+        {:error,
+         "the database inside fails its integrity check (#{first}) - restoring it would " <>
+           "put a damaged database live; try an older backup"}
+
+      {:error, reason} ->
+        {:error,
+         "the database inside could not be read through (#{reason_text(reason)}) - restoring " <>
+           "it would put a damaged database live; try an older backup"}
+    end
+  end
+
+  # SQLite's messages arrive as binaries that are not always printable - the
+  # drill's damaged file produced `<<109, 97, 108, 102, ...>>` where
+  # "malformed" was meant.
+  defp reason_text(reason) when is_binary(reason) do
+    text = String.replace(reason, <<0>>, "")
+    if String.printable?(text), do: text, else: inspect(reason)
+  end
+
+  defp reason_text(reason), do: inspect(reason)
 
   # Not the full table list on purpose: a backup from a slightly older schema
   # should still restore, and demanding every table would refuse exactly the
