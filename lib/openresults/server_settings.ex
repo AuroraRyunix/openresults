@@ -1,8 +1,8 @@
 defmodule OpenResults.ServerSettings do
   @moduledoc """
   The server settings an operator can change from the admin panel without a
-  deploy: the operator's name and terms link, and the numbers that bound
-  public publishing. `docs/public-publishing.md`, "Defaults".
+  deploy: the operator's name, terms link and contact address, and the
+  numbers that bound public publishing. `docs/public-publishing.md`, "Defaults".
 
   ## Precedence
 
@@ -80,7 +80,19 @@ defmodule OpenResults.ServerSettings do
       max: 2000,
       default: nil,
       variable: "OPENRESULTS_TERMS_URL",
-      help: "Linked from OpenPairings' consent dialog and returned by GET /api/server."
+      help:
+        "Linked from OpenPairings' consent dialog and returned by GET /api/server. With none " <>
+          "set, GET /api/server reports this server's own /terms page."
+    },
+    contact_email: %{
+      label: "Contact email",
+      type: :email,
+      max: 254,
+      default: nil,
+      variable: "OPENRESULTS_CONTACT_EMAIL",
+      help:
+        "Shown on the public /terms page as a direct way to reach the operator. With none set, " <>
+          "that page offers only the report form."
     },
     installation_max_versions: %{
       label: "Versions kept per installation tournament",
@@ -174,6 +186,7 @@ defmodule OpenResults.ServerSettings do
   @type key ::
           :operator_name
           | :terms_url
+          | :contact_email
           | :installation_max_versions
           | :min_free_disk_percent
           | :registrations_per_address
@@ -340,7 +353,39 @@ defmodule OpenResults.ServerSettings do
     end
   end
 
+  defp check(:email, spec, raw) when is_binary(raw) do
+    text = String.trim(raw)
+
+    cond do
+      text == "" ->
+        {:error,
+         "Enter the #{String.downcase(spec.label)}. To use the environment's value or none, " <>
+           "reset it to default instead."}
+
+      String.length(text) > spec.max ->
+        {:error, "#{spec.label} is at most #{spec.max} characters."}
+
+      not Regex.match?(email_pattern(), text) ->
+        {:error, "#{spec.label} is one email address, like operator@example.org."}
+
+      true ->
+        {:ok, text}
+    end
+  end
+
   defp check(_type, spec, _raw), do: {:error, "#{spec.label} cannot take that value."}
+
+  @doc """
+  The shape a contact address must have. The report form's rule
+  (`OpenResults.Reports.Report`) - something, an `@`, something with a dot -
+  with the characters a `mailto:` link or an HTML attribute would have to
+  escape refused as well, because this address is printed on a public page.
+  `config/runtime.exs` repeats it for `OPENRESULTS_CONTACT_EMAIL`.
+  """
+  @spec email_pattern() :: Regex.t()
+  def email_pattern,
+    do:
+      ~r/\A[^\s\x00-\x1F\x7F@<>"'(),;:\x5C\[\]?#&%]+@[^\s\x00-\x1F\x7F@<>"'(),;:\x5C\[\]?#&%]+\.[^\s\x00-\x1F\x7F@<>"'(),;:\x5C\[\]?#&%]+\z/u
 
   defp in_range(%{min: min, max: max} = spec, n) do
     if n >= min and (is_nil(max) or n <= max),

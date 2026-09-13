@@ -176,6 +176,13 @@ defmodule OpenResultsWeb.Meta do
   @doc "The changelog."
   def changelog, do: gettext("What has changed on this site, release by release.")
 
+  @doc "The terms and privacy page."
+  def terms,
+    do:
+      gettext(
+        "Who runs this site, what may be published on it, how to have something removed, and what it keeps about you."
+      )
+
   # City and dates, each behind the arbiter's own tick, appended to a
   # sentence that is already complete without them. Empty is the ordinary
   # answer for a club event and for any tournament whose arbiter said no.

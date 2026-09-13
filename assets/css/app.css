@@ -1839,6 +1839,61 @@ a.xt-opp:hover {
   margin: 1.5rem 0;
 }
 
+/* ---------------------------------------------------------------------------
+   Terms and privacy
+
+   `OpenResultsWeb.TermsController`. Prose a reader should get through in two
+   minutes, so a measure and a little air, in the tokens the contrast test
+   already checks: ink on the ground, links in the accent. The link to it
+   under the two forms is secondary text, like a field's hint.
+   --------------------------------------------------------------------------- */
+
+.terms-body section {
+  max-width: 52rem;
+}
+
+.terms-body h2 {
+  margin: 2rem 0 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+}
+
+.terms-body section:first-child h2 {
+  margin-top: 1.5rem;
+  padding-top: 0;
+  border-top: none;
+}
+
+.terms-body h3 {
+  margin: 1.25rem 0 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.terms-body p,
+.terms-body ul {
+  margin: 0 0 0.75rem;
+  line-height: 1.55;
+}
+
+.terms-body ul {
+  padding-left: 1.25rem;
+}
+
+.terms-body li {
+  margin: 0.3rem 0;
+}
+
+.form-terms {
+  margin: 1.25rem 0 0;
+  color: var(--quiet);
+  font-size: 0.8125rem;
+}
+
+.site-foot .terms-link {
+  color: var(--quiet);
+}
+
 .cl-tag {
   display: inline-block;
   font-size: 0.625rem;

@@ -145,6 +145,34 @@ defmodule OpenResultsWeb.AdminSettingsTest do
       assert length(Moderation.list_actions(%{limit: 10_000})) == before
     end
 
+    test "the contact email: checked as an email address, confirmed, saved, logged and reset" do
+      conn = admin_get("/admin/settings/contact_email?" <> URI.encode_query(%{"value" => "nope"}))
+      assert html_response(conn, 422) =~ "one email address"
+      assert ServerSettings.get(:contact_email) == nil
+
+      conn =
+        check_then_post("/admin/settings/contact_email", %{"value" => "takedown@example.org"}, %{
+          "value" => "takedown@example.org"
+        })
+
+      assert redirected_to(conn) == "/admin/settings"
+      assert ServerSettings.get(:contact_email) == "takedown@example.org"
+
+      assert %Action{
+               actor: @admin,
+               action: "put_server_setting",
+               target: "contact_email",
+               details: %{"to" => "takedown@example.org"}
+             } = last_action()
+
+      conn = confirm_and_post("/admin/settings/contact_email/reset")
+      assert redirected_to(conn) == "/admin/settings"
+      assert ServerSettings.get(:contact_email) == nil
+
+      assert %Action{actor: @admin, action: "reset_server_setting", target: "contact_email"} =
+               last_action()
+    end
+
     test "reset to default removes the panel's value" do
       {:ok, _} = Moderation.put_server_setting(:registrations_per_address, "3", %{email: @admin})
 

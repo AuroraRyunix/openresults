@@ -242,6 +242,13 @@
         <a :if={assigns[:report_path]} class="report-link" href={assigns[:report_path]}>
           {gettext("Report this page")}
         </a>
+        <%!-- On every public page, so the terms and the way to have something
+              removed are one click from anywhere. Not on the projector view,
+              where nobody can click and the footer is hidden anyway: left out
+              of the markup rather than only styled away. --%>
+        <a :if={!assigns[:display?]} class="terms-link" href={~p"/terms"}>
+          {gettext("Terms and privacy")}
+        </a>
         <%!-- In the footer of a site with no login, because the person asking
               "did my deploy land" is looking at this from outside. A version
               number could not answer it: this app reported the same 0.1.0 for

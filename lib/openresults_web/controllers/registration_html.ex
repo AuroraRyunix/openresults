@@ -187,6 +187,12 @@ defmodule OpenResultsWeb.RegistrationHTML do
         <button type="submit" id="registration-submit">{gettext("Send to the arbiter")}</button>
         <a href={~p"/t/#{@slug}"} class="cancel">{gettext("Cancel")}</a>
       </div>
+
+      <p class="hint form-terms">
+        <a href={~p"/terms"} id="registration-terms">
+          {gettext("How this site handles what you send: terms and privacy")}
+        </a>
+      </p>
     </.form>
     """
   end

@@ -25,6 +25,7 @@ config :openresults, :ingest_token, nil
 config :openresults, :public_publishing, false
 config :openresults, :operator_name, nil
 config :openresults, :terms_url, nil
+config :openresults, :contact_email, nil
 config :openresults, :registrations_per_address, 10
 config :openresults, :registrations_per_day, 200
 config :openresults, :installation_publishes_per_minute, 30

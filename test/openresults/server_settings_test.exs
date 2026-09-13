@@ -114,6 +114,17 @@ defmodule OpenResults.ServerSettingsTest do
          "https://a b.org/",
          "ftp://example.org"
        ], ["https://example.org/terms"]},
+      {:contact_email,
+       [
+         "operator",
+         "operator@example",
+         "two words@example.org",
+         "a@b@example.org",
+         "<script>@example.org",
+         "op\"erator@example.org",
+         "operator@example.org?subject=x",
+         String.duplicate("x", 250) <> "@example.org"
+       ], ["operator@example.org", "  takedown@zerotwo.cloud  "]},
       {:installation_max_versions, ["0", "-1", "1.5", "abc", ""], ["1", "100"]},
       {:min_free_disk_percent, ["-1", "101", "ten", ""], ["0", "10", "100"]},
       {:registrations_per_address, ["-1", "x", ""], ["0", "10"]},
@@ -217,6 +228,41 @@ defmodule OpenResults.ServerSettingsTest do
       assert %Action{
                action: "reset_server_setting",
                details: %{"from" => 90, "to" => 150, "to_source" => "environment"}
+             } = hd(Moderation.list_actions(%{limit: 1}))
+    end
+  end
+
+  describe "the contact email" do
+    test "is none by default, saves, resets, and each change is logged" do
+      delete_env(:contact_email)
+
+      assert %{value: nil, source: :default, variable: "OPENRESULTS_CONTACT_EMAIL"} =
+               ServerSettings.describe(:contact_email)
+
+      {:ok, described} =
+        Moderation.put_server_setting(:contact_email, " takedown@example.org ", @admin)
+
+      assert %{value: "takedown@example.org", source: :panel} = described
+
+      assert %Action{
+               actor: "settings-admin@example.org",
+               action: "put_server_setting",
+               target_type: "setting",
+               target: "contact_email",
+               details: %{
+                 "from" => nil,
+                 "from_source" => "default",
+                 "to" => "takedown@example.org"
+               }
+             } = hd(Moderation.list_actions(%{limit: 1}))
+
+      {:ok, reset} = Moderation.reset_server_setting(:contact_email, @admin)
+      assert %{value: nil, source: :default} = reset
+
+      assert %Action{
+               action: "reset_server_setting",
+               target: "contact_email",
+               details: %{"from" => "takedown@example.org", "to" => nil, "to_source" => "default"}
              } = hd(Moderation.list_actions(%{limit: 1}))
     end
   end

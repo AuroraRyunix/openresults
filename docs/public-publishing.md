@@ -45,7 +45,8 @@ without a restart:
 
 **Server settings** **(settled in the admin upgrade, 2026-09-13)**, also
 stored in the database and changed from the admin panel without a restart:
-`operator_name`, `terms_url`, `installation_max_versions`,
+`operator_name`, `terms_url`, `contact_email` **(settled in the terms page,
+2026-09-13)**, `installation_max_versions`,
 `min_free_disk_percent`, `registrations_per_address`, `registrations_per_day`,
 `installation_publishes_per_minute`, `installation_max_tournaments`,
 `installation_max_snapshot_bytes` - every row of "Defaults" below except the
@@ -63,7 +64,9 @@ gate and the three admin variables.
   `installation_publishes_per_minute` at least 1;
   `installation_max_snapshot_bytes` 1 to 8,000,000 (the parser's limit);
   `operator_name` one line of at most 100 characters; `terms_url` an
-  `https://` address. Before this upgrade the five registration and
+  `https://` address; `contact_email` one email address of at most 254
+  characters, with none of the characters a `mailto:` link or an HTML
+  attribute would have to escape. Before this upgrade the five registration and
   installation limits were only checked for being numbers; a value now out of
   range stops the boot, like the storage bounds' two.
 - **Cached in ETS**, read with no query on any request path, and refreshed
@@ -161,7 +164,15 @@ receive it.
 ```
 
 - `operator` from `OPENRESULTS_OPERATOR_NAME`, `terms_url` from
-  `OPENRESULTS_TERMS_URL`; both `null` when unset. **(settled in the admin
+  `OPENRESULTS_TERMS_URL`; both `null` when unset.
+  **(settled in the terms page, 2026-09-13)** `terms_url` is no longer `null`
+  when unset: with no value in the panel or the environment it is this
+  server's own terms page, `https://<host>/terms`, built from the endpoint's
+  configured URL (never the request's `Host`). That page is served by
+  OpenResults itself - terms, acceptable use, removal requests and privacy,
+  with the operator's name and, when `contact_email` is set, a contact
+  address - so the consent dialog always has something to link. A
+  `terms_url` that is set still wins. `operator` is still `null` when unset. **(settled in the admin
   upgrade, 2026-09-13)** A value saved in the admin panel wins over the
   variable - see "Server settings" above.
 - `public_registration`: `open` | `closed` | `unavailable`.
@@ -1017,7 +1028,8 @@ the environment - see "Server settings".
 |---|---|---|
 | public publishing exists | off | `OPENRESULTS_PUBLIC_PUBLISHING=enabled` |
 | operator name shown in the consent dialog | none | `OPENRESULTS_OPERATOR_NAME` |
-| terms page | none | `OPENRESULTS_TERMS_URL` |
+| terms page | this server's own `/terms` **(settled in the terms page, 2026-09-13)** | `OPENRESULTS_TERMS_URL` |
+| contact email on the terms page **(settled in the terms page, 2026-09-13)** | none | `OPENRESULTS_CONTACT_EMAIL` |
 | registrations per address per 24 h | 10 | `OPENRESULTS_REGISTRATIONS_PER_ADDRESS` |
 | registrations per 24 h | 200 | `OPENRESULTS_REGISTRATIONS_PER_DAY` |
 | publishes per installation per minute | 30 | `OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE` |
@@ -1034,7 +1046,11 @@ the environment - see "Server settings".
 1. The Cloudflare Access application and the Keycloak group exist, and
    `/admin` loads for an admin and refuses everyone else.
 2. A terms and acceptable-use page with a takedown contact exists and
-   `OPENRESULTS_TERMS_URL` points at it.
+   `OPENRESULTS_TERMS_URL` points at it. **(settled in the terms page,
+   2026-09-13)** OpenResults serves one at `/terms` and reports it when no
+   `terms_url` is set; its takedown route is the report form. Set
+   `contact_email` if a direct address should be shown too, and read the page
+   once as the operator before opening registration.
 3. **(settled in the storage bounds, 2026-09-13)** The dashboard's storage
    section shows the free space on the database's volume as a measurement,
    not "not measured": a disk the server cannot measure refuses nothing, so

@@ -167,7 +167,13 @@ defmodule OpenResultsWeb.Admin.SettingsHTML do
       <div class={["field", @error && "field-wrong"]}>
         <label for="setting-value">New value</label>
         <input
-          type={if @spec.type == :integer, do: "number", else: "text"}
+          type={
+            case @spec.type do
+              :integer -> "number"
+              :email -> "email"
+              _text -> "text"
+            end
+          }
           id="setting-value"
           name="value"
           value={@value || default_input(@setting)}
@@ -315,6 +321,7 @@ defmodule OpenResultsWeb.Admin.SettingsHTML do
 
   defp hint(%{type: :https_url, help: help}), do: "A full https:// address. #{help}"
   defp hint(%{type: :text, max: max, help: help}), do: "At most #{max} characters. #{help}"
+  defp hint(%{type: :email, help: help}), do: "One email address. #{help}"
 
   # `2026-09-13T22:30:00Z` back into what a datetime-local input shows.
   defp local_input(nil), do: nil

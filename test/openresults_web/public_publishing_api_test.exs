@@ -61,7 +61,7 @@ defmodule OpenResultsWeb.PublicPublishingApiTest do
       assert get_resp_header(conn, "etag") == []
     end
 
-    test "operator and terms are null when unset, and the states follow the switches" do
+    test "operator is null and terms is this server's own page when unset, and the states follow the switches" do
       put_env(:operator_name, nil)
       put_env(:terms_url, "  ")
 
@@ -70,10 +70,13 @@ defmodule OpenResultsWeb.PublicPublishingApiTest do
 
       assert %{
                "operator" => nil,
-               "terms_url" => nil,
+               "terms_url" => terms_url,
                "public_registration" => "open",
                "public_publishing" => "paused"
              } = json_response(get(build_conn(), "/api/server"), 200)
+
+      # (settled in the terms page, 2026-09-13)
+      assert terms_url == OpenResultsWeb.Endpoint.url() <> "/terms"
     end
   end
 

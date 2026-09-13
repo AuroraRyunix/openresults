@@ -175,8 +175,11 @@ on"):
 ```ini
 OPENRESULTS_PUBLIC_PUBLISHING=enabled
 OPENRESULTS_OPERATOR_NAME=ZeroTwo
-# optional, linked from OpenPairings' consent dialog:
-OPENRESULTS_TERMS_URL=https://openresults.zerotwo.cloud/terms
+# optional: shown on /terms as a direct way to reach the operator
+OPENRESULTS_CONTACT_EMAIL=takedown@example.org
+# optional: only to link a terms page OTHER than this server's own /terms,
+# which GET /api/server reports when this is unset
+# OPENRESULTS_TERMS_URL=https://example.org/terms
 ```
 
 The deploy warns, loudly, about the two half-states: only some of the three
@@ -336,8 +339,8 @@ written to the action log with your address.
   can be many people.
 - **Action log.** Everything above, plus break-glass uses of the operator
   token and retention runs, filterable by who, what and target.
-- **Settings.** The operator name, the terms link and the public-publishing
-  limits, each showing the value in force and whether it comes from the
+- **Settings.** The operator name, the terms link, the contact email and the
+  public-publishing limits, each showing the value in force and whether it comes from the
   panel, the environment (`.env`) or the built-in default. **Change** checks
   the value against the same rules the server applies to `.env` at boot and
   shows a confirmation; a saved value wins over `.env` from the next request,
@@ -346,6 +349,18 @@ written to the action log with your address.
   changes - the public-publishing gate, the three admin variables, the ingest
   token, backup settings, database and host - listed by name with whether each
   is set; secret values are never shown. Change those in `.env` and deploy.
+- **The terms page** (`/terms`, public, in English, Dutch and French). Terms,
+  acceptable use, how to have something removed, and privacy, with the
+  retention periods the server is actually running with. It shows the
+  operator name, and the **contact email** when one is set; with none, it
+  offers only the report form, and never an invented address. With no
+  **terms link** set, `GET /api/server` reports this server's own
+  `https://<host>/terms`, so OpenPairings' consent dialog links it with no
+  configuration; set the terms link only to point somewhere else. The page is
+  rendered on every request, so a change here shows on the next load. The
+  address is wrapped in Cloudflare's `email_off` markers, so it stays a plain
+  `mailto:` link. Its "last updated" date is `@updated` in
+  `OpenResultsWeb.TermsController`: change it with the wording.
 - **Public notice** (on the settings page). A short message on every public
   page, such as "Maintenance tonight 22:00-22:30": English required, Dutch and
   French optional (visitors whose language has no text get the English),

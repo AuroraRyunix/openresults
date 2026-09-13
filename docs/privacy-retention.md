@@ -54,3 +54,12 @@ else stops the app at boot, the same as `BACKUP_RETENTION`.
 | `OPENRESULTS_REPORT_CONTACT_RETENTION_DAYS` | 90 |
 | `OPENRESULTS_BLOCK_ADDRESS_RETENTION_DAYS` | 30 |
 | `BACKUP_RETENTION` | 30 |
+
+## Where the public reads this
+
+The public page `/terms` (`OpenResultsWeb.TermsController`) states these
+periods to players and publishers, read from the same configuration at
+request time - registrations, report contacts, the fixed 30 days for
+addresses, blocked ranges and `BACKUP_RETENTION` - so changing a variable
+changes the page. A change to what is kept, or why, is a change to that
+page's wording too.

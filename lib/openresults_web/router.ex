@@ -123,6 +123,15 @@ defmodule OpenResultsWeb.Router do
     # change between two requests against the same running build.
     get "/changelog", ChangelogController, :show
 
+    # Terms, acceptable use and privacy - what OpenPairings' consent dialog
+    # links when no `terms_url` is set, and where a player who wants their
+    # name removed is sent. Here and not behind `Revalidate` for the
+    # changelog's reason, and one of its own: it shows server settings (the
+    # operator's name and contact address), so it is rendered on every
+    # request and a change in the panel is on the next one. See
+    # `OpenResultsWeb.TermsController`.
+    get "/terms", TermsController, :show
+
     # Entry. Under the tournament, beside `round` and `player`, because an
     # entry is for one event and the slug is the only handle there is - and
     # because a tournament that has not published here then 404s from the same

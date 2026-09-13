@@ -111,7 +111,7 @@ if public_publishing = System.get_env("OPENRESULTS_PUBLIC_PUBLISHING") do
   config :openresults, :public_publishing, public_publishing == "enabled"
 end
 
-# The operator's name, the terms link and the limits below can also be saved
+# The operator's name, the terms link, the contact email and the limits below can also be saved
 # in the admin panel, where a saved value wins over these - see
 # `OpenResults.ServerSettings`. The panel checks its input with the SAME rules
 # as the checks here, and `test/openresults/server_settings_test.exs` holds the
@@ -144,6 +144,27 @@ if terms_url = System.get_env("OPENRESULTS_TERMS_URL") do
   end
 
   config :openresults, :terms_url, terms_url
+end
+
+# The address the public /terms page offers for reaching the operator. The
+# panel's rule, `OpenResults.ServerSettings.email_pattern/0`, repeated here
+# because this file runs before the application's modules are loaded.
+if contact_email = System.get_env("OPENRESULTS_CONTACT_EMAIL") do
+  email = String.trim(contact_email)
+
+  valid? =
+    email == "" or
+      (String.length(email) <= 254 and
+         Regex.match?(
+           ~r/\A[^\s\x00-\x1F\x7F@<>"'(),;:\x5C\[\]?#&%]+@[^\s\x00-\x1F\x7F@<>"'(),;:\x5C\[\]?#&%]+\.[^\s\x00-\x1F\x7F@<>"'(),;:\x5C\[\]?#&%]+\z/u,
+           email
+         ))
+
+  unless valid? do
+    raise "OPENRESULTS_CONTACT_EMAIL is one email address, got: #{inspect(contact_email)}"
+  end
+
+  config :openresults, :contact_email, contact_email
 end
 
 # {variable, key, least, most or nil}

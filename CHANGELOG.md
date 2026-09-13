@@ -25,6 +25,27 @@ Each entry is tagged so a version can be skimmed:
 | [Security] | a vulnerability closed, or judged not to apply |
 | [Verified] | checked against a reference, no code change |
 
+## [Unreleased]
+
+- [Feature] **A terms and privacy page, at `/terms`.** Who runs the site, who
+  may publish what, what is not allowed, when a tournament shows where, how the
+  operator moderates, how to have a tournament or your name removed or
+  corrected, what the site keeps about people and for how long (the periods the
+  server is really running with, backups included), and that results are the
+  arbiter's. In English, Dutch and French, linked from the footer of every
+  public page (not the projector view) and under the send button of the entry
+  and report forms.
+- [Feature] **A contact email setting.** Optional, blank by default, set on the
+  admin Settings page or with `OPENRESULTS_CONTACT_EMAIL`, checked as one email
+  address and written to the action log like the other settings. When set, the
+  terms page shows it as a direct way to reach the operator, as a plain
+  `mailto:` link that Cloudflare's email obfuscation leaves alone; when not,
+  the page offers only the report form.
+- [Change] **`GET /api/server` reports this server's own terms page when no
+  terms link is set**, as `https://<host>/terms`, so OpenPairings' consent
+  dialog links a real page with no configuration. A terms link set in the
+  panel or the environment still wins.
+
 ## [0.14.0] - 2026-09-13
 
 - [Change] **A pending tournament is public straight away, except on player

@@ -87,7 +87,7 @@ msgstr "Een gedeelde verbinding telt als één: een club, een school of de wifi 
 msgid "Arbiter: %{name}"
 msgstr "Arbiter: %{name}"
 
-#: lib/openresults_web/controllers/registration_html.ex:340
+#: lib/openresults_web/controllers/registration_html.ex:346
 #, elixir-autogen, elixir-format
 msgid "Asking is not the same as getting. What a missed round is worth - a half point, nothing at all - is the arbiter's decision and their tournament's rules, not this form's."
 msgstr "Vragen is niet hetzelfde als krijgen. Wat een gemiste ronde opbrengt - een half punt, helemaal niets - beslist de arbiter volgens het reglement van het toernooi, niet dit formulier."
@@ -163,7 +163,7 @@ msgstr "Cat"
 msgid "Category %{category}"
 msgstr "Categorie %{category}"
 
-#: lib/openresults_web/components/layouts/root.html.heex:284
+#: lib/openresults_web/components/layouts/root.html.heex:294
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Sluiten"
@@ -295,8 +295,8 @@ msgstr "Taal"
 msgid "Live chess results published by arbiters: standings, round pairings and a card for every player."
 msgstr "Live schaakuitslagen, gepubliceerd door arbiters: de stand, de paringen per ronde en een kaart voor elke speler."
 
-#: lib/openresults_web/components/layouts/root.html.heex:275
-#: lib/openresults_web/components/layouts/root.html.heex:287
+#: lib/openresults_web/components/layouts/root.html.heex:285
+#: lib/openresults_web/components/layouts/root.html.heex:297
 #, elixir-autogen, elixir-format
 msgid "Loading…"
 msgstr "Laden…"
@@ -360,7 +360,7 @@ msgstr "Er heeft geen toernooi gepubliceerd onder %{slug}, dus er valt niets in 
 msgid "No tournament has published under %{slug}."
 msgstr "Er heeft geen toernooi gepubliceerd onder %{slug}."
 
-#: lib/openresults_web/controllers/registration_html.ex:231
+#: lib/openresults_web/controllers/registration_html.ex:237
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Geen"
@@ -445,7 +445,7 @@ msgstr "Speler"
 msgid "Player %{number}"
 msgstr "Speler %{number}"
 
-#: lib/openresults_web/components/layouts/root.html.heex:280
+#: lib/openresults_web/components/layouts/root.html.heex:290
 #, elixir-autogen, elixir-format
 msgid "Player card"
 msgstr "Spelerskaart"
@@ -475,7 +475,7 @@ msgstr "Beamerweergave - grote borden, wisselt automatisch"
 msgid "Pts"
 msgstr "Ptn"
 
-#: lib/openresults_web/components/layouts/root.html.heex:221
+#: lib/openresults_web/components/layouts/root.html.heex:224
 #, elixir-autogen, elixir-format
 msgid "Published by the arbiter. Results are theirs, not this site's."
 msgstr "Gepubliceerd door de arbiter. De uitslagen zijn van hen, niet van deze site."
@@ -533,7 +533,7 @@ msgstr "Paringen van de ronde, beamerweergave"
 msgid "Rounds"
 msgstr "Rondes"
 
-#: lib/openresults_web/controllers/registration_html.ex:324
+#: lib/openresults_web/controllers/registration_html.ex:330
 #, elixir-autogen, elixir-format
 msgid "Rounds you already know you cannot play"
 msgstr "Rondes waarvan u nu al weet dat u niet kunt spelen"
@@ -854,7 +854,7 @@ msgstr "niet meegeteld"
 msgid "not published"
 msgstr "niet gepubliceerd"
 
-#: lib/openresults_web/components/layouts/root.html.heex:232
+#: lib/openresults_web/components/layouts/root.html.heex:235
 #, elixir-autogen, elixir-format
 msgid "not updating - connection lost"
 msgstr "wordt niet bijgewerkt - verbinding verbroken"
@@ -877,7 +877,7 @@ msgstr "van %{total}, met %{points}"
 msgid "pairing-allocated bye"
 msgstr "bye toegekend door de paring"
 
-#: lib/openresults_web/controllers/registration_html.ex:240
+#: lib/openresults_web/controllers/registration_html.ex:246
 #: lib/openresults_web/controllers/report_html.ex:69
 #, elixir-autogen, elixir-format
 msgid "required"
@@ -914,7 +914,7 @@ msgstr "niet-gespeelde ronde"
 msgid "unrated"
 msgstr "niet voor rating"
 
-#: lib/openresults_web/components/layouts/root.html.heex:231
+#: lib/openresults_web/components/layouts/root.html.heex:234
 #, elixir-autogen, elixir-format
 msgid "updated just now"
 msgstr "zojuist bijgewerkt"
@@ -1128,7 +1128,7 @@ msgstr "voor ronde 1"
 msgid "Results appear here once the standings after round 1 are published."
 msgstr "De resultaten verschijnen hier zodra de stand na ronde 1 is gepubliceerd."
 
-#: lib/openresults_web/components/layouts/root.html.heex:257
+#: lib/openresults_web/components/layouts/root.html.heex:267
 #: lib/openresults_web/controllers/changelog_controller.ex:29
 #: lib/openresults_web/controllers/changelog_html/show.html.heex:2
 #, elixir-autogen, elixir-format
@@ -1180,7 +1180,7 @@ msgstr "Melding verstuurd"
 msgid "Report sent - %{tournament}"
 msgstr "Melding verstuurd - %{tournament}"
 
-#: lib/openresults_web/components/layouts/root.html.heex:240
+#: lib/openresults_web/components/layouts/root.html.heex:243
 #: lib/openresults_web/controllers/report_html/new.html.heex:4
 #, elixir-autogen, elixir-format
 msgid "Report this page"
@@ -1348,3 +1348,276 @@ msgstr "Tiebreaks"
 #, elixir-autogen, elixir-format
 msgid "Notice"
 msgstr "Mededeling"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:143
+#, elixir-autogen, elixir-format
+msgid "A blocked address range: kept in the operator's log until %{count} day after the block ends."
+msgid_plural "A blocked address range: kept in the operator's log until %{count} days after the block ends."
+msgstr[0] "Een geblokkeerd adresbereik: bewaard in het logboek van de beheerder tot %{count} dag na het einde van de blokkade."
+msgstr[1] "Een geblokkeerd adresbereik: bewaard in het logboek van de beheerder tot %{count} dagen na het einde van de blokkade."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:28
+#, elixir-autogen, elixir-format
+msgid "A tournament page carries its pairings, results and standings, the names of its arbiters, and the player details chess results normally show: name, FIDE ID, rating, title, federation, club and category."
+msgstr "Een toernooipagina toont de paringen, uitslagen en stand, de namen van de arbiters en de spelersgegevens die schaakuitslagen gewoonlijk vermelden: naam, FIDE-ID, rating, titel, federatie, club en categorie."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:51
+#, elixir-autogen, elixir-format
+msgid "A tournament's link works from its first publish, it appears on this site's front page straight away, and search engines may find it."
+msgstr "De link van een toernooi werkt vanaf de eerste publicatie, het toernooi staat meteen op de voorpagina van deze site en zoekmachines kunnen het vinden."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:83
+#, elixir-autogen, elixir-format
+msgid "A wrong result is best corrected by the arbiter who published it: the page changes when they publish again. The operator handles removal."
+msgstr "Een verkeerde uitslag laat u het best verbeteren door de arbiter die hem publiceerde: de pagina verandert zodra die opnieuw publiceert. Verwijderen doet de beheerder."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:39
+#, elixir-autogen, elixir-format
+msgid "Anything that is not a chess tournament."
+msgstr "Alles wat geen schaaktoernooi is."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:23
+#, elixir-autogen, elixir-format
+msgid "Arbiters and organisers may publish the tournaments they run, from OpenPairings. Only publish an event you have the right to publish."
+msgstr "Arbiters en organisatoren mogen de toernooien die zij leiden publiceren, vanuit OpenPairings. Publiceer alleen een toernooi dat u mag publiceren."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:158
+#, elixir-autogen, elixir-format
+msgid "Backups: anything deleted from the site is gone from every backup within %{count} day of being deleted."
+msgid_plural "Backups: anything deleted from the site is gone from every backup within %{count} days of being deleted."
+msgstr[0] "Back-ups: wat van de site is verwijderd, is binnen %{count} dag na het verwijderen uit elke back-up verdwenen."
+msgstr[1] "Back-ups: wat van de site is verwijderd, is binnen %{count} dagen na het verwijderen uit elke back-up verdwenen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:203
+#, elixir-autogen, elixir-format
+msgid "Changes to these terms"
+msgstr "Wijzigingen in deze voorwaarden"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:96
+#, elixir-autogen, elixir-format
+msgid "Entries sent through a tournament's entry form: the name, the email address and the other details the form asks for. They are kept for the organiser only and never shown on a page."
+msgstr "Inschrijvingen via het inschrijfformulier van een toernooi: de naam, het e-mailadres en de andere gegevens die het formulier vraagt. Ze worden alleen voor de organisator bewaard en nooit op een pagina getoond."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:122
+#, elixir-autogen, elixir-format
+msgid "Entries: deleted %{count} day after the tournament ends (or after its last publish, if it has no end date), never before it starts, and at once if the tournament is deleted."
+msgid_plural "Entries: deleted %{count} days after the tournament ends (or after its last publish, if it has no end date), never before it starts, and at once if the tournament is deleted."
+msgstr[0] "Inschrijvingen: verwijderd %{count} dag na het einde van het toernooi (of na de laatste publicatie, als het geen einddatum heeft), nooit voordat het begint, en meteen als het toernooi wordt verwijderd."
+msgstr[1] "Inschrijvingen: verwijderd %{count} dagen na het einde van het toernooi (of na de laatste publicatie, als het geen einddatum heeft), nooit voordat het begint, en meteen als het toernooi wordt verwijderd."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:106
+#, elixir-autogen, elixir-format
+msgid "For each copy of OpenPairings that publishes here, an installation record: the app's version, when it registered and was last seen, and the internet addresses it did that from."
+msgstr "Voor elke installatie van OpenPairings die hier publiceert, installatiegegevens: de versie van de app, wanneer ze zich registreerde en voor het laatst gezien werd, en de internetadressen van waaruit dat gebeurde."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:72
+#, elixir-autogen, elixir-format
+msgid "Having something removed or corrected"
+msgstr "Iets laten verwijderen of verbeteren"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:119
+#, elixir-autogen, elixir-format
+msgid "How long"
+msgstr "Hoe lang"
+
+#: lib/openresults_web/controllers/registration_html.ex:193
+#: lib/openresults_web/controllers/report_html.ex:134
+#, elixir-autogen, elixir-format
+msgid "How this site handles what you send: terms and privacy"
+msgstr "Hoe deze site omgaat met wat u verstuurt: voorwaarden en privacy"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:49
+#, elixir-autogen, elixir-format
+msgid "How visibility works"
+msgstr "Wanneer een toernooi zichtbaar is"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:37
+#, elixir-autogen, elixir-format
+msgid "Invented or falsified results."
+msgstr "Verzonnen of vervalste uitslagen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:14
+#, elixir-autogen, elixir-format
+msgid "It is where arbiters publish chess tournaments - pairings, results and standings - for players and spectators to follow."
+msgstr "Hier publiceren arbiters schaaktoernooien - paringen, uitslagen en stand - zodat spelers en toeschouwers ze kunnen volgen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:4
+#, elixir-autogen, elixir-format
+msgid "Last updated %{date}."
+msgstr "Laatst bijgewerkt op %{date}."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:63
+#, elixir-autogen, elixir-format
+msgid "Moderation"
+msgstr "Moderatie"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:193
+#, elixir-autogen, elixir-format
+msgid "No guarantee"
+msgstr "Geen garantie"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:35
+#, elixir-autogen, elixir-format
+msgid "Not allowed"
+msgstr "Niet toegestaan"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:38
+#, elixir-autogen, elixir-format
+msgid "Passing yourself off as a real event or organiser."
+msgstr "Zich uitgeven voor een bestaand toernooi of een bestaande organisator."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:41
+#, elixir-autogen, elixir-format
+msgid "Personal details beyond those above, such as phone numbers, home addresses or email addresses typed into a name or any other field."
+msgstr "Andere persoonsgegevens dan die hierboven, zoals telefoonnummers, woonadressen of e-mailadressen die in een naam of een ander veld zijn getypt."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:56
+#, elixir-autogen, elixir-format
+msgid "Player history pages, which gather one player's results across tournaments by FIDE ID, include it only once the operator has approved it, or at once if the operator trusts its publisher. That way invented results cannot land on real players' histories."
+msgstr "De geschiedenispagina's van spelers, die de uitslagen van één speler over toernooien heen op FIDE-ID bijeenbrengen, tonen het pas als de beheerder het heeft goedgekeurd, of meteen als de beheerder degene vertrouwt die het publiceert. Zo kunnen verzonnen uitslagen niet in de geschiedenis van echte spelers belanden."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:90
+#, elixir-autogen, elixir-format
+msgid "Privacy"
+msgstr "Privacy"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:155
+#, elixir-autogen, elixir-format
+msgid "Published tournaments: until the arbiter or the operator deletes them."
+msgstr "Gepubliceerde toernooien: tot de arbiter of de beheerder ze verwijdert."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:101
+#, elixir-autogen, elixir-format
+msgid "Reports: what was written, the email address if one was given, and the internet address the report came from."
+msgstr "Meldingen: wat er geschreven is, het e-mailadres als dat werd opgegeven, en het internetadres waar de melding vandaan kwam."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:195
+#, elixir-autogen, elixir-format
+msgid "Results are published by arbiters and are not checked by the operator. The arbiter's own records are what count."
+msgstr "Uitslagen worden gepubliceerd door arbiters en niet gecontroleerd door de beheerder. Wat telt, zijn de eigen gegevens van de arbiter."
+
+#: lib/openresults_web/components/layouts/root.html.heex:250
+#: lib/openresults_web/controllers/terms_controller.ex:50
+#: lib/openresults_web/controllers/terms_html/show.html.heex:2
+#, elixir-autogen, elixir-format
+msgid "Terms and privacy"
+msgstr "Voorwaarden en privacy"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:129
+#, elixir-autogen, elixir-format
+msgid "The email address on a report: deleted %{count} day after the report is resolved. An open report keeps it."
+msgid_plural "The email address on a report: deleted %{count} days after the report is resolved. An open report keeps it."
+msgstr[0] "Het e-mailadres bij een melding: verwijderd %{count} dag nadat de melding is afgehandeld. Een openstaande melding houdt het."
+msgstr[1] "Het e-mailadres bij een melding: verwijderd %{count} dagen nadat de melding is afgehandeld. Een openstaande melding houdt het."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:136
+#, elixir-autogen, elixir-format
+msgid "The internet addresses of reports and installations: deleted after %{count} day."
+msgid_plural "The internet addresses of reports and installations: deleted after %{count} days."
+msgstr[0] "De internetadressen van meldingen en installaties: verwijderd na %{count} dag."
+msgstr[1] "De internetadressen van meldingen en installaties: verwijderd na %{count} dagen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:65
+#, elixir-autogen, elixir-format
+msgid "The operator may hide or delete tournaments, suspend or revoke a publisher's access, and block internet addresses from publishing, without notice, when these terms are broken or a report is upheld."
+msgstr "De beheerder mag zonder voorafgaande melding toernooien verbergen of verwijderen, de toegang van wie publiceert opschorten of intrekken en internetadressen blokkeren voor publicatie, wanneer deze voorwaarden worden geschonden of een melding gegrond blijkt."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:168
+#, elixir-autogen, elixir-format
+msgid "The organiser or arbiter who publishes a tournament decides what is published about their event. %{operator} hosts it and handles reports and removal."
+msgstr "De organisator of arbiter die een toernooi publiceert, beslist wat er over dat toernooi wordt gepubliceerd. %{operator} host het en behandelt meldingen en verwijderingen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:174
+#, elixir-autogen, elixir-format
+msgid "The organiser or arbiter who publishes a tournament decides what is published about their event. The operator hosts it and handles reports and removal."
+msgstr "De organisator of arbiter die een toernooi publiceert, beslist wat er over dat toernooi wordt gepubliceerd. De beheerder host het en behandelt meldingen en verwijderingen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:94
+#, elixir-autogen, elixir-format
+msgid "The tournaments arbiters publish, including earlier versions of each."
+msgstr "De toernooien die arbiters publiceren, met eerdere versies ervan."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:114
+#, elixir-autogen, elixir-format
+msgid "There are no accounts and no tracking. The site's statistics count requests in memory and store no IP addresses and no user agents. The only cookie it sets remembers a language you picked."
+msgstr "Er zijn geen accounts en er wordt niemand gevolgd. De statistieken van de site tellen verzoeken in het geheugen en bewaren geen IP-adressen en geen user-agents. De enige cookie die de site plaatst, onthoudt een taal die u hebt gekozen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:205
+#, elixir-autogen, elixir-format
+msgid "These terms may change. The date at the top of this page says when they last did."
+msgstr "Deze voorwaarden kunnen veranderen. De datum bovenaan deze pagina zegt wanneer dat voor het laatst gebeurde."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:199
+#, elixir-autogen, elixir-format
+msgid "This site is provided as it is, and it may change or stop at any time."
+msgstr "Deze site wordt aangeboden zoals hij is, en kan op elk moment veranderen of stoppen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:11
+#, elixir-autogen, elixir-format
+msgid "This site is run by %{operator}."
+msgstr "Deze site wordt beheerd door %{operator}."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:12
+#, elixir-autogen, elixir-format
+msgid "This site is run by the operator of this server."
+msgstr "Deze site wordt beheerd door de beheerder van deze server."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:181
+#, elixir-autogen, elixir-format
+msgid "To ask what this site holds about you, or to have it deleted, use “Report this page” on the tournament concerned, or write to the operator at the address above."
+msgstr "Wilt u weten wat deze site over u bewaart, of het laten verwijderen, gebruik dan ‘Deze pagina melden’ op het betrokken toernooi, of schrijf de beheerder op het adres hierboven."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:186
+#, elixir-autogen, elixir-format
+msgid "To ask what this site holds about you, or to have it deleted, use “Report this page” on the tournament concerned."
+msgstr "Wilt u weten wat deze site over u bewaart, of het laten verwijderen, gebruik dan ‘Deze pagina melden’ op het betrokken toernooi."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:74
+#, elixir-autogen, elixir-format
+msgid "To have a tournament, or your name in it, removed or corrected, open the tournament on this site and use “Report this page”, at the bottom of every tournament page. The report goes to the operator, not to the arbiter, and nothing changes until somebody has read it."
+msgstr "Wilt u een toernooi, of uw naam erin, laten verwijderen of verbeteren, open dan het toernooi op deze site en gebruik ‘Deze pagina melden’, onderaan elke toernooipagina. De melding gaat naar de beheerder, niet naar de arbiter, en er verandert niets tot iemand ze heeft gelezen."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:150
+#, elixir-autogen, elixir-format
+msgid "What a report says is kept, even after its tournament is deleted: it is the record of why the operator acted."
+msgstr "Wat er in een melding staat, blijft bewaard, ook nadat het toernooi is verwijderd: het legt vast waarom de beheerder ingreep."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:112
+#, elixir-autogen, elixir-format
+msgid "What is not stored"
+msgstr "Wat er niet wordt bewaard"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:92
+#, elixir-autogen, elixir-format
+msgid "What is stored"
+msgstr "Wat er wordt bewaard"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:166
+#, elixir-autogen, elixir-format
+msgid "Who is responsible"
+msgstr "Wie verantwoordelijk is"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:21
+#, elixir-autogen, elixir-format
+msgid "Who may publish, and what"
+msgstr "Wie mag publiceren, en wat"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:10
+#, elixir-autogen, elixir-format
+msgid "Who runs this site"
+msgstr "Wie deze site beheert"
+
+#: lib/openresults_web/meta.ex:182
+#, elixir-autogen, elixir-format
+msgid "Who runs this site, what may be published on it, how to have something removed, and what it keeps about you."
+msgstr "Wie deze site beheert, wat er gepubliceerd mag worden, hoe u iets laat verwijderen en wat de site over u bewaart."
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:79
+#, elixir-autogen, elixir-format
+msgid "You can also write to the operator directly:"
+msgstr "U kunt de beheerder ook rechtstreeks schrijven:"
+
+#: lib/openresults_web/controllers/terms_html/show.html.heex:179
+#, elixir-autogen, elixir-format
+msgid "Your rights"
+msgstr "Uw rechten"

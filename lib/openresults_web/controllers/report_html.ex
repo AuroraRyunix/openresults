@@ -128,6 +128,12 @@ defmodule OpenResultsWeb.ReportHTML do
         <button type="submit" id="report-submit">{gettext("Send the report")}</button>
         <a href={~p"/t/#{@slug}"} class="cancel">{gettext("Cancel")}</a>
       </div>
+
+      <p class="hint form-terms">
+        <a href={~p"/terms"} id="report-terms">
+          {gettext("How this site handles what you send: terms and privacy")}
+        </a>
+      </p>
     </.form>
     """
   end

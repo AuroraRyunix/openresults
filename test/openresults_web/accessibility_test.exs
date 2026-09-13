@@ -105,6 +105,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
       "/changelog" ->
         ["/changelog"]
 
+      "/terms" ->
+        ["/terms", "/terms?lang=nl", "/terms?lang=fr"]
+
       "/t/:slug/register" ->
         [
           "/t/#{world.swiss}/register",

@@ -574,7 +574,8 @@ from the admin panel.
 | --- | --- | --- |
 | `OPENRESULTS_PUBLIC_PUBLISHING` | off | `enabled` turns the feature on; nothing else does |
 | `OPENRESULTS_OPERATOR_NAME` | none | the name OpenPairings' consent dialog asks the arbiter to trust; `null` in `GET /api/server` when unset |
-| `OPENRESULTS_TERMS_URL` | none | the terms and acceptable-use page the dialog links to |
+| `OPENRESULTS_TERMS_URL` | this server's own `/terms` | the terms and acceptable-use page the dialog links to; unset, `GET /api/server` reports `https://<host>/terms`, the page this app serves |
+| `OPENRESULTS_CONTACT_EMAIL` | none | an address shown on `/terms` for reaching the operator directly; unset, that page offers only the report form. One email address, or the app does not start |
 | `OPENRESULTS_REGISTRATIONS_PER_ADDRESS` | 10 | installations one client address may register per 24 h (an IPv6 client counts by its /64) |
 | `OPENRESULTS_REGISTRATIONS_PER_DAY` | 200 | installations the whole server registers per 24 h |
 | `OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE` | 30 | mints plus publishes per installation per minute |
