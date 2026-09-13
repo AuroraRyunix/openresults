@@ -29,6 +29,20 @@ defmodule OpenResultsWeb.DisplayRulesTest do
     put_in(SnapshotPayloads.swiss(), ["tournament", "display"], display)
   end
 
+  # "The page still works" needs more than the word "Standings" appearing
+  # somewhere in the response - that string is also in the masthead's own
+  # nav link, and in the withheld-standings 404 page's own explanation. Only
+  # a correctly rendered table has one row per player.
+  defp standings_row_count(html) do
+    # Direct children only - each tiebreak cell can carry its own nested
+    # `table.working-table` breakdown (see `tiebreak_cell/1`), so a bare
+    # descendant selector counts those rows too.
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("table.standings > tbody > tr")
+    |> Enum.count()
+  end
+
   describe "withholding the standings" do
     # The tick's own hint in OpenPairings says what it is for: "some arbiters
     # withhold standings until the last round is in". That is a decision about
@@ -177,8 +191,10 @@ defmodule OpenResultsWeb.DisplayRulesTest do
       refute card =~ "2033"
 
       # The tournament is still perfectly readable - this hides a column, not
-      # the event.
-      assert standings =~ "Standings"
+      # the event. A bare `=~ "Standings"` is satisfied by the masthead's own
+      # nav link even on a page that rendered no rows at all - check the
+      # actual table instead.
+      assert standings_row_count(standings) == 10
       assert round =~ "Round 1"
     end
   end
@@ -189,9 +205,22 @@ defmodule OpenResultsWeb.DisplayRulesTest do
       html = conn |> get(~p"/t/#{slug}/player/1") |> html_response(200)
 
       refute html =~ "SF Berlin"
-      # Still there: unticking one box must not quietly clear the row.
-      assert html =~ "GER"
-      assert html =~ "GM"
+
+      # Still there: unticking one box must not quietly clear the row. Bare
+      # `=~ "GER"` / `=~ "GM"` are satisfiable by unrelated text anywhere on
+      # the page - scope each to the element that actually carries it: the
+      # title beside the player's name, and the federation in the details
+      # line (the same paragraph that would have carried the now-hidden
+      # club).
+      doc = LazyHTML.from_document(html)
+
+      [title] = doc |> LazyHTML.query("#player-summary h2 span.title") |> Enum.to_list()
+      assert LazyHTML.text(title) =~ "GM"
+
+      [details] = doc |> LazyHTML.query("#player-summary p.details") |> Enum.to_list()
+      details_text = LazyHTML.text(details)
+      assert details_text =~ "GER"
+      refute details_text =~ "SF Berlin"
     end
 
     test "federations go from the masthead as well as the card", %{conn: conn} do
@@ -228,8 +257,9 @@ defmodule OpenResultsWeb.DisplayRulesTest do
       refute hidden_html =~ "Buchholz"
 
       # The arbiter is hiding the arithmetic, not the result. Same order,
-      # same points, same names.
-      assert hidden_html =~ "Standings"
+      # same points, same names - and, unlike a bare `=~ "Standings"`, a
+      # full table of rows to prove it.
+      assert standings_row_count(hidden_html) == 10
 
       for row <- Tournament.standings_rows(SnapshotPayloads.swiss()) do
         name = Tournament.players_by_no(SnapshotPayloads.swiss())[row["player"]]["name"]
@@ -257,7 +287,7 @@ defmodule OpenResultsWeb.DisplayRulesTest do
                "does not publish round pairings"
 
       standings = conn |> get(~p"/t/#{slug}") |> html_response(200)
-      assert standings =~ "Standings"
+      assert standings_row_count(standings) == 10
 
       # And the round strip stops offering rounds nobody can open.
       refute standings =~ ~s|href="/t/#{slug}/round/1"|
