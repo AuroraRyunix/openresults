@@ -163,4 +163,83 @@ defmodule OpenResultsWeb.AdminAccessHelpers do
   def with_access_token(conn, email \\ @admin) do
     Plug.Conn.put_req_header(conn, "cf-access-jwt-assertion", token(email))
   end
+
+  # ---------------------------------------------------------------------------
+  # Requests as a signed-in admin's browser makes them
+
+  @endpoint OpenResultsWeb.Endpoint
+
+  @doc """
+  A fresh connection for the listed admin, with CSRF protection ON.
+
+  `Phoenix.ConnTest.build_conn/0` switches CSRF protection off for every test
+  connection (`:plug_skip_csrf_protection`), so a CSRF test written the
+  obvious way passes whether the check exists or not. Every admin request in
+  these tests puts it back.
+  """
+  def admin_conn(email \\ @admin) do
+    Phoenix.ConnTest.build_conn() |> enforce_csrf() |> with_access_token(email)
+  end
+
+  @doc "Undoes `build_conn/0`'s CSRF opt-out on `conn`."
+  def enforce_csrf(conn),
+    do: %{conn | private: Map.delete(conn.private, :plug_skip_csrf_protection)}
+
+  @doc """
+  A request that follows on from `conn`, as a browser would send it: the
+  cookies it was given, and the Access token Cloudflare adds again.
+  """
+  def next_request(conn) do
+    conn |> Phoenix.ConnTest.recycle(~w(cf-access-jwt-assertion)) |> enforce_csrf()
+  end
+
+  @doc "The CSRF token of the first form on an HTML page."
+  def csrf_token(html) when is_binary(html) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query(~s(input[name="_csrf_token"]))
+    |> LazyHTML.attribute("value")
+    |> List.first()
+  end
+
+  @doc "GET `path` as the admin."
+  def admin_get(path, conn \\ admin_conn()),
+    do: Phoenix.ConnTest.dispatch(conn, @endpoint, :get, path, nil)
+
+  @doc """
+  What pressing the button on a confirmation page does: GET `path`, take the
+  CSRF token its form carries, and POST `params` back to the same path with
+  that token and the confirmation marker - in the same browser session.
+  Returns the POST's connection.
+  """
+  def confirm_and_post(path, params \\ %{}) do
+    page = admin_get(path)
+    token = page |> Phoenix.ConnTest.html_response(200) |> csrf_token()
+
+    page
+    |> next_request()
+    |> Phoenix.ConnTest.dispatch(
+      @endpoint,
+      :post,
+      path,
+      Map.merge(%{"_csrf_token" => token, "confirm" => path}, params)
+    )
+  end
+
+  @doc """
+  A POST to `path` carrying a valid CSRF token from a real admin page, but
+  whatever else `params` says - for proving what a POST without the
+  confirmation marker, or with bad input, gets.
+  """
+  def post_with_token(path, params \\ %{}) do
+    page = admin_get("/admin/address-blocks/new")
+    token = page |> Phoenix.ConnTest.html_response(200) |> csrf_token()
+
+    page
+    |> next_request()
+    |> Phoenix.ConnTest.dispatch(@endpoint, :post, path, Map.put(params, "_csrf_token", token))
+  end
+
+  @doc "The newest action-log entry."
+  def last_action, do: OpenResults.Moderation.list_actions(%{limit: 1}) |> List.first()
 end

@@ -27,6 +27,33 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **The admin panel's management pages.** Behind the `/admin` gate:
+  a dashboard with both switches (opening registration, and pausing public
+  publishing - which says plainly that it takes arbiters' live updates
+  offline mid-event), counts of installations, tournaments and open reports,
+  and the latest actions; tournaments, filterable, each with its owner,
+  publish dates, snapshot size and reports, to approve, hide, unhide,
+  transfer to another installation or delete; installations to suspend,
+  unsuspend or revoke, with an explicit choice about hiding their
+  tournaments; the report queue, each linked to its tournament, to resolve
+  with a written resolution; address blocks, whose confirmation page shows
+  how many installations were seen from the address before anything is
+  blocked; and the whole action log, filterable and paged. Every change goes
+  through a confirmation page and is logged with the admin's address. Input
+  that cannot be used comes back to the form with a sentence saying why.
+- [Feature] **Moving every tournament of an installation to another one, in
+  one step.** A laptop restored from an OpenPairings backup comes back as a
+  new installation, because no backup carries the installation key. The old
+  installation's admin page now moves all of its tournaments - pending,
+  listed and hidden - to the new one, after a confirmation page listing each
+  tournament and showing which laptop they are going to (its client, version
+  and when and where it was last seen). All of them move or none do. A
+  suspended or revoked installation cannot receive them.
+- [Feature] **What published tournaments cost in disk, in the admin panel.**
+  Stored snapshot bytes and the database file's size on the dashboard, per
+  installation on its page, and per tournament (the current snapshot and
+  every kept version) on the tournament's page - the figures the coming
+  decision about bounding storage needs.
 - [Feature] **Public publishing, switched off until the operator turns it
   on.** With `OPENRESULTS_PUBLIC_PUBLISHING=enabled`, any copy of OpenPairings
   can publish here without the server's master token: it asks for an

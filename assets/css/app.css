@@ -1894,3 +1894,300 @@ a.xt-opp:hover {
   color: var(--accent);
   border-width: 2px;
 }
+
+/* ---- admin: the management pages ---- */
+
+.admin-section {
+  margin-top: 2rem;
+}
+
+.admin-crumbs {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+}
+
+/* A status is a word, not a colour: the colour only helps a scanning eye,
+   and every theme variable below keeps the word readable on its own. */
+.admin-status {
+  display: inline-block;
+  padding: 0 0.45rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.admin-status-pending,
+.admin-status-open,
+.admin-status-suspended {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.admin-status-hidden,
+.admin-status-revoked {
+  border-style: dashed;
+  color: var(--withheld);
+}
+
+.admin-status-listed,
+.admin-status-active,
+.admin-status-resolved {
+  color: var(--quiet);
+}
+
+.admin-table td {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.admin-table td.num {
+  white-space: nowrap;
+}
+
+.admin-excerpt,
+.admin-details {
+  max-width: 28rem;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-details {
+  color: var(--quiet);
+}
+
+/* Text strangers typed: kept as they typed it, line breaks included, and
+   never allowed to push the page sideways. */
+.admin-prose {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 52rem;
+}
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  margin: 1rem 0 1.25rem;
+  font-size: 0.875rem;
+}
+
+.admin-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-weight: 600;
+}
+
+.admin-filters .admin-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 400;
+}
+
+.admin-filters input[type="search"],
+.admin-filters select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+
+.admin-filters button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-pager {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 1rem;
+  margin: 0.75rem 0 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.admin-tabs a {
+  padding: 0.3rem 0;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+}
+
+.admin-tabs a.is-current {
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.admin-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 1rem 0;
+}
+
+.admin-actions-bar a {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-actions-bar a.is-danger {
+  border-width: 2px;
+}
+
+.admin-switches,
+.admin-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.admin-switch,
+.admin-count-group {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.admin-switch p,
+.admin-count-title {
+  margin: 0 0 0.4rem;
+}
+
+.admin-switch-name,
+.admin-count-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.admin-switch-state {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.admin-switch-state.is-paused {
+  color: var(--accent);
+}
+
+.admin-count-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-count-group li + li {
+  margin-top: 0.2rem;
+}
+
+.admin-count-group a {
+  text-decoration: none;
+}
+
+.admin-count-group strong {
+  display: inline-block;
+  min-width: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-form {
+  max-width: 34rem;
+  margin-top: 1.25rem;
+}
+
+.field textarea,
+.field input[type="number"] {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.admin-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-inline input[type="number"] {
+  width: 7rem;
+}
+
+.admin-inline select {
+  width: auto;
+}
+
+.admin-choice-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0.5rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.admin-choice-option input {
+  margin-top: 0.3rem;
+  accent-color: var(--accent);
+}
+
+/* How many installations a block would reach: the number the operator
+   must not miss before confirming, so it is the loudest thing on the page. */
+.admin-reach {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--accent);
+  background: var(--panel);
+  font-size: 1.05rem;
+}
+
+/* The tournaments a whole-installation move takes: every one named, because
+   the operator is checking a list, not trusting a count. */
+.admin-moving {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0;
+  list-style: none;
+  max-width: 52rem;
+}
+
+.admin-moving li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--rule);
+}

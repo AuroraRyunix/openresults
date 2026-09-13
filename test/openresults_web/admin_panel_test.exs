@@ -28,18 +28,10 @@ defmodule OpenResultsWeb.AdminPanelTest do
     {:ok, slug: swiss["tournament"]["slug"]}
   end
 
-  defp admin_conn, do: build_conn() |> enforce_csrf() |> with_access_token()
-
-  # A request that follows on from `conn`, as a browser would send it: the
-  # cookies it was given, and the Access token Cloudflare adds again.
-  defp next_request(conn), do: conn |> recycle(~w(cf-access-jwt-assertion)) |> enforce_csrf()
-
-  # `Phoenix.ConnTest.build_conn/0` switches CSRF protection OFF for every
-  # test connection (`:plug_skip_csrf_protection`), so a CSRF test written
-  # the obvious way passes whether the check exists or not. The first run of
-  # this file proved exactly that. Every request here puts it back.
-  defp enforce_csrf(conn),
-    do: %{conn | private: Map.delete(conn.private, :plug_skip_csrf_protection)}
+  # `admin_conn/0`, `next_request/1` and `csrf_token/1` come from
+  # `OpenResultsWeb.AdminAccessHelpers`, which also explains why every admin
+  # request in these tests switches CSRF protection back ON: the first run of
+  # this file showed a CSRF test passing with the check removed.
 
   # An admin route's path with its parameters filled in: the published
   # tournament for `:slug`, which is what `Revalidate` and the page cache key
@@ -52,16 +44,6 @@ defmodule OpenResultsWeb.AdminPanelTest do
 
   defp admin_routes,
     do: for(%{path: "/admin" <> _} = route <- OpenResultsWeb.Router.__routes__(), do: route)
-
-  defp csrf_token(html) do
-    [token] =
-      html
-      |> LazyHTML.from_document()
-      |> LazyHTML.query(~s(#confirmation-form input[name="_csrf_token"]))
-      |> LazyHTML.attribute("value")
-
-    token
-  end
 
   defp set_cookies(conn), do: get_resp_header(conn, "set-cookie")
 
@@ -95,14 +77,22 @@ defmodule OpenResultsWeb.AdminPanelTest do
 
     test "no admin page reaches Revalidate or the page cache", %{slug: slug} do
       # `Revalidate` keys its ETag and the page cache on a `slug` parameter,
-      # and the moderation pages will have `/admin/tournaments/:slug`. A route
-      # added to the wrong scope would put a moderator's page in the cache
-      # that hands pages to strangers - so this requests every admin GET
-      # route the router has, including ones added after this test was
-      # written, with the slug of a tournament that really is published.
+      # and the moderation pages have `/admin/tournaments/:slug` and six
+      # routes beneath it. A route added to the wrong scope would put a
+      # moderator's page in the cache that hands pages to strangers - so this
+      # requests every admin GET route the router has, including ones added
+      # after this test was written, with the slug of a tournament that really
+      # is published.
       Page.clear()
       routes = for %{verb: :get} = route <- admin_routes(), do: route
-      assert routes != []
+      walked = Enum.map(routes, & &1.path)
+
+      # The walk reaches every section and the pages beneath them, so it
+      # really is the management pages being checked and not only the gate.
+      for {_label, path} <- Layouts.sections(), do: assert(path in walked, path)
+      assert "/admin/tournaments/:slug/delete" in walked
+      assert "/admin/installations/:id/move-tournaments" in walked
+      assert "/admin/address-blocks/new" in walked
 
       for route <- routes do
         conn = get(admin_conn(), fill(route.path, slug))
@@ -378,15 +368,24 @@ defmodule OpenResultsWeb.AdminPanelTest do
 
       hrefs = doc |> LazyHTML.query(".admin-nav a") |> LazyHTML.attribute("href")
 
-      # Today, the dashboard is the only section with a page.
-      assert hrefs == ["/admin"]
+      # Every section the contract lists has its page now, in order.
+      assert hrefs == [
+               "/admin",
+               "/admin/tournaments",
+               "/admin/installations",
+               "/admin/reports",
+               "/admin/address-blocks",
+               "/admin/action-log"
+             ]
 
-      # And every link anywhere on the page leads to a route, or is the one
-      # address Cloudflare's edge answers itself.
+      # And every link anywhere on the page leads to a route (query string
+      # aside), or is the one address Cloudflare's edge answers itself.
       for href <- doc |> LazyHTML.query("a[href]") |> LazyHTML.attribute("href"),
           href != "/cdn-cgi/access/logout" do
+        path = URI.parse(href).path
+
         assert %{} =
-                 Phoenix.Router.route_info(OpenResultsWeb.Router, "GET", href, "www.example.com"),
+                 Phoenix.Router.route_info(OpenResultsWeb.Router, "GET", path, "www.example.com"),
                "#{href} leads nowhere"
       end
     end
@@ -406,10 +405,20 @@ defmodule OpenResultsWeb.AdminPanelTest do
       end
     end
 
-    test "marks the current section" do
-      conn = %{admin_conn() | request_path: "/admin/", host: "www.example.com"}
+    test "marks the current section, and a page beneath one marks that one" do
+      current = fn path ->
+        %{admin_conn() | request_path: path, host: "www.example.com"}
+        |> Layouts.nav_items()
+        |> Enum.filter(& &1.current?)
+        |> Enum.map(& &1.path)
+      end
 
-      assert [%{path: "/admin", current?: true}] = Layouts.nav_items(conn)
+      assert current.("/admin/") == ["/admin"]
+      assert current.("/admin/tournaments") == ["/admin/tournaments"]
+      assert current.("/admin/tournaments/some-slug/hide") == ["/admin/tournaments"]
+      assert current.("/admin/address-blocks/new") == ["/admin/address-blocks"]
+      # A switch's confirmation belongs to no section of its own.
+      assert current.("/admin/switches/registration_open") == []
     end
   end
 end

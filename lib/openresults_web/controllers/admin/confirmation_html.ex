@@ -1,6 +1,6 @@
 defmodule OpenResultsWeb.Admin.ConfirmationHTML do
   @moduledoc """
-  The confirmation page for a destructive admin action. See
+  The confirmation page for an admin action. See
   `OpenResultsWeb.Admin.Confirmation` for the pattern it belongs to.
 
   English only, not wrapped in gettext - see `OpenResultsWeb.Admin.Layouts`.
@@ -16,6 +16,10 @@ defmodule OpenResultsWeb.Admin.ConfirmationHTML do
   checkbox, a reason - are submitted with it. `<.form>` adds the CSRF token;
   the hidden `confirm` field names this form's own action, which is what
   `OpenResultsWeb.Admin.Confirmation` checks on the way back in.
+
+  `error` is a sentence about input the last attempt could not use, shown
+  above everything else: the page is re-rendered with it rather than the
+  admin being sent somewhere else to start again.
   """
   attr :title, :string, required: true
   attr :action, :string, required: true, doc: "where the form posts"
@@ -23,6 +27,7 @@ defmodule OpenResultsWeb.Admin.ConfirmationHTML do
   attr :cancel, :string, required: true, doc: "where Cancel goes"
   attr :hidden, :map, default: %{}, doc: "extra hidden fields, name => value"
   attr :danger, :boolean, default: true
+  attr :error, :string, default: nil
   slot :inner_block
 
   def confirmation(assigns) do
@@ -35,6 +40,7 @@ defmodule OpenResultsWeb.Admin.ConfirmationHTML do
       class={["admin-confirm", @danger && "is-danger"]}
     >
       <h1>{@title}</h1>
+      <p :if={@error} class="alarm" role="alert" id="confirmation-error">{@error}</p>
       {render_slot(@inner_block)}
       <input type="hidden" name={Confirmation.field()} value={@action} />
       <input :for={{name, value} <- @hidden} type="hidden" name={name} value={value} />
@@ -56,6 +62,7 @@ defmodule OpenResultsWeb.Admin.ConfirmationHTML do
       cancel={@cancel}
       hidden={@hidden}
       danger={@danger}
+      error={@error}
     >
       <p :for={line <- @consequences} class="admin-consequence">{line}</p>
     </.confirmation>
@@ -68,7 +75,7 @@ defmodule OpenResultsWeb.Admin.ConfirmationHTML do
     <section id="confirmation-missing">
       <h1>Not confirmed</h1>
       <p>Nothing was changed. This action is only carried out from its own confirmation page.</p>
-      <p><a href={@conn.request_path}>Go to the confirmation page</a></p>
+      <p><a href={@back}>{@back_label}</a></p>
     </section>
     """
   end
