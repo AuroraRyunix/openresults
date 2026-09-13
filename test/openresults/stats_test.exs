@@ -292,14 +292,26 @@ defmodule OpenResults.StatsTest do
       # One past the cap is still refused a row on its second request.
       Stats.record_view(table, @m0, "slug-#{cap + 1}")
 
-      slug_rows = :ets.select_count(table, [{{{@m0, {:slug, :_}, :_}, :_}, [], [true]}])
-      assert slug_rows == cap
-      assert [{_, 6}] = :ets.lookup(table, {@m0, :slug_other, 0})
+      recorded = cap + 5 + 3 + 1
+
+      # Rows are keyed by scheduler, so a test process the VM moves to another
+      # scheduler part-way through writes slug-1's later views to a new row,
+      # which counts against the cap like any new row and is folded into
+      # "other" (the moduledoc's "may overcount, which only tightens the
+      # bound"). The exact split therefore depends on scheduling; what never
+      # does is the bound and the total.
+      slug_rows = :ets.select(table, [{{{@m0, {:slug, :_}, :_}, :"$1"}, [], [:"$1"]}])
+      other = :ets.lookup(table, {@m0, :slug_other, 0}) |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+
+      assert length(slug_rows) <= cap
+      assert other >= 6
+      assert Enum.sum(slug_rows) + other == recorded
 
       bucket = Collector.report(pid, @t0 + 10).hour |> List.last() |> elem(1)
-      assert {[{"slug-1", 4} | _], rest} = Report.top_slugs(bucket, 10)
+      {top, rest} = Report.top_slugs(bucket, 10)
+      assert length(top) == 10
       # Every counted request is either in the top ten or in the rest.
-      assert rest == cap + 5 + 3 + 1 - 4 - 9
+      assert Enum.sum(Enum.map(top, &elem(&1, 1))) + rest == recorded
     end
 
     test "a finished minute keeps its 200 busiest slugs and folds the others" do

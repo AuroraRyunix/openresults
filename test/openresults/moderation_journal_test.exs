@@ -258,6 +258,28 @@ defmodule OpenResults.ModerationJournalTest do
       end)
     end
 
+    test "two lines about one installation with the same timestamp are both re-applied" do
+      # An untrust and a lowered limit in the same clock tick. Before
+      # `journal_action`, the first line's replay row carried that same time
+      # and so made the second line look known: the limit stayed high.
+      at = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      {:ok, %{installation: installation}} =
+        Installations.register(%{"client" => "OpenPairings"}, nil)
+
+      {:ok, _} = Moderation.trust(installation.id, @ops, [])
+
+      {:ok, _} =
+        Moderation.put_installation_limits(installation.id, %{"max_versions" => "50"}, @ops)
+
+      ModerationJournal.record_untrust(installation.id, at)
+      ModerationJournal.record_lower_limits(installation.id, %{max_versions: 5}, at)
+
+      assert ModerationJournal.replay() == 2
+      assert %{trusted: false, max_versions: 5} = Installations.get(installation.id)
+      assert ModerationJournal.replay() == 0
+    end
+
     test "a limit already as low as the journal's is left alone, and an unknown installation too" do
       now = DateTime.utc_now()
 

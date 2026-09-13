@@ -397,7 +397,7 @@ defmodule OpenResults.ModerationJournal do
       deleted_later?(slug, later) ->
         false
 
-      known?("tournament", slug, at) ->
+      known?("tournament", slug, at, "hide") ->
         false
 
       true ->
@@ -440,7 +440,7 @@ defmodule OpenResults.ModerationJournal do
   end
 
   defp reapply(%{"action" => "suspend", "target" => id, "at" => at} = entry, _later, _now) do
-    if known?("installation", id, at) do
+    if known?("installation", id, at, "suspend") do
       false
     else
       Repo.transaction(fn ->
@@ -475,7 +475,7 @@ defmodule OpenResults.ModerationJournal do
     key = Enum.find(Map.keys(@safer_settings), &(Atom.to_string(&1) == key_text))
 
     cond do
-      known?("setting", key_text, at) ->
+      known?("setting", key_text, at, "put_setting") ->
         false
 
       Settings.get(key) == value ->
@@ -491,7 +491,7 @@ defmodule OpenResults.ModerationJournal do
   end
 
   defp reapply(%{"action" => "untrust", "target" => id, "at" => at} = entry, _later, _now) do
-    if known?("installation", id, at) do
+    if known?("installation", id, at, "untrust") do
       false
     else
       Repo.transaction(fn ->
@@ -505,7 +505,7 @@ defmodule OpenResults.ModerationJournal do
   end
 
   defp reapply(%{"action" => "lower_limits", "target" => id, "at" => at} = entry, _later, _now) do
-    with false <- known?("installation", id, at),
+    with false <- known?("installation", id, at, "lower_limits"),
          %Installation{} = installation <- Repo.get(Installation, id),
          changes when changes != %{} <- still_higher(installation, entry["limits"]) do
       Repo.transaction(fn ->
@@ -555,7 +555,9 @@ defmodule OpenResults.ModerationJournal do
       action,
       target_type,
       target,
-      Map.put(details, :journal_at, DateTime.to_iso8601(entry["at"]))
+      details
+      |> Map.put(:journal_at, DateTime.to_iso8601(entry["at"]))
+      |> Map.put(:journal_action, entry["action"])
     )
   end
 
@@ -591,7 +593,16 @@ defmodule OpenResults.ModerationJournal do
   # wrote it: otherwise replaying one line about an installation would make
   # every other line about it - an untrust and a lowered limit, say - look
   # known, and the second would never be applied.
-  defp known?(target_type, target, at) do
+  #
+  # And a replay row from a line with the SAME time only covers a line of the
+  # same kind (`journal_action`). Two actions on one target can share a
+  # timestamp - an untrust and a lowered limit in one clock tick, which a
+  # coarse clock makes easy - and with a plain `>=` the first one's replay row
+  # hid the second, so a removal was silently not re-applied. A replay row
+  # from a strictly later line still covers earlier ones, which is what keeps
+  # a second boot a no-op. Rows written before `journal_action` existed match
+  # any kind, as they did then.
+  defp known?(target_type, target, at, journal_action) do
     replay = Moderation.restore_replay_actor()
     at_text = DateTime.to_iso8601(at)
 
@@ -601,7 +612,13 @@ defmodule OpenResults.ModerationJournal do
           a.target_type == ^target_type and a.target == ^target and
             ((a.actor != ^replay and a.inserted_at >= ^at) or
                (a.actor == ^replay and
-                  fragment("json_extract(?, '$.journal_at')", a.details) >= ^at_text))
+                  (fragment("json_extract(?, '$.journal_at')", a.details) > ^at_text or
+                     (fragment("json_extract(?, '$.journal_at')", a.details) == ^at_text and
+                        fragment(
+                          "coalesce(json_extract(?, '$.journal_action'), ?)",
+                          a.details,
+                          ^journal_action
+                        ) == ^journal_action))))
     )
   end
 
