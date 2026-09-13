@@ -93,8 +93,12 @@ defmodule OpenResults.TrustedInstallationsTest do
                actor: "trust-admin@example.org",
                action: "trust",
                target_type: "installation",
-               details: %{"list_pending" => true, "listed" => [^first, ^second]}
+               details: %{"list_pending" => true, "listed" => listed}
              } = last_action()
+
+      # Both were minted within the same second, so creation time ties and the
+      # slugs (random) break it: the logged order is stable but not mint order.
+      assert Enum.sort(listed) == Enum.sort([first, second])
 
       approvals =
         Moderation.list_actions(%{action: "approve", limit: 10})
