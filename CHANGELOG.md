@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-13
+
 - [Feature] **A round's results can be held back while its pairings are public,
   and a round whose results are coming in says so.** OpenPairings now keeps a
   new round's results private until the arbiter switches them on; rounds that
