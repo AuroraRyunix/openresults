@@ -1525,12 +1525,11 @@ a.xt-opp:hover {
   margin: 0 0 1.25rem;
 }
 
-/* The viewBox is a fixed 640x190, so the aspect ratio is decided in the
-   markup and not by how many rounds the tournament had. */
+/* The SVG carries its natural width (at most 640, narrower for short
+   events); it may shrink to fit, never grow past it. */
 .chart-svg {
   display: block;
-  width: 100%;
-  max-width: 40rem;
+  max-width: 100%;
   height: auto;
 }
 

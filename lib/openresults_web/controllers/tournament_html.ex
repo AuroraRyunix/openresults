@@ -2131,6 +2131,10 @@ defmodule OpenResultsWeb.TournamentHTML do
   Inline SVG, no library: this site ships one stylesheet and one script, and
   a chart is not a reason to change that.
   """
+  # A line through two points is not a trend, and one bar pair beside it
+  # reads as a broken chart. The round-by-round card below says the same thing.
+  @chart_min_points 3
+
   attr :payload, :map, required: true
   attr :card, :list, required: true
   attr :no, :integer, required: true
@@ -2167,10 +2171,17 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:points, points)
       |> assign(:rounds, Enum.map(assigns.card, & &1.round))
       |> assign(:max, max)
+      |> assign(:min_points, @chart_min_points)
 
     ~H"""
-    <figure :if={@rounds != [] and @max > 0} class="chart">
-      <svg viewBox="0 0 640 190" class="chart-svg" role="img">
+    <figure :if={length(@points) >= @min_points and @max > 0} class="chart">
+      <svg
+        viewBox={"0 0 #{chart_width(@rounds)} 190"}
+        width={chart_width(@rounds)}
+        height="190"
+        class="chart-svg"
+        role="img"
+      >
         <title>
           {chart_title(@label)}
         </title>
@@ -2179,7 +2190,12 @@ defmodule OpenResultsWeb.TournamentHTML do
               noise on an axis whose whole job is "roughly how big". --%>
         <g class="chart-grid">
           <g :for={value <- gridlines(@max)}>
-            <line x1="30" x2="630" y1={y(value, @max)} y2={y(value, @max)} />
+            <line
+              x1="30"
+              x2={chart_right(@rounds)}
+              y1={y(value, @max)}
+              y2={y(value, @max)}
+            />
             <text x="24" y={y(value, @max) + 4} text-anchor="end">{trunc(value)}</text>
           </g>
         </g>
@@ -2239,15 +2255,23 @@ defmodule OpenResultsWeb.TournamentHTML do
     )
   end
 
-  # A FIXED 640x190 viewBox, with the rounds distributed across it rather
-  # than a width that grows per round. The first version sized the box by
-  # round count, so a five-round event produced a nearly square viewBox that
-  # `width: 100%; height: auto` then scaled into a chart taller than the
-  # screen. The aspect ratio has to be decided here, not by the data.
+  # The chart is 190 high and at most 640 wide, with each round given at most
+  # 80 units. A short event gets a narrower chart instead of two bars stretched
+  # across the full width. The SVG's `width` attribute is its natural size, and
+  # the stylesheet only lets it shrink, never grow. The first version sized the
+  # box by round count AND scaled it to `width: 100%`, so a five-round event
+  # grew taller than the screen; capping at the natural size is what prevents
+  # that now.
   @chart_left 34
-  @chart_right 630
+  @chart_max_width 640
+  @chart_slot_max 80
 
-  defp chart_slot(rounds), do: (@chart_right - @chart_left) / max(length(rounds), 1)
+  defp chart_width(rounds),
+    do: min(@chart_max_width, @chart_left + @chart_slot_max * max(length(rounds), 1) + 10)
+
+  defp chart_right(rounds), do: chart_width(rounds) - 10
+
+  defp chart_slot(rounds), do: (chart_right(rounds) - @chart_left) / max(length(rounds), 1)
   defp bar_x(index, rounds), do: @chart_left + chart_slot(rounds) * (index + 0.5)
   defp bar_width(rounds), do: min(28.0, chart_slot(rounds) * 0.55)
 

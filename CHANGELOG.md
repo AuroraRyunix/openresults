@@ -29,6 +29,12 @@ Each entry is tagged so a version can be skimmed:
 
 - [Change] **Dutch says "FIDE-rated", not "FIDE-gerateerd".** The FIDE badge on
   tournament pages uses the term Dutch-speaking arbiters actually say.
+- [Change] **A player's chart waits for a third round, and a short event gets a
+  narrow one.** After two rounds the chart was two bars and a stub of a line
+  stretched across the full width; the round-by-round card already shows the
+  same thing, so the chart now appears once the running score has three
+  points. Each round gets at most 80 units of width, so a five-round event is
+  no longer spread across the whole page.
 
 ## [0.14.1] - 2026-09-13
 

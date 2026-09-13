@@ -184,8 +184,9 @@ defmodule OpenResultsWeb.TiebreakWorkingTest do
 
     test "the detail carries the chart, the rounds and the full working", %{
       conn: conn,
-      slug: slug
+      swiss: swiss
     } do
+      slug = three_rounds(swiss)
       document = conn |> get(~p"/t/#{slug}/player/1") |> doc()
 
       assert texts(document, "#player-detail .chart figcaption") != []
@@ -197,8 +198,9 @@ defmodule OpenResultsWeb.TiebreakWorkingTest do
   describe "the chart" do
     test "draws a bar per contributing round and a line through the score", %{
       conn: conn,
-      slug: slug
+      swiss: swiss
     } do
+      slug = three_rounds(swiss)
       # Player 9, not player 1: player 1's own discarded round (round 1 of
       # Buchholz Cut-1) happens to be worth 0 in this fixture, and a bar
       # worth 0 is not drawn at all - see `score_chart/1`. Player 9's
@@ -212,6 +214,24 @@ defmodule OpenResultsWeb.TiebreakWorkingTest do
       # The discarded round is drawn, in the withheld colour, rather than
       # left out - "that round did not help you" is the interesting part.
       assert LazyHTML.query(document, ".chart-svg rect.chart-bar-out") |> Enum.count() == 1
+    end
+
+    test "two rounds are not a chart", %{conn: conn, slug: slug} do
+      # The fixture's standings are after round 2, so every running score has
+      # two points: a stub of a line beside a pair of bars. The round-by-round
+      # card already says it, so no chart is drawn until a third round.
+      document = conn |> get(~p"/t/#{slug}/player/9") |> doc()
+
+      assert LazyHTML.query(document, ".chart-svg") |> Enum.count() == 0
+      assert texts(document, "#player-detail table.card thead") != []
+    end
+
+    test "a short event gets a narrow chart, not a stretched one", %{conn: conn, swiss: swiss} do
+      slug = three_rounds(swiss)
+      document = conn |> get(~p"/t/#{slug}/player/9") |> doc()
+
+      [width] = document |> LazyHTML.query(".chart-svg") |> LazyHTML.attribute("width")
+      assert String.to_integer(width) < 640
     end
 
     test "a player with nothing to plot gets no figure", %{conn: conn, swiss: swiss} do
@@ -338,5 +358,17 @@ defmodule OpenResultsWeb.TiebreakWorkingTest do
     update_in(payload, ["standings", "rows"], fn rows ->
       Enum.map(rows, &Map.put(&1, "working", %{}))
     end)
+  end
+
+  # The fixture with its standings one round further on, so running scores
+  # have the three points a chart needs.
+  defp three_rounds(swiss) do
+    {:ok, _} =
+      swiss
+      |> put_in(["tournament", "slug"], "three-rounds")
+      |> put_in(["standings", "after_round"], 3)
+      |> Snapshots.ingest()
+
+    "three-rounds"
   end
 end
