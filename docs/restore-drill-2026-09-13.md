@@ -18,6 +18,25 @@ The code bugs the drill found are fixed; the procedure is rewritten in
 `docs/deployment.md` ("Backups", "Restoring a backup", "What a restore
 undoes") and was re-run from that text.
 
+## Since the drill: what was fixed later the same day (2026-09-13)
+
+Commit `994063f` fixed the code findings the drill itself could (1, 3 in the
+docs, 4-7, 9-11). The rest were fixed afterwards on branch `restore-fixes`, and
+each heading below now says where. `docs/deployment.md`, "Backups",
+"Restoring a backup" and "What a restore undoes", is the procedure as it
+stands.
+
+| Finding | Status | Commit | Proven by |
+| --- | --- | --- | --- |
+| 2 a restore undid moderation | a moderation journal beside the database records every safer action - delete (admin, owner or operator), hide, revoke, suspend, block, closing registration, pausing publishing - and re-applies at boot what the restored database does not know, with a `restore-replay` action log row each. Reversals are never journalled: they stay as the backup had them | `a2b8b94` | `moderation_journal_test.exs`: a real backup, every action through `Moderation` plus an owner's withdrawal, a real restore, the replay through the app's Repo - every removal back, approve and unhide not replayed, idempotent, later reversals kept. Also a prod-mode boot on a restored copy |
+| 3 backup older than the code | a production `mix phx.server` start refuses a database with pending migrations, as OpenPairings' does | `a2b8b94` | `backup_restore_test.exs`; a prod-mode boot that refused, then started after migrating |
+| 8 privacy | client addresses are nulled in every backup (and vacuumed out of the file: nulling alone left 43 of 400 readable). Contact emails, entry-form emails and the ranges in block log rows stay: a retention-policy question, recommended below | `9286066` | `backup_restore_test.exs`, fails without the VACUUM |
+| 12 thirty files | retention is days, the newest always kept, and a boot with a recent backup does not write another | `e0c5b1c` | `backup_test.exs`, `backup_restore_test.exs` |
+
+Still recommended, not done: log an owner's `DELETE /api/tournaments/:slug`
+to the action log as well (the journal now keeps it, the admin panel still
+does not show it); set `OPENRESULTS_BACKUP_PASSPHRASE`; decide a retention
+for report contact emails and the addresses in block log rows.
 ## How it was run
 
 Local only, on a Windows 11 workstation (16 threads). No SSH, no deploy, no
@@ -78,7 +97,7 @@ needed were not written anywhere.
 
 ## Findings, worst first
 
-### 1. The documented swap could restore nothing and say nothing - FIXED (docs, task output)
+### 1. The documented swap could restore nothing and say nothing - FIXED (docs, task output; `994063f`)
 
 `--restore` printed `mv live live.before-restore; mv restored live`. That moves
 the database without its `-wal` and `-shm`. After a clean stop those do not
@@ -111,7 +130,7 @@ as one database) and the guide explains it. Re-run after killing the node
 mid-write: the twenty rows that existed only in the old WAL were in the
 `before-restore` copy and not in the restored database.
 
-### 2. A restore undoes moderation and resurrects withdrawn tournaments - RECOMMENDED (policy); procedure documented
+### 2. A restore undoes moderation and resurrects withdrawn tournaments - FIXED (`a2b8b94`, moderation journal); reversals DOCUMENTED
 
 Restoring the reference backup after the operator's later work, measured on
 the restored, running site:
@@ -150,7 +169,7 @@ Recommended, and a decision for the operator rather than a fix:
 - `mix openresults.backup --restore` could run the reconcile report itself
   when the live database is readable, before the swap.
 
-### 3. A backup older than the code boots and fails every page - FIXED (docs)
+### 3. A backup older than the code boots and fails every page - FIXED (docs, `994063f`; the start refuses it, `a2b8b94`)
 
 `mix phx.server` does not migrate (`Ecto.Migrator` is skipped unless
 `RELEASE_NAME` is set, and the unit is not a release). A backup taken before
@@ -161,7 +180,7 @@ swap and start: every page 200, the backfill listed the old tournament, a
 publish was accepted, no errors. The guide now has the step; the task prints
 it.
 
-### 4. `verify/1` passed databases with damaged tables - FIXED
+### 4. `verify/1` passed databases with damaged tables - FIXED (`994063f`)
 
 It checked three tables exist and counted `snapshots`. A backup whose envelope
 is perfect (valid gzip, valid CRC) around a database with a damaged
@@ -174,7 +193,7 @@ refused before anything was written; only the damaged database got through.
 problems SQLite reports. SQLite's error text also came back as
 `<<109, 97, 108, ...>>`; it is now words.
 
-### 5. The PBKDF2 count from the unauthenticated header was trusted - FIXED
+### 5. The PBKDF2 count from the unauthenticated header was trusted - FIXED (`994063f`)
 
 OpenPairings bounded this in its 2026-09-01 sweep (L5); this copy of the format
 never learned it. An encrypted backup whose header says 20 million iterations
@@ -182,7 +201,7 @@ took 7.6 s to refuse; the header will say 5 billion, and `--verify` then runs
 for hours with no cancel. A count of 1 was used too. Now the same
 10,000-2,000,000 bound as OpenPairings, refused before any key is derived.
 
-### 6. `verify/1` left a decrypted copy of the database in the temp directory - FIXED
+### 6. `verify/1` left a decrypted copy of the database in the temp directory - FIXED (`994063f`)
 
 On Windows every successful verify left its staging copy behind: the
 connection was closed with its prepared statements still alive, SQLite defers
@@ -194,7 +213,7 @@ runs. For an encrypted backup those copies are the plaintext. Statements are
 now released and the connection closed on every path; 0 left, accepted or
 refused.
 
-### 7. `BACKUP_RETENTION` of 0 or less deleted the newest backups - FIXED
+### 7. `BACKUP_RETENTION` of 0 or less deleted the newest backups - FIXED (`994063f`)
 
 `prune/1` is `Enum.drop(list, keep)`. With 0 that deletes every backup,
 including the one the scheduler has just written; with -2 it dropped from the
@@ -202,7 +221,7 @@ other end and kept the **two oldest**, deleting 33 newer ones (measured). The
 count is now at least one in `prune/1` and `retention/0`, and a
 `BACKUP_RETENTION` that is not a whole number of at least 1 stops the boot.
 
-### 8. Privacy: what a backup keeps, and what a restore brings back - RECOMMENDED (policy)
+### 8. Privacy: what a backup keeps, and what a restore brings back - client addresses FIXED (`9286066`); the rest RECOMMENDED (policy)
 
 Measured, not assumed:
 
@@ -231,7 +250,7 @@ first-run delays); null addresses older than 30 days in the staging copy
 before it is written, as OpenPairings strips its rating lists; stop writing
 the address into `block_address`'s log details.
 
-### 9. The first boot after a restore logged `database is locked` - FIXED
+### 9. The first boot after a restore logged `database is locked` - FIXED (`994063f`)
 
 `VACUUM INTO` writes a rollback-journal database; the pool's connections all
 tried to switch it to WAL at once and three lost (measured: three `[error]`
@@ -247,13 +266,13 @@ root is opened read-only by a non-root service (pages load, nothing saves) -
 from the unit's `User=` and SQLite's documented read-only fallback, not
 reproduced on Windows.
 
-### 11. `--verify` did not accept the name `--list` prints - FIXED
+### 11. `--verify` did not accept the name `--list` prints - FIXED (`994063f`)
 
 The listed name, typed back in: "no such file" (measured on OpenPairings'
 task, which was the same code). A bare name that matches a backup in the
 backup directory now resolves to it.
 
-### 12. Retention is thirty files, not thirty days - RECOMMENDED
+### 12. Retention is thirty files, not thirty days - FIXED (`e0c5b1c`)
 
 Every boot writes one, and so does every manual run. The drill's instance had
 four backups within twenty minutes. A day with three deploys spends three.
@@ -309,3 +328,10 @@ stop and confirm; rename the database **with** its `-wal` and `-shm`; restore
 ownership; `mix ecto.migrate`; start and check for a 200; then reconcile
 against the `before-restore` database and re-apply moderation, taking resurrected
 tournaments down with break-glass.
+
+After the fixes the removals re-apply themselves at the start, from the
+moderation journal beside the database, and a database behind the code is
+refused rather than served. What is left by hand: the reconcile, run after the
+start, lists the reversals made after the backup (approvals, unhides,
+unsuspensions, unblocks, openings) to redo, and break-glass is only for what the
+journal could not know about.

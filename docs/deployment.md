@@ -156,49 +156,75 @@ snapshot came from an arbiter's machine, which remains the source of truth
 and can republish. The registration queue is the exception: an entry a
 spectator typed in exists only here until an arbiter pulls it. Since public
 publishing, so is moderation - who is suspended or revoked, what is hidden,
-what was taken down - and that is the part a restore gets wrong without
-help; see "What a restore undoes" below.
+what was taken down - and that is the part a restore got wrong until the
+moderation journal beside the database started putting it back; see
+"What a restore undoes" below.
 
 ## Backups
 
-`OpenResults.Backup.Scheduler` writes one five minutes after every boot and
-then every 24 hours; `mix openresults.backup` writes one on demand. Each is
-`openresults-<UTC time>.orbak` in `backups/` beside the database
-(`/var/lib/openresults/backups`), and is a whole copy of the database - every
-table, the public-publishing ones included (checked table by table in the
-2026-09-13 drill) - gzip-compressed.
+`OpenResults.Backup.Scheduler` writes one a day: five minutes after a boot
+when the newest backup on disk is at least a day old, otherwise when that one
+comes due, and every 24 hours after that. `mix openresults.backup` writes one
+on demand. Each is `openresults-<UTC time>.orbak` in `backups/` beside the
+database (`/var/lib/openresults/backups`), and is a whole copy of the database -
+every table, the public-publishing ones included (checked table by table in
+the 2026-09-13 drill) - gzip-compressed, with **every client address nulled**:
+where an installation registered from and was last seen from, and where a
+report came from.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `BACKUP_DIR` | `backups/` beside the database | where they are written |
-| `BACKUP_RETENTION` | 30 | how many files are kept; a whole number of at least 1, or the app refuses to boot |
+| `BACKUP_RETENTION` | 30 | how many **days** a backup is kept; the newest is always kept, however old. A whole number of at least 1, or the app refuses to boot |
 | `OPENRESULTS_BACKUP_PASSPHRASE` | none | encrypts them (AES-256-GCM); the same value is needed to verify or restore one |
 
-**The deploy script sets none of these**, so on this host backups are
-unencrypted, and they carry the entry form's email addresses, report contact
-emails, and client addresses (see "Privacy" below).
+**Retention is days, since 2026-09-13.** It was a count of files, and every
+boot and every manual run spent one: the drill's instance had four backups
+inside twenty minutes. Now `BACKUP_RETENTION=30` keeps the last thirty days -
+about one backup a day plus manual ones, however often the site restarts. **A
+value set before that date means days now.**
 
-Retention is a count, not an age, and every boot and every manual run spends
-one. Thirty files are thirty days only on a box that is never restarted: the
-drill's instance had four backups inside twenty minutes - three boots, one of
-them the restore, and a manual run.
+**The deploy script sets none of these**, so on this host backups are
+unencrypted, and they carry the entry form's email addresses and report
+contact emails (see "Privacy" below). **Recommended: set
+`OPENRESULTS_BACKUP_PASSPHRASE`** - from the deploy's `.env`, or in a drop-in
+the deploy does not rewrite
+(`/etc/systemd/system/openresults.service.d/backup.conf`, `[Service]`,
+`Environment="OPENRESULTS_BACKUP_PASSPHRASE=..."`, then `systemctl
+daemon-reload`), which step 1 below already reads. Keep the passphrase off
+this box.
 
 A backup on the same disk survives a bad deploy, not the disk. Nothing here
 copies one off the box. And keep the copy you mean to restore from **outside**
-`backups/`: the scheduler's prune counts everything in there, and an older
-file dropped in among thirty newer ones is deleted five minutes after the
-next boot.
+`backups/`: a prune removes anything older than the window except the newest.
+
+### The moderation journal, beside the database
+
+`openresults-moderation.jsonl`, next to `openresults.db`, is not a backup and
+is in none. Every action that makes the site safer is written there once it
+has committed - deleting a tournament (the admin panel's, and an owner's or
+the operator's `DELETE /api/tournaments/:slug`), hiding, revoking, suspending,
+blocking an address, closing registration, pausing publishing - and at every
+start, before the endpoint serves anything, each one the database does not know
+about is applied again (`OpenResults.ModerationJournal`). Reversals - approve,
+unhide, unsuspend, unblock, opening registration, unpausing - are never written,
+so never replayed.
+
+It is trimmed by itself to what a backup still on disk could bring back (the
+retention window plus a week). Never delete it, and restore nothing over it.
+If the site moves to another machine, copy it along with the backup.
 
 ## Restoring a backup
 
 Rehearsed on 2026-09-13 - `docs/restore-drill-2026-09-13.md` has the run, the
 timings and what broke. Every step below is there because the drill failed
-without it. The commands take about ten seconds; `mix` starting is most of
-that, so allow a minute on the box.
+without it, and what the drill found in the code is fixed. The commands take
+about ten seconds; `mix` starting is most of that, so allow a minute on the
+box.
 
 Before you start: read "What a restore undoes", and if the current database
 still opens, do not delete it. It is the only record of what happened after
-the backup.
+the backup that the journal does not cover.
 
 All as root.
 
@@ -274,7 +300,7 @@ database. In the drill that gave a database that never existed - the action
 log from the old one, the tournaments from the backup - with `PRAGMA
 integrity_check` saying `ok`. Renamed together,
 `openresults.db.before-restore-<stamp>` and its `-wal` still open as one
-database.
+database. Leave `openresults-moderation.jsonl` where it is.
 
 `chown`: a recovered file written by root is root's, and SQLite opens a file
 it cannot write read-only - pages load and every publish fails. `--reference=.`
@@ -290,44 +316,52 @@ app ecto.migrate
 ```
 
 The service runs `mix phx.server`, which does not migrate - only a release
-does. A backup older than the code therefore boots, answers `/changelog`, and
-fails everything else: the drill restored a backup from before 2026-09-12 and
-every tournament page, `GET /api/server` and every publish returned 500 with
-`no such table: tournaments`. Migrating also runs that migration's backfill,
-which lists every tournament published before visibility existed.
+does. A backup older than the code used to boot, answer `/changelog`, and fail
+everything else: the drill restored a backup from before 2026-09-12 and every
+tournament page, `GET /api/server` and every publish returned 500 with `no such
+table: tournaments`. Since 2026-09-13 a production start refuses a database
+that is behind the code instead - `systemctl start` fails, and the journal says
+which migrations are pending and to run this step. Migrating also runs a
+migration's backfill, which listed every tournament published before
+visibility existed.
 
 **7. Start, and check.**
 
 ```bash
 systemctl start openresults
 curl -s -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:${PORT:-4004}/"   # 200
-journalctl -u openresults -n 20 --no-pager
+journalctl -u openresults -n 30 --no-pager
 ```
 
-Then work through "What a restore undoes" before telling anybody it is done,
-and keep the `before-restore` files until you have.
+At the start the moderation journal applies again every safer action made
+after the backup, before the site answers: one `Moderation journal: ... was not
+in the database` line per action and a `re-applied N action(s)` summary, and
+one action log row for each, by `restore-replay`, on the admin panel's action
+log. Then work through "What a restore undoes" before telling anybody it is
+done, and keep the `before-restore` files until you have.
 
 ## What a restore undoes
 
-Everything written after the backup. On most apps that means data; on this
-one it also means authority.
+Everything written after the backup - except what the moderation journal puts
+back at the start. On most apps a restore means data; on this one it also
+means authority.
 
 | After the backup, somebody... | After the restore |
 | --- | --- |
-| revoked or suspended an installation | its key works again - the drill minted a slug with a key revoked after the backup |
-| closed `registration_open`, or paused publishing | open, unpaused |
-| blocked an address | the block is gone - the drill registered a new installation from inside it |
-| hid, approved, or deleted a tournament | as it was; a deleted one is back with its history and its entry-form registrations |
-| **withdrew their own tournament from OpenPairings** | **back online with its entry form open - and that arbiter's machine threw its key away when the withdrawal succeeded**, so it cannot withdraw it again. Only the operator token can (below). |
+| revoked or suspended an installation | **back in force** at the start: revoked again (with its tournaments hidden, if the revocation hid them), suspended again |
+| closed `registration_open`, or paused publishing | **back in force**: closed, paused |
+| blocked an address | **back in force** until the block's own expiry, as a block created by `restore-replay` (the reason says it was kept in force after a restore) |
+| hid or deleted a tournament | **back in force**: hidden again; deleted again, with its history and its entry-form registrations |
+| **withdrew their own tournament from OpenPairings** | **kept withdrawn**: the owner's `DELETE` is journalled too, so it is purged again at the start. (Before the fix it was back online with its entry form open, and that arbiter's machine had already thrown its key away.) |
+| approved or unhid a tournament, unsuspended an installation, lifted a block, opened registration or unpaused | **as the backup had it** - these are never replayed. Redo them from the admin panel, deliberately |
 | published a tournament for the first time | gone, and its key claim with it; the next publish that carries a key claims the address again |
 | sent an entry or a report | lost |
-| had a client address forgotten by retention | the address is back |
+| had a client address recorded | gone: backups hold no client addresses. The next request from that installation records a current one |
 
-The action log is restored to the same moment, so it cannot say what to
-re-apply, and an arbiter's withdrawal was never in it (only break-glass is,
-and at `info` level no request line reaches the journal either). While the
-old database still opens, this lists every difference that matters, and
-reads the old file's `-wal` with it:
+The action log is restored to the same moment as everything else; the replay
+adds its own rows on top. While the old database still opens, this lists what
+the journal does not put back - run it after step 7, so the replay has
+happened, and it reads the old file's `-wal` with it:
 
 ```bash
 cd /var/lib/openresults
@@ -340,37 +374,40 @@ def show(title, sql):
     rows = db.execute(sql).fetchall()
     print(f"\n{title}: {len(rows)}")
     for r in rows: print("  ", *r)
-show("BACK ONLINE - withdrawn or deleted after the backup; take them down again",
+show("BACK ONLINE - not in the old database (should be none after the replay)",
      f"SELECT s.slug, ifnull(t.status, 'listed') FROM ({slugs.format('main')}) s "
      f"LEFT JOIN main.tournaments t USING (slug) WHERE s.slug NOT IN ({slugs.format('old')})")
 show("GONE - created or first published after the backup; their claims went with them",
      f"SELECT slug FROM ({slugs.format('old')}) WHERE slug NOT IN ({slugs.format('main')})")
-show("status or owner differs",
+show("status or owner differs - approvals, unhides and transfers to redo",
      "SELECT m.slug, m.status || ' -> ' || o.status, ifnull(m.installation_id, '-') || ' -> ' || ifnull(o.installation_id, '-') "
      "FROM main.tournaments m JOIN old.tournaments o USING (slug) "
      "WHERE m.status IS NOT o.status OR m.installation_id IS NOT o.installation_id")
-show("installation status differs - a revoked or suspended key works again",
+show("installation status differs - unsuspensions to redo",
      "SELECT m.id, m.status || ' -> ' || o.status FROM main.installations m JOIN old.installations o USING (id) WHERE m.status <> o.status")
-show("switches that differ (restored -> before)",
+show("switches that differ (restored -> before) - openings to redo",
      "SELECT k, ifnull((SELECT value FROM main.settings WHERE key = k), 0) || ' -> ' || ifnull((SELECT value FROM old.settings WHERE key = k), 0) "
      "FROM (SELECT key AS k FROM main.settings UNION SELECT key FROM old.settings) "
      "WHERE ifnull((SELECT value FROM main.settings WHERE key = k), 0) <> ifnull((SELECT value FROM old.settings WHERE key = k), 0)")
-show("address blocks placed after the backup", "SELECT cidr, expires_at, reason FROM old.address_blocks WHERE cidr NOT IN (SELECT cidr FROM main.address_blocks)")
-show("moderation actions after the backup",
-     "SELECT inserted_at, actor, action, target FROM old.moderation_actions WHERE id > (SELECT ifnull(max(id), 0) FROM main.moderation_actions) ORDER BY id")
+show("address blocks that differ", "SELECT cidr, expires_at FROM old.address_blocks WHERE cidr NOT IN (SELECT cidr FROM main.address_blocks) UNION ALL SELECT cidr || ' (only here)', expires_at FROM main.address_blocks WHERE cidr NOT IN (SELECT cidr FROM old.address_blocks)")
+show("moderation actions after the backup", "SELECT inserted_at, actor, action, target FROM old.moderation_actions WHERE inserted_at > (SELECT ifnull(max(inserted_at), '') FROM main.moderation_actions WHERE actor <> 'restore-replay') ORDER BY inserted_at")
 EOF
 ```
 
 It opens both files read-only, as the service account: SQLite may still
 create a `-shm` beside a WAL database it only reads, and one created by root
-is one the service cannot open. In the drill it listed, exactly, the two
-tournaments withdrawn or deleted after the backup, the two published after it,
-the revoked installation, both switches, the block and the five moderation
-actions.
+is one the service cannot open.
 
-Re-apply moderation from the admin panel. Take a tournament that is back
-online down again with the operator token, in the tournament-key position -
-it is logged as break-glass:
+For a tournament that is gone: if it was published with the operator token -
+hosted OpenPairings, or any copy configured with a token - its arbiter's next
+publish claims the address back with the key that machine still holds; the
+drill's came back that way. If it was minted for an installation, the address
+no longer belongs to one, and by the contract's ownership rule that
+installation's publishes to it are refused as `not_owner` until it takes a
+new address (not exercised in the drill). Anything the journal missed - it was
+lost with the disk, or the backup is older than the journal's trimming - is
+taken down with the operator token in the tournament-key position, logged as
+break-glass:
 
 ```bash
 curl -X DELETE "http://127.0.0.1:${PORT:-4004}/api/tournaments/<slug>" \
@@ -381,42 +418,30 @@ curl -X DELETE "http://127.0.0.1:${PORT:-4004}/api/tournaments/<slug>" \
 (`OPENRESULTS_INGEST_TOKEN` is in the unit; step 1 did not export it, on
 purpose.)
 
-For a tournament that is gone: if it was published with the operator token -
-hosted OpenPairings, or any copy configured with a token - its arbiter's
-next publish claims the address back with the key that machine still holds;
-the drill's came back that way. If it was minted for an installation, the
-address no longer belongs to one, and by the contract's ownership rule that
-installation's publishes to it are refused as `not_owner` until it takes a
-new address (not exercised in the drill).
-
-If the old database is gone too, the table above is a checklist to work
-through by hand, starting with every takedown and revocation you know of.
+If the old database is gone too, the table above is the checklist: the journal
+has already put the removals back, and what is left is the reversals.
 
 ### Privacy
 
-What a backup holds, measured in the drill rather than assumed:
+What a backup holds, measured in the drill rather than assumed, and what
+changed since:
 
-- **Client addresses** on installations and reports, up to about 31 days old
-  when it is written: the scheduled backup runs five minutes before the daily
-  retention job, which forgets addresses at 30 days. With 30 backups kept one
-  a day, the oldest is about 30 days old, so **the backup set can hold
-  addresses about two months old**.
-- **Addresses retention never reaches**: every `block_address` and `unblock`
-  row in the action log keeps the address or range it named, for good.
+- **Client addresses**: none, since 2026-09-13. They are nulled in the copy
+  and the copy is vacuumed, so they are not left in its free space either. In
+  the drill a backup held them up to about two months old, and a restore
+  brought back addresses retention had already forgotten.
 - **Email addresses**: every entry-form registration, and a report's optional
   contact email, which no retention job touches.
+- **Addresses retention never reaches**: every `block_address` and `unblock`
+  row in the action log keeps the address or range it named, for good, and
+  so does the moderation journal for a block until it is trimmed.
 
-A restore puts back every address retention had already forgotten. The
-retention job forgets the ones past 30 days ten minutes after boot - but the
-first backup after a restore is written at five minutes, so it keeps them for
-another full retention cycle. The drill measured exactly that: an address
-forgotten before the restore was back in the database, and in the backup
-written five minutes after it.
-
-Whether backups should be encrypted, kept for less than a month, or stripped
-of addresses older than 30 days before they are written is a decision for the
-operator, not something this guide settles. `docs/restore-drill-2026-09-13.md`
-sets out the options.
+Recommended, and a decision for the operator rather than something this guide
+settles: set the backup passphrase (above); give report contact emails and the
+action log's block ranges a retention of their own, or stop writing the range
+into `block_address`'s log details; keep fewer days of backups where the
+entry-form emails are a concern. `docs/restore-drill-2026-09-13.md` has the
+measurements.
 
 ## Configuration (environment variables)
 

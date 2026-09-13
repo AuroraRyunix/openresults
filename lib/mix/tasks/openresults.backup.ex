@@ -162,8 +162,11 @@ defmodule Mix.Tasks.Openresults.Backup do
       systemctl start openresults
       curl -s -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${PORT:-4000}/"   # expect 200
 
-    Keep the .before-restore-* files until you are sure: they hold everything
-    written after the backup, including the moderation to re-apply.
+    At the start the moderation journal applies again every removal made after
+    the backup (revocations, suspensions, blocks, hides, deletions, closed
+    switches). Approvals, unhides, unblocks and openings are not replayed. Keep
+    the .before-restore-* files until you are sure: they hold everything written
+    after the backup, including those.
     """
   end
 

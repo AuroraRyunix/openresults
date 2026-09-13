@@ -94,14 +94,14 @@ Each entry is tagged so a version can be skimmed:
   older than the code otherwise boots and answers 500 on every page); the
   whole procedure, and what a restore undoes, is in `docs/deployment.md`.
 - [Change] **What a restore undoes is now written down, with a way to find
-  it.** A restore rolls moderation back with the data: a revoked installation
-  key works again, closed registration is open, blocks are gone, and a
-  tournament its arbiter withdrew is back online with its entry form open -
-  while the arbiter's machine has already thrown its key away. The deployment
-  guide has a read-only script that compares the restored and the replaced
-  database and lists exactly that, and how to take a resurrected tournament
-  down again. Details and the privacy side (backups hold client addresses up
-  to about two months old) in `docs/restore-drill-2026-09-13.md`.
+  it.** As the drill found it, a restore rolled moderation back with the data:
+  a revoked installation key worked again, closed registration was open,
+  blocks were gone, and a tournament its arbiter withdrew was back online with
+  its entry form open. The removals are now put back by the moderation journal
+  (above); the deployment guide's read-only script compares the restored and
+  the replaced database and lists what is still left by hand - the approvals,
+  unhides and openings made after the backup. Details in
+  `docs/restore-drill-2026-09-13.md`.
 - [Fix] **`--verify` reads every page.** It checked that three tables existed,
   so a backup of a database with one damaged table verified and restored.
   It now runs SQLite's integrity check and refuses, before anything is written.

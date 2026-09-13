@@ -61,12 +61,15 @@ defmodule OpenResults.Backup do
 
   ## What a restore undoes
 
-  Everything written after the backup, and on this server that includes
-  moderation: a revoked installation key works again, a closed registration
-  switch is open, an address block is gone, a hidden or deleted tournament is
-  back - and so is a tournament its arbiter withdrew, whose key that arbiter's
-  machine has already thrown away. The action log is restored to the same
-  moment, so it cannot say what to re-apply. See the deployment guide.
+  Everything written after the backup, and on this server that included
+  moderation: a revoked installation key worked again, a closed registration
+  switch was open, an address block was gone, a hidden or deleted tournament
+  was back - and so was a tournament its arbiter withdrew, whose key that
+  arbiter's machine had already thrown away. The action log is restored to the
+  same moment, so it cannot say what to re-apply. Since 2026-09-13 those
+  removals are kept outside the database as well and applied again at the
+  first start (`OpenResults.ModerationJournal`); the reversals - approvals,
+  unhides, unblocks, openings - are not, by design. See the deployment guide.
   """
 
   @magic "ORBAK1"
