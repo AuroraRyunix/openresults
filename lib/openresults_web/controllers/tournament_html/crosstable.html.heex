@@ -1,4 +1,9 @@
-<.masthead payload={@payload} slug={@slug} current={@current} />
+<.masthead
+  payload={@payload}
+  slug={@slug}
+  current={@current}
+  query={OpenResultsWeb.FilterParams.to_params(@filters)}
+/>
 
 <section>
   <%!-- No "after round N" beside this heading, unlike the standings. The
@@ -9,7 +14,7 @@
         rounds are actually here. --%>
   <h2>{gettext("Cross-table")}</h2>
 
-  <.crosstable_table payload={@payload} slug={@slug} />
+  <.crosstable_table payload={@payload} slug={@slug} filters={@filters} />
 
   <.withheld_results_note rounds={Tournament.withheld_result_rounds(@payload)} payload={@payload} />
 </section>

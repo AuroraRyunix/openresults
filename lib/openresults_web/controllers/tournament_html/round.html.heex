@@ -1,7 +1,12 @@
 <%= if @display? do %>
   <.projector_round payload={@payload} slug={@slug} round={@round} players={@players} />
 <% else %>
-  <.masthead payload={@payload} slug={@slug} current={@current} />
+  <.masthead
+    payload={@payload}
+    slug={@slug}
+    current={@current}
+    query={OpenResultsWeb.FilterParams.to_params(@filters)}
+  />
 
   <section>
     <%!-- The "dates" tick covers a round's own date as well as the
@@ -23,7 +28,13 @@
       payload={@payload}
     />
 
-    <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />
+    <.pairings_table
+      slug={@slug}
+      round={@round}
+      players={@players}
+      payload={@payload}
+      filters={@filters}
+    />
 
     <%!-- The projector view was reachable only by knowing to add ?display=1,
           which is no way to find a feature. A plain link: whoever is setting

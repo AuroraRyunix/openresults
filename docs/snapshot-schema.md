@@ -138,6 +138,39 @@ is one of these. Nothing else identifies a player.
 optional, all frequently absent in club play. A missing key and a `null` mean
 the same thing: not known.
 
+**`tournament.categories`** - the tournament's category vocabulary (e.g.
+`["U1800", "Women"]`), in the arbiter's own order - the order they defined on
+the Categories page. **Gated**: present only when the arbiter's "Categories"
+public-display setting is on (`tournament.display.category`, read by
+`OpenResultsWeb.Tournament.show?/2` on this side). Omitted entirely - never
+sent as `[]` - when that setting is off, or when talking to an OpenPairings
+that predates this field. OpenResults reads absence as "no category filter
+available for this tournament", never as "the tournament has no categories" -
+the two are indistinguishable from here and the difference does not matter to
+a reader either way; see `OpenResultsWeb.Tournament.Filter.categories/1`.
+
+**`players[].categories`** - that one player's OWN categories, drawn from
+`tournament.categories`'s vocabulary and in that same order, limited to
+categories the tournament still lists - a tag a player once carried that the
+tournament later removed is dropped, exactly like `standings.rows[].category`
+already drops a category the arbiter stopped listing. Added in OpenPairings
+0.53.0 and, since this version, gated the same way `tournament.categories` is
+above: present only when categories are shown. **When absent** (an older
+OpenPairings, or an individual player entry missing it even though
+`tournament.categories` is present), OpenResults falls back to that player's
+single `category` field below, wrapped in a one-element list when it is not
+`null`, else `[]` - see `OpenResultsWeb.Tournament.Filter.player_categories/1`.
+This is a richer, separate thing from `players[].category` just below: a
+player can carry several of these (a junior AND a woman, say), where
+`category` is the one the arbiter actually paired them by.
+
+**`players[].category`** - the single category this player was PAIRED by -
+see OpenPairings' `PairingsEngine.Categories.pairing_category/2`. A string or
+`null`, always present regardless of the display setting above, exactly as
+before this document described `tournament.categories`/`players[].categories`.
+This is also what `standings.rows[].category` (below) already carries per row;
+`players[].category` is the same value read off the player instead of the row.
+
 **`rounds[]`** - contains only PUBLISHED rounds. An unpublished round is
 absent entirely, not present-and-flagged. Same for a hidden board: absent
 from `boards`.

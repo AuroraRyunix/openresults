@@ -17,6 +17,7 @@ defmodule OpenResultsWeb.TournamentController do
 
   alias OpenResults.Snapshots
   alias OpenResults.Tournaments
+  alias OpenResultsWeb.FilterParams
   alias OpenResultsWeb.Meta
   alias OpenResultsWeb.Tournament
 
@@ -65,23 +66,24 @@ defmodule OpenResultsWeb.TournamentController do
   @doc """
   `GET /t/:slug` - the standings, exactly as the arbiter computed them.
   """
-  def standings(conn, %{"slug" => slug}) do
+  def standings(conn, %{"slug" => slug} = params) do
     with_payload(conn, slug, fn conn, payload ->
       if Tournament.show?(payload, "standings") do
-        render_standings(conn, payload, slug)
+        render_standings(conn, payload, slug, FilterParams.parse(params))
       else
         withheld(conn, payload, slug, :standings)
       end
     end)
   end
 
-  defp render_standings(conn, payload, slug) do
+  defp render_standings(conn, payload, slug, filters) do
     render(conn, :standings,
       page_title: Tournament.name(payload),
       page_description: Meta.standings(payload),
       payload: payload,
       slug: slug,
-      current: :standings
+      current: :standings,
+      filters: filters
     )
   end
 
@@ -92,23 +94,24 @@ defmodule OpenResultsWeb.TournamentController do
   the honest wording: what is withheld here is the boards, whichever of the
   two ticks did it. See `Tournament.crosstable?/1`.
   """
-  def crosstable(conn, %{"slug" => slug}) do
+  def crosstable(conn, %{"slug" => slug} = params) do
     with_payload(conn, slug, fn conn, payload ->
       if Tournament.crosstable?(payload) do
-        render_crosstable(conn, payload, slug)
+        render_crosstable(conn, payload, slug, FilterParams.parse(params))
       else
         withheld(conn, payload, slug, :pairings)
       end
     end)
   end
 
-  defp render_crosstable(conn, payload, slug) do
+  defp render_crosstable(conn, payload, slug, filters) do
     render(conn, :crosstable,
       page_title: "#{Tournament.name(payload)} - #{gettext("Cross-table")}",
       page_description: Meta.crosstable(payload),
       payload: payload,
       slug: slug,
-      current: :crosstable
+      current: :crosstable,
+      filters: filters
     )
   end
 
@@ -123,14 +126,14 @@ defmodule OpenResultsWeb.TournamentController do
   def round(conn, %{"slug" => slug, "n" => n} = params) do
     with_payload(conn, slug, fn conn, payload ->
       if Tournament.show?(payload, "pairings") do
-        render_round(conn, payload, slug, n, display?(params))
+        render_round(conn, payload, slug, n, display?(params), FilterParams.parse(params))
       else
         withheld(conn, payload, slug, :pairings)
       end
     end)
   end
 
-  defp render_round(conn, payload, slug, n, display?) do
+  defp render_round(conn, payload, slug, n, display?, filters) do
     number = integer(n)
 
     case number && Tournament.round(payload, number) do
@@ -154,7 +157,8 @@ defmodule OpenResultsWeb.TournamentController do
           round: round,
           players: Tournament.players_by_no(payload),
           current: {:round, number},
-          display?: display?
+          display?: display?,
+          filters: filters
         )
     end
   end

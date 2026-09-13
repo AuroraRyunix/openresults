@@ -939,6 +939,10 @@
   },
   "tournament": {
     "arbiter": "Jorian Burssens",
+    "categories": [
+      "A",
+      "B"
+    ],
     "city": "Ghent",
     "deputy": null,
     "display": {

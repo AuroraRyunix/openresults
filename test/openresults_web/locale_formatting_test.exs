@@ -104,30 +104,53 @@ defmodule OpenResultsWeb.LocaleFormattingTest do
     end
   end
 
-  describe "the data-* attributes a sort or filter reads" do
-    test "stay dot-decimal in nl and fr exactly as they do in en", %{slug: slug} do
+  describe "the standings table's own numbers, now that sorting is a real request rather than a script reading data-* attributes" do
+    # The standings table used to carry `data-points`/`data-value` for a
+    # client-side sort script that read them with `parseFloat`, which is
+    # exactly why they were NEVER allowed to localise - `OpenResultsWeb.Format`
+    # existing for the visible text only. That script is gone (sorting is a
+    # real `?sort=` request now - see `OpenResultsWeb.Tournament.Filter`),
+    # and with it the attributes: there is nothing left in the page for a
+    # comma to break. What remains to assert is the ordinary rule every
+    # other visible number on this site already follows.
+    test "points and tiebreak values follow the locale; ratings and ranks never do", %{
+      slug: slug
+    } do
       for lang <- ~w(en nl fr) do
         document = build_conn() |> get(~p"/t/#{slug}?lang=#{lang}") |> doc()
         row = "table.standings > tbody > tr:nth-child(3)"
+        comma? = lang in ~w(nl fr)
 
-        assert attrs(document, row, "data-points") == ["1.5"], "locale #{lang}"
+        points = texts(document, "#{row} td.strong") |> List.first()
+        tiebreaks = texts(document, "#{row} .tb-detail summary, #{row} td.tb-cell > span")
 
-        assert attrs(document, "#{row} td.tb-cell", "data-value") ==
-                 ["1.5", "1.5", "0.75", "2.5"],
-               "locale #{lang}"
+        if comma? do
+          assert points =~ ",", "locale #{lang}"
+          assert Enum.any?(tiebreaks, &(&1 =~ ",")), "locale #{lang}"
+        else
+          refute points =~ ",", "locale #{lang}"
+          refute Enum.any?(tiebreaks, &(&1 =~ ",")), "locale #{lang}"
+        end
       end
     end
 
-    test "the Keizer table's data-value and data-score stay dot-decimal too", %{conn: conn} do
+    test "the Keizer table's value and score follow the locale too", %{conn: conn} do
       slug = publish(SnapshotPayloads.keizer())
 
       for lang <- ~w(en nl fr) do
         document = conn |> get(~p"/t/#{slug}?lang=#{lang}") |> doc()
-        rows = LazyHTML.query(document, "table.standings > tbody > tr")
+        # Row 3 (rank 3, player 2) is the one with fractional points/score
+        # (4.5/0.5) in the fixture - a whole number like row 1's never gains
+        # a comma in any locale (`number/1` prints `8.0` as `"8"`), so it
+        # would prove nothing either way.
+        row_cells = texts(document, "table.standings > tbody > tr:nth-child(3) > td.num")
+        comma? = lang in ~w(nl fr)
 
-        assert attr(rows, "data-value") != []
-        assert Enum.all?(attr(rows, "data-value"), &(not String.contains?(&1, ",")))
-        assert Enum.all?(attr(rows, "data-score"), &(not String.contains?(&1, ",")))
+        if comma? do
+          assert Enum.any?(row_cells, &(&1 =~ ",")), "locale #{lang}"
+        else
+          refute Enum.any?(row_cells, &(&1 =~ ",")), "locale #{lang}"
+        end
       end
     end
   end
