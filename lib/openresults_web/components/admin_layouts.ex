@@ -27,7 +27,8 @@ defmodule OpenResultsWeb.Admin.Layouts do
     {"Installations", "/admin/installations"},
     {"Reports", "/admin/reports"},
     {"Address blocks", "/admin/address-blocks"},
-    {"Action log", "/admin/action-log"}
+    {"Action log", "/admin/action-log"},
+    {"Stats", "/admin/stats"}
   ]
 
   @doc "The page's title, then the panel's."

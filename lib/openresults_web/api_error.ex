@@ -56,6 +56,8 @@ defmodule OpenResultsWeb.ApiError do
   @spec send(Plug.Conn.t(), atom(), map() | keyword()) :: Plug.Conn.t()
   def send(conn, code, extra \\ %{}) do
     {status, detail} = Map.fetch!(@codes, code)
+    # One counter increment, for the admin stats page's refusals by code.
+    OpenResults.Stats.count({:refused, code})
     extra = Map.new(extra)
 
     conn =

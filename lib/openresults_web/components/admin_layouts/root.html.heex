@@ -8,6 +8,13 @@
           `X-Robots-Tag`; this is the copy that survives a saved page. --%>
     <meta name="robots" content="noindex, nofollow" />
     <title>{title(assigns)}</title>
+    <%!-- A page that watches something (the stats page) reloads itself this
+          way: no script, and nothing the CSP has to allow. --%>
+    <meta
+      :if={assigns[:refresh_seconds]}
+      http-equiv="refresh"
+      content={assigns[:refresh_seconds]}
+    />
     <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
     <link rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!-- No script tag, and the response's CSP says `script-src 'none'`:

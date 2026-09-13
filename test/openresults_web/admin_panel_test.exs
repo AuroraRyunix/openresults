@@ -389,7 +389,8 @@ defmodule OpenResultsWeb.AdminPanelTest do
                "/admin/installations",
                "/admin/reports",
                "/admin/address-blocks",
-               "/admin/action-log"
+               "/admin/action-log",
+               "/admin/stats"
              ]
 
       # And every link anywhere on the page leads to a route (query string

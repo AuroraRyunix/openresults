@@ -27,6 +27,21 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **A stats page in the admin panel, `/admin/stats`.** Traffic for
+  the last hour (per minute) and the last 24 hours (per hour): requests by
+  route group, status classes, page-cache hit rate and 304 share, response
+  time p50/p95/p99, and the busiest tournaments. Server health: CPU and load
+  from `/proc` (or "not measured"), system and BEAM memory, schedulers online
+  against logical CPUs (to confirm `+S 2:2` took effect), run queue, open HTTP
+  connections, uptime and versions. Publishing in the last 24 hours:
+  publishes by operator token and installation key, mints, registrations and
+  refusals by code. The database: file and WAL size, row counts (once a
+  minute), query and pool-queue p95, and free disk. Counted in memory by
+  telemetry handlers doing one ETS increment per request, reset by a restart,
+  with no addresses, user agents or query strings. Server-rendered SVG charts,
+  no JavaScript, reloads every 30 seconds. Measured cost on one pinned core:
+  about 1-2% of throughput, within the run-to-run noise
+  (`docs/stats-overhead-2026-09-13.md`).
 - [Fix] **The admin panel showed every email address as "[email protected]"
   behind Cloudflare.** Cloudflare's Email Address Obfuscation rewrites addresses
   in HTML and decodes them with a script, and the panel allows no scripts, so

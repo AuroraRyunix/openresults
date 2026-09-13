@@ -298,6 +298,9 @@ defmodule OpenResultsWeb.Router do
 
     get "/action-log", ActionLogController, :index
 
+    # Read-only, and cheap to open: see `OpenResults.Stats`.
+    get "/stats", StatsController, :show
+
     # Test-only: a harmless confirmation page and the POST behind it, so the
     # confirmation pattern and the CSRF check are proven through this exact
     # pipeline. Compiled in only where config/test.exs asks for it; no

@@ -322,6 +322,16 @@ written to the action log with your address.
   can be many people.
 - **Action log.** Everything above, plus break-glass uses of the operator
   token and retention runs, filterable by who, what and target.
+- **Stats.** Read-only, and reloads itself every 30 seconds. Traffic (requests
+  by route group, status classes, page-cache hit rate, response times, the
+  busiest tournaments), server health (CPU and load, memory, schedulers online
+  against logical CPUs, run queue, open connections), publishing and refusals
+  in the last 24 hours, and the database (file and WAL size, row counts, query
+  and pool-queue times). Everything is counted in memory since the last
+  restart, which the page names; no addresses, user agents or query strings
+  are kept. "Schedulers: 2 online of 2" is how to confirm the deploy's
+  `+S 2:2` took effect. CPU, load and system memory come from `/proc` and say
+  "not measured" anywhere else.
 
 ## When it does not work
 
