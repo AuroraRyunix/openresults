@@ -43,6 +43,22 @@ defmodule OpenResults.PublicPublishing do
   def installation_max_snapshot_bytes, do: env(:installation_max_snapshot_bytes, 3_145_728)
 
   @doc """
+  How many stored versions a tournament owned by an installation keeps - see
+  `OpenResults.Snapshots.prune_versions/2`. Never less than 1, whatever the
+  configuration says: the newest version is the one the public reads, and a
+  cap of 0 would prune it. `config/runtime.exs` refuses such a value at boot;
+  this is the second line.
+  """
+  def installation_max_versions, do: max(env(:installation_max_versions, 20), 1)
+
+  @doc """
+  The free space, as a whole percentage of the database's volume, below which
+  installation keys are refused `storage_low` on mint and publish. `0` is off.
+  See `OpenResults.DiskSpace`.
+  """
+  def min_free_disk_percent, do: min(env(:min_free_disk_percent, 10), 100)
+
+  @doc """
   What `GET /api/server` answers.
 
   The two state fields collapse to `unavailable` whenever the gate is off,

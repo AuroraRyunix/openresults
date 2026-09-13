@@ -36,6 +36,9 @@ defmodule OpenResultsWeb.ApiError do
     snapshot_too_large: {413, "the snapshot is larger than an installation key may publish"},
     registration_closed: {503, "this server is not accepting new installations right now"},
     publishing_paused: {503, "publishing with installation keys is paused on this server"},
+    storage_low:
+      {503,
+       "this server is low on disk space; installation keys may publish again when it has room, and may still delete"},
     rate_limited: {429, "too many requests; wait `retry_after` seconds"}
   }
 

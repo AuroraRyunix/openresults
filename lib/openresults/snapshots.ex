@@ -16,6 +16,7 @@ defmodule OpenResults.Snapshots do
   import Ecto.Query, warn: false
 
   alias OpenResults.Envelope
+  alias OpenResults.PublicPublishing
   alias OpenResults.Repo
   alias OpenResults.Snapshots.LatestIdCache
   alias OpenResults.Snapshots.Snapshot
@@ -80,6 +81,11 @@ defmodule OpenResults.Snapshots do
   landing between the plug's check and the insert would leave a snapshot with
   no row behind it - which reads as `listed` - and a pending tournament would
   have promoted itself onto the front page and the player pages.
+
+  The same transaction then prunes the tournament to its newest
+  `PublicPublishing.installation_max_versions/0` versions
+  (`prune_versions/2`) - after every accepted installation publish, an
+  unchanged repeat included. The operator path keeps every version.
   """
   @spec ingest(term(), keyword()) ::
           {:ok, Snapshot.t()}
@@ -116,6 +122,9 @@ defmodule OpenResults.Snapshots do
         with :ok <- Tournaments.authorize_owner(slug, installation, :publish),
              :ok <- TournamentKeys.authorize_publish(slug, key, break_glass: false),
              {:ok, snapshot} <- store(slug, payload, received_at) do
+          # Inside the transaction that inserted, so the newest N at commit
+          # are exactly the ones kept. See `prune_versions/2`.
+          prune_versions(slug, PublicPublishing.installation_max_versions())
           snapshot
         else
           {:error, reason} -> Repo.rollback(reason)
@@ -364,6 +373,53 @@ defmodule OpenResults.Snapshots do
   end
 
   defp only_listed(query, _all), do: query
+
+  @doc """
+  Deletes every version of `slug` older than its newest `keep`, returning how
+  many went - the version cap of `docs/public-publishing.md`, "Storage
+  bounds". Called by an installation-key publish inside its own transaction;
+  an operator publish never prunes.
+
+  Only the OLDEST go, by insertion (the row id), never by `received_at`, and
+  never the newest: `keep` is at least 1. That is what keeps every reader
+  whole. `latest/1`, `LatestIdCache`, the body cache, the ETag and the page
+  cache all name the newest id, which is always kept. And `as_of/2` picks the
+  highest id at or before an instant: removing only ids lower than every id
+  kept can make that answer `nil`, never a different document. It is the opposite of the mistake `delete_all_for/1`
+  warns about: that one would remove the newest row and leave the history;
+  this removes the far end of the history and always leaves the newest.
+
+  A tournament already over the cap is pruned lazily, by its next accepted
+  installation publish. SQLite reuses the freed pages; nothing is vacuumed
+  here.
+
+  Writes no action log row: it is housekeeping, and the moderation journal's
+  replay reads action rows about a tournament as moderation it already knows.
+  """
+  @spec prune_versions(String.t(), integer()) :: non_neg_integer()
+  def prune_versions(slug, keep) when is_integer(keep) do
+    keep = max(keep, 1)
+
+    boundary =
+      slug
+      |> for_slug()
+      |> offset(^(keep - 1))
+      |> limit(1)
+      |> select([s], s.id)
+      |> Repo.one()
+
+    case boundary do
+      nil ->
+        0
+
+      id ->
+        {count, _} =
+          from(s in Snapshot, where: s.tournament_slug == ^slug and s.id < ^id)
+          |> Repo.delete_all()
+
+        count
+    end
+  end
 
   @doc """
   Deletes EVERY snapshot held for a tournament, returning how many went.

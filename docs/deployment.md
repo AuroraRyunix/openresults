@@ -580,6 +580,8 @@ from the admin panel.
 | `OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE` | 30 | mints plus publishes per installation per minute |
 | `OPENRESULTS_INSTALLATION_MAX_TOURNAMENTS` | 50 | `pending` plus `listed` tournaments one installation may hold |
 | `OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES` | 3145728 | largest snapshot body an installation key may publish; measured, see the contract. The operator token keeps the 8 MB parser limit |
+| `OPENRESULTS_INSTALLATION_MAX_VERSIONS` | 20 | stored versions an installation's tournament keeps; the oldest beyond it are pruned on its next publish. At least 1. Operator-published tournaments keep every version. The hosted unit sets 100 |
+| `OPENRESULTS_MIN_FREE_DISK_PERCENT` | 10 | below this much free space on the database's volume (`df`'s Available, measured every minute), installation keys get 503 `storage_low` on mint and publish; delete and the operator token are unaffected. 0 to 100, 0 is off. A disk that cannot be measured refuses nothing - check the dashboard shows a measurement |
 
 The numeric ones must be whole numbers; anything else stops the app at boot,
 like `BACKUP_RETENTION`.

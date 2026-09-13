@@ -16,6 +16,13 @@ defmodule OpenResultsWeb.Admin.DashboardHTML do
       to enabled. The switches below are stored, but change nothing until it is.
     </p>
 
+    <p :if={@storage.disk.status == :low} class="alarm" id="storage-low">
+      Free disk space is below the floor: {percent(@storage.disk.free_percent)} free on {@storage.disk.path}, floor {@storage.disk.floor_percent}%. Installation keys are refused
+      with storage_low for publishing and new tournaments until there is room again; deleting
+      still works and the operator token is unaffected. Free space on that volume (old backups,
+      deleted tournaments), or change OPENRESULTS_MIN_FREE_DISK_PERCENT.
+    </p>
+
     <section class="admin-section" id="switches">
       <h2>Switches</h2>
       <div class="admin-switches">
@@ -119,11 +126,45 @@ defmodule OpenResultsWeb.Admin.DashboardHTML do
             ({thousands(@storage.database_bytes)} bytes)
           </span>
         </dd>
+
+        <dt>Free disk space</dt>
+        <dd id="storage-disk">
+          <%= if @storage.disk.status == :unknown do %>
+            <span>not measured</span>
+            <span class="quiet">
+              ({@storage.disk.error}). Nothing is refused for storage while it cannot be measured.
+            </span>
+          <% else %>
+            <strong>{percent(@storage.disk.free_percent)}</strong>
+            <span class="quiet">
+              ({bytes(@storage.disk.available_bytes)} of {bytes(@storage.disk.total_bytes)} on {@storage.disk.path}, measured {at(
+                @storage.disk.measured_at
+              )})
+            </span>
+          <% end %>
+        </dd>
+
+        <dt>Free-disk floor</dt>
+        <dd id="storage-floor">
+          <%= if @storage.disk.floor_percent == 0 do %>
+            off
+          <% else %>
+            {@storage.disk.floor_percent}%
+            <span class="quiet">
+              below it, installation keys may not publish or create tournaments
+            </span>
+          <% end %>
+        </dd>
+
+        <dt>Version cap</dt>
+        <dd id="storage-version-cap">
+          {@storage.max_versions}
+          <span class="quiet">
+            versions kept per installation-owned tournament, the oldest pruned on its next
+            publish; operator-published tournaments keep every version
+          </span>
+        </dd>
       </dl>
-      <p class="quiet">
-        Every changed version of a tournament is kept, so published snapshots grow with every
-        publish until a tournament is deleted. Nothing bounds that yet.
-      </p>
     </section>
 
     <section class="admin-section" id="recent-actions">
@@ -147,6 +188,9 @@ defmodule OpenResultsWeb.Admin.DashboardHTML do
     </section>
     """
   end
+
+  defp percent(value) when is_number(value),
+    do: :erlang.float_to_binary(value / 1, decimals: 1) <> "%"
 
   defp checked_by(:cloudflare_access),
     do: "Cloudflare Access, and this server's own check of the Access token"

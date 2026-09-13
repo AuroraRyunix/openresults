@@ -33,6 +33,14 @@ config :openresults, :installation_max_tournaments, 50
 # "Snapshot size cap". 3 MiB: about twice a 500-player, 11-round open with
 # five tie-breaks' working published.
 config :openresults, :installation_max_snapshot_bytes, 3_145_728
+# The storage bounds - docs/public-publishing.md, "Storage bounds". An
+# installation's tournament keeps its newest 20 versions (the operator's keep
+# every one), and below 10% free space on the database's volume installation
+# keys are refused `storage_low` on mint and publish.
+config :openresults, :installation_max_versions, 20
+config :openresults, :min_free_disk_percent, 10
+# How often `OpenResults.DiskSpace` measures that free space.
+config :openresults, :disk_space_interval, :timer.minutes(1)
 
 # How often `OpenResults.Retention` runs. `:disabled` in test.
 config :openresults, :retention_interval, :timer.hours(24)
