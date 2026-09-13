@@ -25,8 +25,14 @@ Each entry is tagged so a version can be skimmed:
 | [Security] | a vulnerability closed, or judged not to apply |
 | [Verified] | checked against a reference, no code change |
 
-## [Unreleased]
+## [0.14.1] - 2026-09-13
 
+- [Fix] **A restore no longer drops a removal that shared its timestamp with
+  another one.** Ending an installation's trust and lowering its limits in the
+  same instant wrote two journal lines with one time; when a restore replayed
+  them, the first line's replay made the second look already applied, so the
+  limit stayed high. A replay now only covers a line of the same kind at the
+  same time, and a second boot still changes nothing.
 - [Feature] **A terms and privacy page, at `/terms`.** Who runs the site, who
   may publish what, what is not allowed, when a tournament shows where, how the
   operator moderates, how to have a tournament or your name removed or
