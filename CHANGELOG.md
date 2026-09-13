@@ -25,7 +25,7 @@ Each entry is tagged so a version can be skimmed:
 | [Security] | a vulnerability closed, or judged not to apply |
 | [Verified] | checked against a reference, no code change |
 
-## [Unreleased]
+## [0.14.0] - 2026-09-13
 
 - [Change] **A pending tournament is public straight away, except on player
   pages.** A tournament published with an installation key is now on the front
