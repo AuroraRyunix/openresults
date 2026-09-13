@@ -26,13 +26,14 @@ defmodule OpenResultsWeb.Admin.AddressBlockHTML do
 
     <div :if={@blocks != []} class="scroller">
       <table class="admin-table" id="blocks">
+        <caption class="visually-hidden">Blocked addresses</caption>
         <thead>
           <tr>
-            <th>Address or range</th>
-            <th>Until</th>
-            <th>Reason</th>
-            <th>Blocked by</th>
-            <th></th>
+            <th scope="col">Address or range</th>
+            <th scope="col">Until</th>
+            <th scope="col">Reason</th>
+            <th scope="col">Blocked by</th>
+            <th scope="col"><span class="visually-hidden">Lift the block</span></th>
           </tr>
         </thead>
         <tbody>

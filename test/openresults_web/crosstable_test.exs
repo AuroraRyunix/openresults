@@ -94,7 +94,8 @@ defmodule OpenResultsWeb.CrosstableTest do
       # reader who has just read "6w1" wants to find row 6 by counting.
       assert texts(document, "table.crosstable tbody td.xt-no") == ~w(1 2 3 4 5 6 7 8 9 10)
 
-      assert texts(document, "table.crosstable tbody tr:first-child td.xt-name") ==
+      # A `th`, the row's header, since the accessibility pass of 2026-09-13.
+      assert texts(document, "table.crosstable tbody tr:first-child th.xt-name") ==
                ["GM Müller, Jörg"]
     end
 
@@ -135,7 +136,7 @@ defmodule OpenResultsWeb.CrosstableTest do
       # scrolled to round 9 from looking at numbers belonging to nobody.
       assert texts(document, "div.scroller table.crosstable thead th") != []
       assert length(texts(document, "table.crosstable tbody td.xt-no")) == 10
-      assert length(texts(document, "table.crosstable tbody td.xt-name")) == 10
+      assert length(texts(document, "table.crosstable tbody th.xt-name")) == 10
     end
 
     test "an opponent's number is a link to their card", %{conn: conn, slug: slug} do
@@ -221,7 +222,8 @@ defmodule OpenResultsWeb.CrosstableTest do
       # printed in the hall.
       round = conn |> get(~p"/t/#{slug}/round/1") |> doc()
 
-      assert texts(round, "table.pairings tbody tr:first-child td") ==
+      # `> *`, because the board number is the row's header cell, a `th`.
+      assert texts(round, "table.pairings tbody tr:first-child > *") ==
                ["1", "2601", "0", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana", "0", "2033"]
 
       document = grid(conn, slug)
@@ -239,8 +241,10 @@ defmodule OpenResultsWeb.CrosstableTest do
       # nobody has typed in and a zero would be a game somebody lost.
       document = grid(conn, slug)
 
-      assert cell(document, 8, 3) == "5 w -"
-      assert cell(document, 5, 3) == "8 b -"
+      # The hyphen is for the eye; the words after it are visually hidden and
+      # are what a screen reader says instead of "dash".
+      assert cell(document, 8, 3) == "5 w - not yet reported"
+      assert cell(document, 5, 3) == "8 b - not yet reported"
     end
 
     test "a bye carries the arbiter's own word for it and the arbiter's own value", %{
@@ -308,8 +312,16 @@ defmodule OpenResultsWeb.CrosstableTest do
       # the cell says nothing rather than choosing.
       document = grid(conn, slug)
 
-      assert cell(document, 7, 3) == ""
-      assert cell(document, 10, 3) == ""
+      # Empty to the eye: the only text is visually hidden, for a screen
+      # reader, which would otherwise say "blank".
+      assert cell(document, 7, 3) == "no game published for this round"
+      assert cell(document, 10, 3) == "no game published for this round"
+
+      assert document
+             |> LazyHTML.query(
+               "table.crosstable tbody tr:nth-child(7) td.xt-empty > :not(.visually-hidden)"
+             )
+             |> Enum.empty?()
 
       # And it says so to anyone who asks, in the words the player card uses.
       assert attributes(document, "table.crosstable tbody tr:nth-child(7) td.xt-empty", "title") ==
@@ -339,7 +351,7 @@ defmodule OpenResultsWeb.CrosstableTest do
     test "are the arbiter's own, not this page's arithmetic", %{conn: conn, slug: slug} do
       document = grid(conn, slug)
 
-      assert texts(document, "table.crosstable tbody tr:first-child td") ==
+      assert texts(document, "table.crosstable tbody tr:first-child > *") ==
                ["1", "GM Müller, Jörg", "2601", "6 w 1", "2 b 0.5", "3 w 1", "2 b 1", "1.5", "3"]
 
       # Players 6 and 10 both finish on 0 points; the arbiter placed 6 ahead
@@ -380,7 +392,7 @@ defmodule OpenResultsWeb.CrosstableTest do
       assert texts(document, "table.crosstable thead th") ==
                ["No", "Player", "Elo", "1", "Score", "Rank"]
 
-      assert texts(document, "table.crosstable tbody tr:first-child td") ==
+      assert texts(document, "table.crosstable tbody tr:first-child > *") ==
                ["1", "Peeters, Wouter", "2088", "4 w 1", "1", "2"]
     end
 

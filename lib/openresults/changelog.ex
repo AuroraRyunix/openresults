@@ -28,9 +28,17 @@ defmodule OpenResults.Changelog do
 
   @tags ~w(Feature Fix Change Removed Security Verified)
 
+  # The file's own "# Changelog" title is dropped: the page around it already
+  # has that heading as its one <h1>, and a second one told a screen reader's
+  # heading list the page had two titles.
   @html (case File.read(@changelog_path) do
            {:ok, markdown} ->
-             Enum.reduce(@tags, OpenResults.Markdown.to_html(markdown), fn tag, acc ->
+             body =
+               markdown
+               |> OpenResults.Markdown.to_html()
+               |> String.replace(~r{\A\s*<h1>[^<]*</h1>}, "")
+
+             Enum.reduce(@tags, body, fn tag, acc ->
                String.replace(
                  acc,
                  "[#{tag}]",

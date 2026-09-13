@@ -66,7 +66,9 @@ defmodule OpenResults.Markdown do
         "<" <> tag <> attributes(attrs, tag) <> " />"
 
       true ->
-        "<" <> tag <> attributes(attrs, tag) <> ">" <> render(children) <> "</" <> tag <> ">"
+        "<" <>
+          tag <>
+          attributes(attrs, tag) <> scope(tag) <> ">" <> render(children) <> "</" <> tag <> ">"
     end
   end
 
@@ -74,6 +76,11 @@ defmodule OpenResults.Markdown do
   # but a renderer that crashes on an unexpected node is worse than one that
   # skips it).
   defp render(_other), do: ""
+
+  # A markdown table's header cells are only ever its first row, so each one
+  # heads a column - said outright, as every other table on this site does.
+  defp scope("th"), do: ~s( scope="col")
+  defp scope(_tag), do: ""
 
   defp attributes(attrs, tag) do
     attrs

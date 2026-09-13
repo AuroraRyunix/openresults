@@ -87,7 +87,10 @@
       const empty = document.querySelector("[data-index-empty]");
       const groups = Array.from(panel.querySelectorAll("[data-group]"));
 
-      const apply = () => {
+      // `said` is true for a reader's own typing. The "nothing matches"
+      // sentence is announced when it appears - once, not per keystroke -
+      // because a list emptying itself makes no sound.
+      const apply = (said) => {
         const query = box.value.trim().toLowerCase();
         let anyVisible = false;
 
@@ -109,11 +112,17 @@
           if (groupHasMatch) { anyVisible = true; }
         });
 
-        if (empty) { empty.hidden = anyVisible || !query; }
+        if (empty) {
+          const wasHidden = empty.hidden;
+          empty.hidden = anyVisible || !query;
+          if (said && wasHidden && !empty.hidden && window.openResultsAnnounce) {
+            window.openResultsAnnounce(empty.textContent.trim());
+          }
+        }
       };
 
-      box.addEventListener("input", apply);
-      apply();
+      box.addEventListener("input", () => apply(true));
+      apply(false);
     };
 
     init();

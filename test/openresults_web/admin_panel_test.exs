@@ -379,9 +379,11 @@ defmodule OpenResultsWeb.AdminPanelTest do
              ]
 
       # And every link anywhere on the page leads to a route (query string
-      # aside), or is the one address Cloudflare's edge answers itself.
+      # aside), or is the one address Cloudflare's edge answers itself. The
+      # skip link points within the page, which `AccessibilityTest` checks.
       for href <- doc |> LazyHTML.query("a[href]") |> LazyHTML.attribute("href"),
-          href != "/cdn-cgi/access/logout" do
+          href != "/cdn-cgi/access/logout",
+          not String.starts_with?(href, "#") do
         path = URI.parse(href).path
 
         assert %{} =
