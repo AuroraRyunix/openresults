@@ -180,7 +180,9 @@ defmodule OpenResults.ServerSettings do
     {"PHX_HOST", nil, false},
     {"PORT", nil, false},
     {"FIDE_LOOKUP_ENDPOINT", :fide_lookup_endpoint, false},
-    {"FIDE_LOOKUP_TOKEN", :fide_lookup_token, true}
+    {"FIDE_LOOKUP_TOKEN", :fide_lookup_token, true},
+    {"OPENRESULTS_KBSB_API_URL", :bel_kbsb_api_url, false},
+    {"OPENRESULTS_KBSB_API_KEY", :bel_kbsb_api_key, true}
   ]
 
   @type key ::

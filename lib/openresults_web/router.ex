@@ -229,6 +229,14 @@ defmodule OpenResultsWeb.Router do
     # in the system that returns an email address.
     get "/tournaments/:slug/registrations", RegistrationController, :index,
       private: %{installation_access: :registrations}
+
+    # The Belgian (KBSB/FRBE) roster relay - not tied to any tournament, so
+    # not on the `:public_publishing` gate either: a self-hosted operator may
+    # configure this with an operator token with public publishing off
+    # altogether. See `OpenResultsWeb.Federations.BelController` and
+    # docs/federations-bel.md.
+    get "/federations/bel/players", Federations.BelController, :players,
+      private: %{installation_access: :bel_players}
   end
 
   # Reads. Open, because the CURRENT snapshot only ever contains what an

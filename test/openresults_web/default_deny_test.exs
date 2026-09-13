@@ -70,7 +70,8 @@ defmodule OpenResultsWeb.DefaultDenyTest do
                  {:post, "/api/snapshots", :publish},
                  {:get, "/api/tournaments/:slug/history", :history},
                  {:delete, "/api/tournaments/:slug", :delete},
-                 {:get, "/api/tournaments/:slug/registrations", :registrations}
+                 {:get, "/api/tournaments/:slug/registrations", :registrations},
+                 {:get, "/api/federations/bel/players", :bel_players}
                ])
 
       for route <- routes(), not is_nil(route.access) do
