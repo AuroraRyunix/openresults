@@ -633,7 +633,22 @@
               });
           };
 
-          setInterval(tick, 20000);
+          // Every 20 seconds, and every 10 on a tournament page while a
+          // round's results are coming in - the masthead carries
+          // `data-results-live` exactly then (see `TournamentHTML.masthead/1`).
+          // Asked again before every wait, of the region as it stands after
+          // the last swap, so the pace follows the round: faster the moment
+          // one goes live, back to 20 once its last result is in. Each poll
+          // still sends `x-openresults-refresh`, so none of them counts as a
+          // view whatever the pace.
+          const delay = () => (live.querySelector("[data-results-live]") ? 10000 : 20000);
+          const loop = () => {
+            setTimeout(() => {
+              tick();
+              loop();
+            }, delay());
+          };
+          loop();
           // A tab brought back to the front is stale by however long it was
           // hidden, and its reader is looking at it right now.
           document.addEventListener("visibilitychange", () => {

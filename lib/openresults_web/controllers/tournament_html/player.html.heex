@@ -67,6 +67,8 @@
 
   <.card_table :if={@card != []} slug={@slug} card={@card} payload={@payload} />
 
+  <.withheld_results_note rounds={Tournament.withheld_result_rounds(@payload)} payload={@payload} />
+
   <p :if={@card != [] and Enum.any?(@card, &is_nil(&1.score))} class="footnote">
     {raw(
       gettext(

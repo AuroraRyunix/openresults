@@ -1,6 +1,12 @@
 <.masthead payload={@payload} slug={@slug} current={@current} />
 
 <% starting_rank? = Tournament.starting_rank?(@payload) %>
+<%!-- The live rounds the overview mentions, only where the round pages are
+      public at all, and the first one past the standings for the heading. --%>
+<% live_rounds =
+  if Tournament.show?(@payload, "pairings"), do: Tournament.live_rounds(@payload), else: [] %>
+<% in_progress =
+  Enum.find(live_rounds, &(&1["number"] > (Tournament.after_round(@payload) || 0))) %>
 
 <section>
   <h2>
@@ -9,10 +15,31 @@
     <%!-- `Tournament.after_round/1` is `nil` for `0` as well as for absent -
           see its own doc for why printing "after round 0" was the bug this
           guards against. --%>
-    <span :if={not starting_rank? and Tournament.after_round(@payload)} class="quiet">
+    <span
+      :if={(not starting_rank? and Tournament.after_round(@payload)) && is_nil(in_progress)}
+      class="quiet"
+    >
       {gettext("after round %{number}", number: Tournament.after_round(@payload))}
     </span>
+    <%!-- A later round's results are coming in, so the table is not stuck -
+          it is waiting for the arbiter to close that round. --%>
+    <span
+      :if={(not starting_rank? and Tournament.after_round(@payload)) && in_progress}
+      class="quiet"
+    >
+      {gettext("after round %{number}, round %{live} in progress",
+        number: Tournament.after_round(@payload),
+        live: Tournament.round_label(@payload, in_progress["number"])
+      )}
+    </span>
   </h2>
+
+  <p :for={round <- live_rounds} class="live-line">
+    <a href={~p"/t/#{@slug}/round/#{round["number"]}"}>
+      {Tournament.round_heading(@payload, round["number"])}
+    </a>
+    <.live_marker round={round} />
+  </p>
 
   <.starting_rank_table :if={starting_rank?} payload={@payload} slug={@slug} />
 

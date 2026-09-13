@@ -87,6 +87,7 @@ whole document is trivially idempotent.
     {
       "number": 1,
       "date": "2026-03-01",
+      "results_public": true,
       "boards": [
         { "board": 1, "white": 1, "black": 12, "result": "1-0" },
         { "board": 2, "white": 13, "black": 2, "result": null }
@@ -140,6 +141,27 @@ the same thing: not known.
 **`rounds[]`** - contains only PUBLISHED rounds. An unpublished round is
 absent entirely, not present-and-flagged. Same for a hidden board: absent
 from `boards`.
+
+**`rounds[].results_public`** - whether the round's RESULTS are public, as
+opposed to its pairings. Added 2026-09-13. **Absent means true**, because an
+OpenPairings that predates the field sent every result it had.
+
+`false` means the arbiter has published the round's pairings and switched its
+results off ("Results round N" on their Pairings page, off for every new
+round). The round still travels, with every board, but each `boards[].result`
+is `null` because the result is withheld - not because the game is
+unfinished. Withheld at build time, like a hidden board: the results are not
+in the document. Nothing derived from them is either - `standings.after_round`
+is always below a withheld round, because public standings after a round
+force its results public on the arbiter's side. A `vacated-seat` row in
+`byes` carries a result and is left out of a withheld round; every other bye
+is part of the pairing sheet and still travels with its points. A reader must
+not add those points to a running score, since everyone else's result in the
+same round is unknown.
+
+The arbiter's side sends `true` whenever the results are public for any
+reason - the switch, public standings through that round, or the "immediate"
+publish mode - so a reader never has to work that out.
 
 **`boards[].result`** - the token OpenPairings already stores, verbatim, with
 `null` for a game not yet reported. Taken from the app's own vocabulary rather

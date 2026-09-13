@@ -15,7 +15,13 @@
       <span :if={Tournament.show?(@payload, "dates") && @round["date"]} class="quiet">
         {date(@round["date"])}
       </span>
+      <.live_marker round={@round} />
     </h2>
+
+    <.withheld_results_note
+      rounds={if Tournament.results_public?(@round), do: [], else: [@round["number"]]}
+      payload={@payload}
+    />
 
     <.pairings_table slug={@slug} round={@round} players={@players} payload={@payload} />
 

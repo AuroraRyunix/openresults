@@ -281,7 +281,17 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   defp finished?(payload, today) do
-    all_rounds_published?(payload) or past_end_date?(payload, today)
+    all_rounds_in?(payload) or past_end_date?(payload, today)
+  end
+
+  # Every round published AND its results public. A round whose results the
+  # arbiter is still holding back is not over as far as this site can say,
+  # however many rounds have been paired. The calendar rule beside this is
+  # left alone: an event whose end date has passed is finished even with a
+  # round still withheld, for the reason the doc above gives for dates
+  # outranking a `rounds_count` nobody kept current.
+  defp all_rounds_in?(payload) do
+    all_rounds_published?(payload) and withheld_result_rounds(payload) == []
   end
 
   # Every round from 1 to `rounds_count`, published - not merely a published
@@ -353,6 +363,64 @@ defmodule OpenResultsWeb.Tournament do
   A round's boards, in board order.
   """
   def boards(round), do: round |> list("boards") |> Enum.filter(&is_map/1)
+
+  @doc """
+  Whether a round's results are public - `rounds[].results_public`.
+
+  `false` means the arbiter has published the round's pairings and not yet
+  its results: every board arrives with `result: null` because the results
+  were withheld, not because none were entered, and the pages say so once
+  instead of a column of unreported games.
+
+  **Absent means true.** An OpenPairings that predates the switch sent every
+  result it had, so a round without the key is a round whose results are
+  public. Anything other than a literal `false` reads the same way, for the
+  same reason `registration_open` reads silence as open.
+  """
+  def results_public?(round) when is_map(round), do: Map.get(round, "results_public") != false
+  def results_public?(_not_a_round), do: true
+
+  @doc """
+  The numbers of the published rounds whose results are withheld, in order.
+  """
+  def withheld_result_rounds(payload) do
+    payload
+    |> rounds()
+    |> Enum.reject(&results_public?/1)
+    |> Enum.map(&number_of/1)
+    |> Enum.filter(&is_integer/1)
+  end
+
+  @doc """
+  How far a round's results have come in, as `{reported, total}` over its
+  boards: a board with any result token counts as reported. Counting, never
+  calculating - byes are not boards and are not counted.
+  """
+  def results_progress(round) do
+    boards = boards(round)
+    {Enum.count(boards, &is_binary(Map.get(&1, "result"))), length(boards)}
+  end
+
+  @doc """
+  Whether a round is live: its results are public and at least one of its
+  boards has no result yet. A withheld round is never live - nothing about
+  its results is public, including how many are in.
+  """
+  def live_round?(round) do
+    {reported, total} = results_progress(round)
+    results_public?(round) and reported < total
+  end
+
+  @doc """
+  The live rounds, in number order - see `live_round?/1`.
+  """
+  def live_rounds(payload), do: payload |> rounds() |> Enum.filter(&live_round?/1)
+
+  @doc """
+  Whether any round of the tournament is live. What the page refresher polls
+  faster for.
+  """
+  def live?(payload), do: live_rounds(payload) != []
 
   @doc """
   A round's byes.
@@ -764,6 +832,11 @@ defmodule OpenResultsWeb.Tournament do
     payload
     |> round_slots()
     |> Enum.filter(&within_standings?(payload, &1))
+    # The card stops at a round whose results are withheld: the page says so
+    # once, rather than a row of nothing, and a running score never steps
+    # over the gap. OpenPairings never puts such a round inside the
+    # standings, so this is the guard for a document that does.
+    |> Enum.take_while(&results_public?(Map.get(by_number, &1)))
     |> Enum.map_reduce({:known, 0.0}, fn number, running ->
       entry = card_entry(index, by_number, number, no)
       running = advance(running, entry.points)
@@ -908,7 +981,7 @@ defmodule OpenResultsWeb.Tournament do
   before the first standings are published.
   """
   def crosstable(payload) do
-    numbers = payload |> round_numbers() |> Enum.filter(&within_standings?(payload, &1))
+    numbers = crosstable_rounds(payload)
     placings = Map.new(standings_rows(payload), &{Map.get(&1, "player"), &1})
 
     # One pass over every board and bye in the tournament, and then a lookup
@@ -925,7 +998,7 @@ defmodule OpenResultsWeb.Tournament do
     cells =
       payload
       |> rounds()
-      |> Enum.filter(&within_standings?(payload, number_of(&1)))
+      |> Enum.filter(&(within_standings?(payload, number_of(&1)) and results_public?(&1)))
       |> Map.new(&{number_of(&1), round_cells(&1)})
 
     for player <- Enum.sort_by(players(payload), &Map.get(&1, "no")),
@@ -945,6 +1018,21 @@ defmodule OpenResultsWeb.Tournament do
         cells: Enum.map(numbers, &cell_for(cells, &1, no))
       }
     end
+  end
+
+  @doc """
+  The cross-table's columns: the published rounds no later than the standings
+  (`within_standings?/2`), without a round whose results are withheld - the
+  page says that once rather than showing a column of nothing. The one list
+  both `crosstable/1`'s cells and the page's column headings are built from.
+  """
+  def crosstable_rounds(payload) do
+    withheld = withheld_result_rounds(payload)
+
+    payload
+    |> round_numbers()
+    |> Enum.filter(&within_standings?(payload, &1))
+    |> Enum.reject(&(&1 in withheld))
   end
 
   defp cell_for(cells, number, no) do
@@ -1078,6 +1166,12 @@ defmodule OpenResultsWeb.Tournament do
   # never published - which leaves every player `:absent`, i.e. unknown,
   # which is the honest answer for a round nobody can see.
   defp round_contributions(nil), do: %{}
+
+  # A round whose results are withheld contributes nothing known to anyone -
+  # not even a bye's points, which do travel: a running score that moved for
+  # the players with a bye and stopped for everyone else would be a partial
+  # result of a round the arbiter has not published.
+  defp round_contributions(%{"results_public" => false}), do: %{}
 
   defp round_contributions(round) do
     from_boards =

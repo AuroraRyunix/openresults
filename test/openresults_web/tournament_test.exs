@@ -292,6 +292,79 @@ defmodule OpenResultsWeb.TournamentTest do
     end
   end
 
+  describe "rounds[].results_public" do
+    defp flag(payload, number, value) do
+      update_in(payload, ["rounds"], fn rounds ->
+        Enum.map(rounds, fn
+          %{"number" => ^number} = round -> Map.put(round, "results_public", value)
+          round -> round
+        end)
+      end)
+    end
+
+    test "absent means true; only a literal false withholds", %{swiss: swiss} do
+      assert Tournament.results_public?(%{"number" => 1})
+      assert Tournament.results_public?(%{"number" => 1, "results_public" => true})
+      assert Tournament.results_public?(%{"number" => 1, "results_public" => nil})
+      refute Tournament.results_public?(%{"number" => 1, "results_public" => false})
+
+      assert Tournament.withheld_result_rounds(swiss) == []
+      assert Tournament.withheld_result_rounds(flag(swiss, 5, false)) == [5]
+    end
+
+    test "live is counting boards with a result, and a withheld round is never live", %{
+      swiss: swiss
+    } do
+      round3 = Tournament.round(swiss, 3)
+
+      assert Tournament.results_progress(round3) == {2, 3}
+      assert Tournament.live_round?(round3)
+      refute Tournament.live_round?(Tournament.round(swiss, 5))
+      assert Enum.map(Tournament.live_rounds(swiss), & &1["number"]) == [3]
+      assert Tournament.live?(swiss)
+
+      refute Tournament.live_round?(Tournament.round(flag(swiss, 3, false), 3))
+      refute Tournament.live?(flag(swiss, 3, false))
+    end
+
+    test "the running score into a later round stops at a withheld round, bye or no bye", %{
+      swiss: swiss
+    } do
+      # Player 4 has a pairing-allocated bye in round 2, worth 1.0, and it
+      # still travels in a withheld round - but it must not move the score.
+      assert Tournament.scores_before(swiss, 3)[4] != nil
+      assert Tournament.scores_before(flag(swiss, 2, false), 3)[4] == nil
+      assert Tournament.scores_before(flag(swiss, 2, false), 3)[1] == nil
+    end
+
+    test "a player's card stops at a withheld round inside the standings", %{swiss: swiss} do
+      payload = swiss |> through_last_round() |> flag(3, false)
+
+      assert Enum.map(Tournament.card(payload, 1), & &1.round) == [1, 2]
+    end
+
+    test "the cross-table has no column for a withheld round", %{swiss: swiss} do
+      payload = swiss |> through_last_round() |> flag(3, false)
+
+      assert Tournament.crosstable_rounds(payload) == [1, 2, 5]
+      assert payload |> Tournament.crosstable() |> hd() |> Map.fetch!(:cells) |> length() == 3
+    end
+
+    test "every round published is not finished while one round's results are withheld", %{
+      swiss: swiss
+    } do
+      payload =
+        update_in(
+          swiss,
+          ["tournament"],
+          &Map.merge(&1, %{"rounds_count" => 3, "end_date" => "2099-01-01"})
+        )
+
+      assert Tournament.status(payload, ~D[2026-06-15]) == :finished
+      assert Tournament.status(flag(payload, 3, false), ~D[2026-06-15]) == :live
+    end
+  end
+
   describe "tolerance" do
     test "keizer is keyed off system, not off which keys a row happens to have", %{
       swiss: swiss,

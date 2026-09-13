@@ -27,6 +27,21 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **A round's results can be held back while its pairings are public,
+  and a round whose results are coming in says so.** OpenPairings now keeps a
+  new round's results private until the arbiter switches them on; rounds that
+  were already public keep their results. When a round's results are held
+  back, its round page, the cross-table and a player's card say "Results for
+  round N are not published yet." once, and the round page shows the boards
+  without a result column rather than a column of unreported games. A round
+  whose results are public but not all in carries a small "Live" label and
+  "7 of 12 results" on its page and on the tournament's standings page, and
+  the standings heading reads "after round 2, round 3 in progress" so the
+  table does not look stuck. While a round is live, open tournament pages
+  refresh every 10 seconds instead of 20; those refreshes still do not count
+  as views. A round with held-back results is never treated as finished. A
+  snapshot from an older OpenPairings, which does not say, is read as results
+  public, exactly as before. English, Dutch and French.
 - [Change] **Dutch says "FIDE-rated", not "FIDE-gerateerd".** The FIDE badge on
   tournament pages uses the term Dutch-speaking arbiters actually say.
 - [Change] **A player's chart waits for a third round, and a short event gets a

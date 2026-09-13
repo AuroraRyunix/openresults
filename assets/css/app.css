@@ -322,6 +322,32 @@ a.chip:hover {
   background: none;
 }
 
+/* A round whose results are coming in - see `TournamentHTML.live_marker/1`.
+   Small, beside a heading, and a word rather than a pulsing dot: it says
+   "still changing", which colour alone would not. */
+.live-marker {
+  font-size: 0.875rem;
+  font-weight: normal;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.live-badge {
+  display: inline-block;
+  padding: 0 0.4rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.25rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.live-line {
+  margin: 0.25rem 0 0.75rem;
+}
+
 /* Standings can carry any number of tiebreak columns, so the table scrolls
    inside its own box rather than pushing the page sideways. */
 .scroller {

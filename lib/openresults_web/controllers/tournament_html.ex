@@ -50,6 +50,10 @@ defmodule OpenResultsWeb.TournamentHTML do
 
     ~H"""
     <header class="masthead">
+      <%!-- Read by the root layout's refresher: while any round's results
+            are coming in it polls twice as often. Derived from the snapshot
+            alone, so the page cache keyed by snapshot stays right. --%>
+      <span :if={Tournament.live?(@payload)} data-results-live hidden></span>
       <h1>{Tournament.name(@payload)}</h1>
 
       <%!-- Facts a printed pairing sheet carries as a matter of course, each
@@ -996,10 +1000,7 @@ defmodule OpenResultsWeb.TournamentHTML do
     # same filter to the same list to build each row's `cells`, so the
     # columns here and the cells there can never disagree about which rounds
     # exist.
-    rounds =
-      payload
-      |> Tournament.round_numbers()
-      |> Enum.filter(&Tournament.within_standings?(payload, &1))
+    rounds = Tournament.crosstable_rounds(payload)
 
     assigns =
       assigns
@@ -1228,6 +1229,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       assigns
       |> assign(:boards, Tournament.boards(assigns.round))
       |> assign(:show, show)
+      |> assign(:results?, Tournament.results_public?(assigns.round))
       # The points each player carried INTO this round, which is what a
       # pairing list means by score and what explains why these two are on
       # this board. Their points after it are on the standings.
@@ -1254,7 +1256,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               {gettext("Pts")}
             </th>
             <th scope="col">{gettext("White")}</th>
-            <th class="num" scope="col">{gettext("Result")}</th>
+            <th :if={@results?} class="num" scope="col">{gettext("Result")}</th>
             <th scope="col">{gettext("Black")}</th>
             <th
               :if={@show.pairing_scores}
@@ -1284,7 +1286,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 detail
               />
             </td>
-            <td class="num"><.result token={board["result"]} /></td>
+            <td :if={@results?} class="num"><.result token={board["result"]} /></td>
             <td>
               <.player_link
                 slug={@slug}
@@ -1303,6 +1305,45 @@ defmodule OpenResultsWeb.TournamentHTML do
         </tbody>
       </table>
     </div>
+    """
+  end
+
+  @doc """
+  The "Live" label for a round whose results are public and still coming
+  in, with how many are in. Counting, never calculating: boards with a
+  result against boards in the round. Renders nothing for a round that is
+  not live - finished, or withheld.
+  """
+  attr :round, :map, required: true
+
+  def live_marker(assigns) do
+    {reported, total} = Tournament.results_progress(assigns.round)
+    assigns = assign(assigns, reported: reported, total: total)
+
+    ~H"""
+    <span :if={Tournament.live_round?(@round)} class="live-marker">
+      <span class="live-badge">{gettext("Live")}</span>
+      <span class="quiet">
+        {gettext("%{reported} of %{total} results", reported: @reported, total: @total)}
+      </span>
+    </span>
+    """
+  end
+
+  @doc """
+  One line per round whose results the arbiter has not published, said once
+  on the page rather than as a column of unreported games.
+  """
+  attr :rounds, :list, required: true, doc: "round numbers"
+  attr :payload, :map, required: true
+
+  def withheld_results_note(assigns) do
+    ~H"""
+    <p :for={n <- @rounds} class="footnote results-withheld">
+      {gettext("Results for round %{round} are not published yet.",
+        round: Tournament.round_label(@payload, n)
+      )}
+    </p>
     """
   end
 
@@ -1437,6 +1478,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       assigns
       |> assign(:boards, Tournament.boards(assigns.round))
       |> assign(:show, display_rules(assigns.payload))
+      |> assign(:results?, Tournament.results_public?(assigns.round))
 
     ~H"""
     <section
@@ -1457,6 +1499,11 @@ defmodule OpenResultsWeb.TournamentHTML do
 
       <p :if={@boards == []} class="empty">{gettext("No boards were published for this round.")}</p>
 
+      <.withheld_results_note
+        rounds={if @results?, do: [], else: [@round["number"]]}
+        payload={@payload}
+      />
+
       <div :if={@boards != []} class="projector-table-wrap" id="projector-boards">
         <table class="pairings projector-pairings">
           <caption class="visually-hidden">
@@ -1466,7 +1513,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             <tr>
               <th class="num" scope="col">{gettext("Bd")}</th>
               <th scope="col">{gettext("White")}</th>
-              <th class="num" scope="col">{gettext("Result")}</th>
+              <th :if={@results?} class="num" scope="col">{gettext("Result")}</th>
               <th scope="col">{gettext("Black")}</th>
             </tr>
           </thead>
@@ -1483,7 +1530,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                   detail
                 />
               </td>
-              <td class="num"><.result token={board["result"]} /></td>
+              <td :if={@results?} class="num"><.result token={board["result"]} /></td>
               <td>
                 <.player_link
                   slug={@slug}

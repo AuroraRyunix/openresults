@@ -10,4 +10,6 @@
   <h2>{gettext("Cross-table")}</h2>
 
   <.crosstable_table payload={@payload} slug={@slug} />
+
+  <.withheld_results_note rounds={Tournament.withheld_result_rounds(@payload)} payload={@payload} />
 </section>

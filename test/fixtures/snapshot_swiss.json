@@ -173,7 +173,8 @@
       ],
       "byes": [],
       "date": "2026-03-01",
-      "number": 1
+      "number": 1,
+      "results_public": true
     },
     {
       "boards": [
@@ -219,7 +220,8 @@
         }
       ],
       "date": "2026-03-02",
-      "number": 2
+      "number": 2,
+      "results_public": true
     },
     {
       "boards": [
@@ -258,7 +260,8 @@
         }
       ],
       "date": "2026-03-03",
-      "number": 3
+      "number": 3,
+      "results_public": true
     },
     {
       "boards": [
@@ -300,7 +303,8 @@
       ],
       "byes": [],
       "date": "2026-03-05",
-      "number": 5
+      "number": 5,
+      "results_public": true
     }
   ],
   "schema": "openresults/snapshot",

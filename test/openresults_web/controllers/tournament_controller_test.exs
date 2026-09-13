@@ -75,7 +75,10 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       assert texts(document, "h1") == ["Gent Spring Open 2026"]
       assert texts(document, "td.rank") == ~w(1 2 3 4 5 6 7 8 9 10)
-      assert texts(document, "h2") == ["Standings after round 2"]
+      # The fixture's round 3 is published with its results public and one
+      # board still unreported, so it is live - see the "results_public"
+      # describe block below.
+      assert texts(document, "h2") == ["Standings after round 2, round 3 in progress"]
     end
 
     test "the tiebreak columns are the payload's labels, in the payload's order", %{
@@ -269,7 +272,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     test "a tournament with a real standings table is unaffected", %{conn: conn, slug: slug} do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
-      assert texts(document, "h2") == ["Standings after round 2"]
+      assert texts(document, "h2") == ["Standings after round 2, round 3 in progress"]
       assert texts(document, "table.starting-rank") == []
     end
   end
@@ -414,6 +417,145 @@ defmodule OpenResultsWeb.TournamentControllerTest do
                ["Standings", "Cross-table", "1", "2", "3", "5"]
 
       assert texts(document, "nav.rounds span.chip.withheld") == ["4, not published"]
+    end
+  end
+
+  describe "rounds[].results_public - the arbiter's results switch" do
+    # Round 5 is complete in the fixture; round 3 has one board unreported.
+    defp withhold(payload, number) do
+      update_in(payload, ["rounds"], fn rounds ->
+        Enum.map(rounds, fn
+          %{"number" => ^number} = round ->
+            round
+            |> Map.put("results_public", false)
+            |> Map.update!("boards", fn boards ->
+              Enum.map(boards, &Map.put(&1, "result", nil))
+            end)
+
+          round ->
+            round
+        end)
+      end)
+    end
+
+    # The element, not the attribute name: the layout's own script mentions it.
+    defp live_marker?(conn, slug) do
+      conn |> get(~p"/t/#{slug}") |> doc() |> LazyHTML.query("[data-results-live]") |> Enum.any?()
+    end
+
+    defp without_flag(payload) do
+      update_in(payload, ["rounds"], fn rounds ->
+        Enum.map(rounds, &Map.delete(&1, "results_public"))
+      end)
+    end
+
+    test "false: the round page says so once, with no result column and no live label", %{
+      conn: conn,
+      swiss: swiss,
+      slug: slug
+    } do
+      publish(withhold(swiss, 5))
+      document = conn |> get(~p"/t/#{slug}/round/5") |> doc()
+      html = conn |> get(~p"/t/#{slug}/round/5") |> html_response(200)
+
+      assert texts(document, ".results-withheld") == [
+               "Results for round 5 are not published yet."
+             ]
+
+      # The pairings are still there - only the results are withheld.
+      assert length(texts(document, "table.pairings tbody tr")) == 5
+      refute "Result" in texts(document, "table.pairings thead th")
+      refute html =~ "not yet reported"
+      assert texts(document, ".live-marker") == []
+    end
+
+    test "false: the projector view says so and drops the result column", %{
+      conn: conn,
+      swiss: swiss,
+      slug: slug
+    } do
+      publish(withhold(swiss, 5))
+      document = conn |> get(~p"/t/#{slug}/round/5?display=1") |> doc()
+
+      assert texts(document, ".results-withheld") == [
+               "Results for round 5 are not published yet."
+             ]
+
+      assert texts(document, "table.projector-pairings thead th") == ["Bd", "White", "Black"]
+    end
+
+    test "false: the cross-table and a player's card say so once", %{
+      conn: conn,
+      swiss: swiss,
+      slug: slug
+    } do
+      publish(withhold(swiss, 5))
+
+      for path <- [~p"/t/#{slug}/crosstable", ~p"/t/#{slug}/player/1"] do
+        document = conn |> get(path) |> doc()
+
+        assert texts(document, ".results-withheld") == [
+                 "Results for round 5 are not published yet."
+               ]
+      end
+    end
+
+    test "true, with a board unreported: the round page and the overview say Live, counting", %{
+      conn: conn,
+      slug: slug
+    } do
+      round3 = conn |> get(~p"/t/#{slug}/round/3") |> doc()
+      assert texts(round3, "h2 .live-marker") == ["Live 2 of 3 results"]
+      assert texts(round3, ".results-withheld") == []
+
+      # A round with every result in is not live.
+      assert texts(conn |> get(~p"/t/#{slug}/round/5") |> doc(), ".live-marker") == []
+
+      overview = conn |> get(~p"/t/#{slug}") |> doc()
+      assert texts(overview, ".live-line") == ["Round 3 Live 2 of 3 results"]
+    end
+
+    test "absent: read as true, so an older OpenPairings's results render as they always did", %{
+      conn: conn,
+      swiss: swiss,
+      slug: slug
+    } do
+      publish(without_flag(swiss))
+
+      document = conn |> get(~p"/t/#{slug}/round/1") |> doc()
+
+      assert texts(document, "table.pairings tbody tr:first-child > *") ==
+               ["1", "2601", "0", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana", "0", "2033"]
+
+      assert texts(document, ".results-withheld") == []
+
+      assert texts(conn |> get(~p"/t/#{slug}/round/3") |> doc(), ".live-marker") ==
+               ["Live 2 of 3 results"]
+    end
+
+    test "the refresher's marker is on the page while a round is live, and only then", %{
+      conn: conn,
+      swiss: swiss,
+      slug: slug
+    } do
+      assert live_marker?(conn, slug)
+
+      # Round 3 finished: nothing is live any more.
+      finished =
+        update_in(swiss, ["rounds"], fn rounds ->
+          Enum.map(rounds, fn round ->
+            Map.update(round, "boards", [], fn boards ->
+              Enum.map(boards, &Map.update(&1, "result", "1-0", fn r -> r || "1-0" end))
+            end)
+          end)
+        end)
+
+      publish(finished)
+      refute live_marker?(conn, slug)
+
+      # And a withheld round is never live, however many boards are empty.
+      publish(withhold(finished, 5))
+      refute live_marker?(conn, slug)
     end
   end
 
