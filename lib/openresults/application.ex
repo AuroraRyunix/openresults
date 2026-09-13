@@ -29,6 +29,11 @@ defmodule OpenResults.Application do
     # revalidation. See `OpenResultsWeb.Plugs.Revalidate`.
     OpenResultsWeb.Plugs.Revalidate.new_secret()
 
+    # The stats page's request and query counters. Attached before anything
+    # serves or queries; until the collector has created their table an
+    # increment is a no-op. See `OpenResultsWeb.StatsTelemetry`.
+    OpenResultsWeb.StatsTelemetry.attach()
+
     children = [
       OpenResultsWeb.Telemetry,
       OpenResults.Repo,
@@ -70,6 +75,11 @@ defmodule OpenResults.Application do
       # `storage_low` check is an ETS read. Before the endpoint, like the
       # caches above. See `OpenResults.DiskSpace`.
       OpenResults.DiskSpace,
+      # The admin stats page's counters: owns their table and folds finished
+      # minutes into history. Before the endpoint, like the caches above. See
+      # `OpenResults.Stats`.
+      {OpenResults.Stats.Collector,
+       connections: &OpenResultsWeb.StatsTelemetry.open_connections/0},
 
       # Cloudflare Access's signing keys for the admin gate. Owns its table
       # and does every fetch itself, so a burst of admin requests with an

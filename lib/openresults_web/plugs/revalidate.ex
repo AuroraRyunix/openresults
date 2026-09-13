@@ -141,10 +141,11 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
 
         cond do
           etag in request_etags(conn) ->
-            conn |> send_resp(304, "") |> halt()
+            conn |> stats(:not_modified) |> send_resp(304, "") |> halt()
 
           gzip_body ->
             conn
+            |> stats(:hit)
             |> put_resp_header("content-encoding", "gzip")
             |> put_resp_content_type("text/html")
             |> send_resp(200, gzip_body)
@@ -152,15 +153,23 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
 
           body = Page.get(slug, id, locale, etag) ->
             conn
+            |> stats(:hit)
             |> put_resp_content_type("text/html")
             |> send_resp(200, body)
             |> halt()
 
           true ->
-            register_before_send(conn, &keep(&1, slug, id, locale, etag))
+            conn
+            |> stats(:miss)
+            |> register_before_send(&keep(&1, slug, id, locale, etag))
         end
     end
   end
+
+  # The decision, for the admin stats page: read off the finished conn by
+  # `OpenResultsWeb.StatsTelemetry` and counted in the same single increment
+  # as the response itself, rather than costing one of its own here.
+  defp stats(conn, outcome), do: put_private(conn, :openresults_page_cache, outcome)
 
   # A cache miss always answers with the identity bytes, whatever this
   # particular reader's own Accept-Encoding says - see the moduledoc's

@@ -28,6 +28,7 @@ defmodule OpenResultsWeb.Admin.Layouts do
     {"Reports", "/admin/reports"},
     {"Address blocks", "/admin/address-blocks"},
     {"Action log", "/admin/action-log"},
+    {"Stats", "/admin/stats"},
     {"Settings", "/admin/settings"}
   ]
 

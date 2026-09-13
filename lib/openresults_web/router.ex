@@ -308,6 +308,9 @@ defmodule OpenResultsWeb.Router do
 
     get "/action-log", ActionLogController, :index
 
+    # Read-only, and cheap to open: see `OpenResults.Stats`.
+    get "/stats", StatsController, :show
+
     # Server settings and the public notice. A setting's and the notice's
     # confirmation is a GET carrying the value (nothing here is personal), so
     # every POST is a confirmed action like the rest.

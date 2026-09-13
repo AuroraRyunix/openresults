@@ -2250,6 +2250,72 @@ a.xt-opp:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- admin: stats ---- */
+
+.admin-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.admin-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.admin-chart {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.admin-chart figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.admin-chart-title {
+  color: var(--quiet);
+}
+
+.admin-chart-now {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.admin-chart-axis {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.admin-chart-label {
+  fill: var(--quiet);
+  font-size: 10px;
+}
+
+.admin-chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.admin-chart-dot,
+.admin-chart-bar {
+  fill: var(--accent);
+}
+
 .admin-form {
   max-width: 34rem;
   margin-top: 1.25rem;

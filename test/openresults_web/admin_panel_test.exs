@@ -390,6 +390,7 @@ defmodule OpenResultsWeb.AdminPanelTest do
                "/admin/reports",
                "/admin/address-blocks",
                "/admin/action-log",
+               "/admin/stats",
                "/admin/settings"
              ]
 
