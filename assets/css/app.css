@@ -509,109 +509,94 @@ html.has-js .index-controls {
   display: none;
 }
 
-/* ---- the standings table: sorting and filtering ----
+/* ---- the filter/sort bar ----
 
-   Client-side, entirely - see `OpenResultsWeb.TournamentHTML.standings_table/1`
-   for why. Set to `none` here and only laid out once `html.has-js` says the
-   script that drives it actually ran, the same rule the theme picker already
-   follows: a control that filters nothing without JavaScript is worse than
-   no control at all. */
-.standings-controls {
-  display: none;
+   Shared by the standings, round pairings and cross-table pages - see
+   `OpenResultsWeb.Components.FilterBar`. Real form controls, always laid
+   out (no `html.has-js` gate the way the old client-only standings filter
+   had): a `<select>` and a submit button both work with no script at all,
+   so there is nothing here that needs hiding until JavaScript proves
+   itself. Wraps rather than scrolls at a narrow width - the one rule this
+   bar must never break is the page body moving sideways. */
+.filter-bar {
+  margin-bottom: 1rem;
+}
+
+.filter-fields {
+  display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.75rem 1rem;
-  margin-bottom: 0.75rem;
+  margin: 0;
+  border: 0;
+  padding: 0;
 }
 
-html.has-js .standings-controls {
-  display: flex;
-}
-
-.standings-filter {
+.filter-field {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   font-size: 0.75rem;
   color: var(--quiet);
+  min-width: 0;
 }
 
-.standings-filter select {
-  padding: 0.3rem 0.5rem;
+.filter-field select,
+.filter-field input {
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--quiet);
   border-radius: 4px;
   background: var(--panel);
   color: var(--ink);
   font: inherit;
   font-size: 0.875rem;
+  max-width: 14rem;
 }
 
-.standings-reset {
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--rule);
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.filter-submit {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--accent);
   border-radius: 4px;
-  background: transparent;
-  color: var(--quiet);
+  background: var(--accent);
+  color: var(--panel);
   font: inherit;
   font-size: 0.8125rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.standings-reset:hover {
-  color: var(--ink);
-}
-
-.standings-count {
-  margin: 0;
+.filter-clear {
   font-size: 0.8125rem;
   color: var(--quiet);
 }
 
-.standings-count[hidden] {
-  display: none;
+.filter-empty {
+  margin-top: 0.75rem;
 }
 
-/* A sortable header is plain text - and looks exactly like the ones beside
-   it - until `has-js` says clicking it will do something. `all` is not
-   reset here: a `<button>` inside `thead th` still has to inherit that
-   cell's own uppercase, letter-spacing and size, which resetting would
-   throw away along with the browser's own button chrome. */
-.sort-btn {
-  padding: 0;
-  border: none;
-  margin: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-transform: inherit;
-  letter-spacing: inherit;
-  cursor: default;
+/* The place-in-group beside a row's overall rank, e.g. "3" then "1 in
+   U1800" - the same "·"-separated look the masthead's detail line already
+   uses for the same reason (unrelated facts, no separator character
+   stranded when one side is absent). */
+.category-place::before {
+  content: "·";
+  margin: 0 0.35rem;
 }
 
-html.has-js .sort-btn {
-  cursor: pointer;
-}
-
-html.has-js .sort-btn:hover,
-html.has-js .sort-btn:focus-visible {
-  color: var(--ink);
-  text-decoration: underline;
-}
-
-/* The arrow is added by the state the script sets, not drawn until a column
-   actually has an order - an arrow on every header would just be sixteen
-   identical hints. */
-th[aria-sort] .sort-btn::after {
-  margin-left: 0.3em;
-  font-size: 0.7em;
-}
-
-th[aria-sort="ascending"] .sort-btn::after {
-  content: "\25B2";
-}
-
-th[aria-sort="descending"] .sort-btn::after {
-  content: "\25BC";
+/* The seat(s) a round pairings filter actually matched. Not colour alone -
+   the left border and the bold weight both carry it, so it reads in a
+   greyscale printout and to a screen reader through `aria-current`
+   (`pairings_table/1` sets both). */
+.pairing-match {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.4rem;
+  font-weight: 600;
 }
 
 /* The entry form: the one page here with a control on it, and the only one

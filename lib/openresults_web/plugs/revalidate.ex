@@ -46,6 +46,36 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   cross tournaments, outlive a publish or surface a 404 or a withheld page.
   Defacement inside one tournament, not disclosure.
 
+  ## The filter bar and the page cache
+
+  `?category=U1800`, `?sort=rating` and the rest of
+  `OpenResultsWeb.FilterParams`'s query keys change what a page RENDERS -
+  see `OpenResultsWeb.Tournament.Filter` - which `Page`'s own contract
+  ("every reader of one URL gets byte-identical HTML") was never written to
+  allow. The ETag digest already includes the raw query string (see
+  `etag_for/3` below, unchanged by this), so a filtered request and the
+  plain one could never collide or shadow each other even before this - the
+  problem is not correctness, it is the KEY SPACE: `Page.put/5` bounds each
+  tournament to 512 entries and wipes the lot when a busier one is
+  published, `?category=U1800`, `?category=u1800` and `?category=U1800&x=1`
+  each earning their own entry for what a reader would call one filter.
+  That is real capacity a stranger typing query junk can burn through,
+  repeatedly evicting a tournament's warm cache for every OTHER reader.
+
+  Two ways to close that were on the table: key `Page` on a NORMALISED
+  filter (fold every filtered request to one canonical query string first,
+  so the key space is bounded by real filter combinations rather than by
+  what a client can type), or never let a filtered request touch `Page` at
+  all. This plug takes the second: `filtered?` in `revalidate/2` below is
+  the whole decision, one guard clause rather than a second key shape for
+  `Page` to learn. A filtered response still renders correctly and still
+  answers a matching `If-None-Match` with a real 304 (see the `cond` below
+  for why that half costs nothing to keep) - it is simply never read from
+  or written to the ETS table, so `Page`'s key space stays exactly what it
+  always was: bounded by how many distinct PAGES a tournament actually has,
+  not by how many query strings a stranger can invent. An unfiltered
+  request to the same path is untouched either way.
+
   ## What is not covered
 
   Only the read routes for a published tournament. The entry form is a form,
@@ -80,6 +110,7 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   import Plug.Conn
 
   alias OpenResults.Snapshots
+  alias OpenResultsWeb.FilterParams
   alias OpenResultsWeb.Plugs.Revalidate.Page
 
   @secret {__MODULE__, :etag_secret}
@@ -126,12 +157,20 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
       id ->
         locale = locale(conn)
         etag = etag_for(conn, id, locale, visibility)
+        # Whether this request carries the filter bar's own query keys with
+        # a real value - `?category=U1800`, `?sort=rating`, and so on. See
+        # "The filter bar and the page cache" below for what this decides.
+        filtered? = FilterParams.any_present?(conn.params)
 
         # Computed ahead of the `cond` rather than inside one of its clauses:
         # `&&`/`and` each open their own scope for the value they short
         # circuit to, so a `body = ...` bound on their right-hand side is not
-        # visible in the clause's own body afterward.
-        gzip_body = gzip_acceptable?(conn) && Page.get(slug, id, locale, gzip_key(etag))
+        # visible in the clause's own body afterward. Never even asked for a
+        # filtered request - see below.
+        gzip_body =
+          (not filtered? and gzip_acceptable?(conn)) && Page.get(slug, id, locale, gzip_key(etag))
+
+        body = not filtered? and Page.get(slug, id, locale, etag)
 
         conn =
           conn
@@ -140,6 +179,12 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
           |> add_vary_accept_encoding()
 
         cond do
+          # A 304 costs nothing this plug needs to guard: it is a header
+          # comparison, never a `Page` read, and it only fires when the
+          # reader already holds the tag for THIS EXACT query string (the
+          # digest covers it - see `etag_for/3`), filtered or not. Kept for
+          # every request, filtered included, so a filtered link a reader
+          # revalidates still gets the cheap answer.
           etag in request_etags(conn) ->
             conn |> stats(:not_modified) |> send_resp(304, "") |> halt()
 
@@ -151,12 +196,24 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
             |> send_resp(200, gzip_body)
             |> halt()
 
-          body = Page.get(slug, id, locale, etag) ->
+          # See "The filter bar and the page cache": a filtered request is
+          # never looked up in `Page` at all, filtered or not - falls
+          # straight through to the render-and-do-not-store branch below.
+          body ->
             conn
             |> stats(:hit)
             |> put_resp_content_type("text/html")
             |> send_resp(200, body)
             |> halt()
+
+          filtered? ->
+            # Rendered normally, ETag and all - a filtered link still
+            # revalidates correctly, it is just never the thing that gets
+            # stored or read back from `Page`. No `stats/2` call: this is
+            # not a page-cache decision, it is "the page cache was not
+            # asked", which is exactly what `Stats.cache_index(nil)` already
+            # means for every request this plug never reaches at all.
+            conn
 
           true ->
             conn

@@ -14,13 +14,12 @@ defmodule OpenResultsWeb.Format do
   that is a separate decision.
 
   Nothing that is read back by a script or another program goes through
-  this module. The standings sort reads `data-points`, `data-value` and
-  `data-rating` straight off the payload and `parseFloat`s them - see
-  `OpenResultsWeb.TournamentHTML.standings_table/1` and its own
-  `standings_script/1` - and neither of those attributes is built from
-  `number/2`. A `datetime` attribute, JSON, CSV or any other
-  machine-readable surface would be the same: this module is for what a
-  reader sees, never for what a program parses back.
+  this module. A `datetime` attribute, JSON, CSV or any other
+  machine-readable surface is the same: this module is for what a reader
+  sees, never for what a program parses back. (The standings table used to
+  carry `data-points`/`data-value`/`data-rating` for a client-side sort
+  script that read them with `parseFloat` - removed when sorting became a
+  real `?sort=` request, per `OpenResultsWeb.Tournament.Filter`.)
 
   ## Why a comma and not a different notation
 

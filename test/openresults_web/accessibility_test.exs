@@ -215,17 +215,29 @@ defmodule OpenResultsWeb.AccessibilityTest do
       assert document |> LazyHTML.query("#live-region #announcer") |> Enum.empty?()
     end
 
-    test "sortable headers are real buttons inside column headers", %{world: world} do
+    test "the filter bar is a real GET form with labelled controls and a visible submit button",
+         %{world: world} do
       document =
         build_conn() |> get("/t/#{world.swiss}") |> html_response(200) |> LazyHTML.from_document()
 
-      buttons = LazyHTML.query(document, "button[data-sort-key]")
-      assert Enum.count(buttons) > 0
+      forms = LazyHTML.query(document, "form[data-filter-form]")
+      assert Enum.count(forms) == 1
 
-      assert document
-             |> LazyHTML.query(~s(th[scope="col"] > button[type="button"][data-sort-key]))
-             |> Enum.count() ==
-               Enum.count(buttons)
+      assert LazyHTML.query(document, ~s(form[data-filter-form][method="get"])) != []
+
+      # A `<fieldset>`/`<legend>` grouping, the site's existing convention
+      # for a form's own controls (see `registration_html.ex`), and every
+      # control wrapped in its own `<label>` - so this works by keyboard and
+      # is read sensibly by a screen reader with no `aria-*` wiring of its
+      # own required.
+      assert LazyHTML.query(document, "form[data-filter-form] fieldset > legend") != []
+      selects = LazyHTML.query(document, "form[data-filter-form] label > select")
+      inputs = LazyHTML.query(document, "form[data-filter-form] label > input")
+      assert Enum.count(selects) + Enum.count(inputs) > 0
+
+      # A real, visible submit button - not hidden behind `html.has-js`, so
+      # the form works exactly the same with the script switched off.
+      assert LazyHTML.query(document, ~s(form[data-filter-form] button[type="submit"])) != []
     end
 
     test "every tie-break working a reader can open is keyed, so a refresh can reopen it", %{

@@ -12,8 +12,10 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   use OpenResultsWeb, :html
 
+  alias OpenResultsWeb.Components.FilterBar
   alias OpenResultsWeb.Format
   alias OpenResultsWeb.Tournament
+  alias OpenResultsWeb.Tournament.Filter
 
   embed_templates "tournament_html/*"
 
@@ -31,6 +33,16 @@ defmodule OpenResultsWeb.TournamentHTML do
   attr :current, :any,
     required: true,
     doc: ":standings, :crosstable, :register, {:round, n} or {:player, no}"
+
+  attr :query, :map,
+    default: %{},
+    doc: """
+    the active filter bar query (`OpenResultsWeb.FilterParams.to_params/1`),
+    carried onto the standings/cross-table/round links below so a reader
+    moving between those three pages keeps their filter and sort - see
+    `OpenResultsWeb.Tournament.Filter`. `%{}` (the default) on any page that
+    does not offer the bar, which renders exactly as before this existed.
+    """
 
   def masthead(assigns) do
     payload = assigns.payload
@@ -79,7 +91,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       <nav :if={@show.standings or @show.pairings} class="rounds" aria-label={gettext("Rounds")}>
         <a
           :if={@show.standings}
-          href={~p"/t/#{@slug}"}
+          href={~p"/t/#{@slug}?#{@query}"}
           class={["chip", @current == :standings && "current"]}
           aria-current={@current == :standings && "page"}
         >
@@ -90,7 +102,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               `Tournament.crosstable?/1`. --%>
         <a
           :if={@show.pairings and @show.crosstable}
-          href={~p"/t/#{@slug}/crosstable"}
+          href={~p"/t/#{@slug}/crosstable?#{@query}"}
           class={["chip", @current == :crosstable && "current"]}
           aria-current={@current == :crosstable && "page"}
         >
@@ -99,7 +111,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         <%= for {n, published?} <- @slots, @show.pairings do %>
           <a
             :if={published?}
-            href={~p"/t/#{@slug}/round/#{n}"}
+            href={~p"/t/#{@slug}/round/#{n}?#{@query}"}
             class={["chip", @current == {:round, n} && "current"]}
             aria-current={@current == {:round, n} && "page"}
             aria-label={round_link_label(@payload, n)}
@@ -207,73 +219,54 @@ defmodule OpenResultsWeb.TournamentHTML do
   def escaped(value), do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   @doc """
-  The standings, in the order they arrived.
+  The standings, filtered and sorted per the filter bar's own query string -
+  see `OpenResultsWeb.Tournament.Filter.standings/2` for what decides which
+  rows show and in what order, and `OpenResultsWeb.Components.FilterBar` for
+  the form itself.
 
-  `rows` is rendered as given. Nothing here sorts, and nothing recomputes a
-  placing: `rank` is the arbiter's answer after their tiebreaks ran, and this
-  page exists to agree with the printed crosstable rather than to check it.
-  Clicking a header re-orders the ROWS ON THE SCREEN; it never touches
-  `rank`, which stays printed in its own column throughout.
+  `rank` is always the arbiter's own placing, printed in its own column,
+  whatever `filters.sort` reorders the rows to - never recomputed here, and
+  never affected by which rows are hidden: this page exists to agree with
+  the printed crosstable, not to re-rank against it. When a category filter
+  is active each row also shows its place WITHIN that category, from
+  `Filter.standings/2`'s `places` map - see that function's own moduledoc for
+  exactly how that number is derived.
 
-  The tiebreak columns are driven entirely by `standings.tiebreaks` - one
-  column per declared tiebreak, headed with the label the payload carries, in
-  the payload's order, with `rows[].tiebreaks` read positionally against it.
-  This module has never heard of Buchholz and does not need to; an arbiter who
-  reorders their tiebreaks, or a client that adds a fifth, changes this page
-  without changing this code.
+  ## Why this is a server-side filter, unlike the site's other search boxes
 
-  ## Sorting, filtering, and why both happen in the browser
+  `index.html.heex`'s tournament search and (before this change) this very
+  table's club/federation/category dropdowns filter client-side, and their
+  own comments explain why: it keeps `OpenResultsWeb.Plugs.Revalidate`'s
+  page cache trivially valid, because every reader of one URL always got
+  byte-identical HTML.
 
-  The whole table is rendered once, in full, exactly as it always was; a
-  script re-orders and hides `<tr>`s already on the page rather than asking
-  the server for a different one. Two things ride on that:
-
-    * **the cache stays valid.** `OpenResultsWeb.Plugs.Revalidate` and
-      `OpenResultsWeb.Plugs.Revalidate.Page` both rest on every reader of one
-      URL getting byte-identical HTML. A server-side sort or filter would
-      make that false the moment two readers picked different columns.
-    * **it still works with the script switched off.** The full, unsorted,
-      unfiltered table - the only version that has ever existed here - is
-      what renders with no JavaScript at all, on a phone, or the instant the
-      page's HTML lands and before the script has run.
-
-  The filters ARE reflected in the URL (`?club=...&federation=...`), so a
-  link to "this club's players" can be copied and shared - see
-  `standings_script/1`, rendered alongside this component by
-  `standings.html.heex` rather than nested inside it (its own moduledoc says
-  why). That reflection is `history.replaceState`, a browser-local rewrite
-  with no request behind it, so it creates nothing for the cache to hold. A
-  reader who then opens that URL fresh gets the ordinary, unfiltered page
-  from the server, and the same script reads the query string back out on
-  load and reapplies the filter - the server never has to know the filter
-  exists.
-
-  Sort order is deliberately NOT in the URL: re-deriving "third click on
-  Buchholz, descending" from a link would be considerably more machinery than
-  a second click back. It does survive a refresh, though. It used to reset
-  whenever the 20-second poll in the root layout replaced this table's HTML,
-  and so did an open tiebreak `<details>` (see `tiebreak_cell/1`) and the
-  focused header - which put a keyboard or screen reader user back in rank
-  order, at the top of the page, every time a result came in. Since the
-  accessibility pass of 2026-09-13 the script keeps the sort in memory and
-  re-applies it, and the refresher reopens the `<details>` and puts focus
-  back; see the root layout.
+  The filter bar breaks that assumption on purpose - a `?category=U1800`
+  request must render fewer rows, in real HTML, so the page works with no
+  JavaScript at all and a filtered link is what a reader can actually send
+  someone. `Revalidate.call/2` is where the trade is made: a request
+  carrying any filter/sort key bypasses the page cache entirely rather than
+  polluting it with a key space bounded only by how creative a query string
+  can get - see that module's own moduledoc for the decision in full.
   """
   attr :payload, :map, required: true
   attr :slug, :string, required: true
+  attr :filters, OpenResultsWeb.FilterParams, required: true
 
   def standings_table(assigns) do
     payload = assigns.payload
-    rows = Tournament.standings_rows(payload)
-    players = Tournament.players_by_no(payload)
     show = display_rules(payload)
+    filtered = Filter.standings(payload, assigns.filters)
+    players = Tournament.players_by_no(payload)
+    all_rows = Tournament.standings_rows(payload)
     # Only when the tournament actually groups its players. A column of
     # dashes on every ordinary open is noise.
-    categories? = Enum.any?(rows, & &1["category"])
+    categories? = Enum.any?(all_rows, & &1["category"])
 
     assigns =
       assigns
-      |> assign(:rows, rows)
+      |> assign(:rows, filtered.rows)
+      |> assign(:places, filtered.places)
+      |> assign(:empty?, all_rows != [] and filtered.rows == [])
       |> assign(:tiebreaks, Tournament.tiebreaks(payload))
       |> assign(:players, players)
       # Keizer standings carry value, Keizer points and score where a swiss
@@ -289,15 +282,16 @@ defmodule OpenResultsWeb.TournamentHTML do
       # columns while keeping the per-round arithmetic behind them closed.
       # Absent means shown, like every other key `Tournament.show?/2` reads.
       |> assign(:explain_tiebreaks?, Tournament.show?(payload, "tiebreak_working"))
-      # Each filter is offered only behind its own display tick - a club or
-      # federation an arbiter has hidden from this table must not resurface
-      # in a dropdown - and only when there is more than one value to split
-      # on, or the control would filter nothing.
-      |> assign(:clubs, filter_values(show.club, rows, players, "club"))
-      |> assign(:federations, filter_values(show.federation, rows, players, "federation"))
+      # The filter bar's own option lists - only categories the arbiter
+      # shows (`Filter.categories/1` reads the same gate `Tournament.show?/2`
+      # does through `tournament.categories` itself being absent when
+      # hidden), and only clubs/federations behind their own display ticks,
+      # exactly as the site's other dropdowns already work.
+      |> assign(:bar_categories, Filter.categories(payload))
+      |> assign(:bar_clubs, (show.club && Filter.player_values(payload, "club")) || [])
       |> assign(
-        :filter_categories,
-        filter_values(categories? and show.category, rows, "category")
+        :bar_federations,
+        (show.federation && Filter.player_values(payload, "federation")) || []
       )
 
     ~H"""
@@ -327,385 +321,114 @@ defmodule OpenResultsWeb.TournamentHTML do
       )}
     </p>
 
-    <p :if={@rows == []} class="empty">
+    <p :if={@rows == [] and not @empty?} class="empty">
       {gettext("No standings have been published for this tournament yet.")}
     </p>
 
-    <%!-- `data-sorted-*` are what the script says to a screen reader after a
-          sort - attributes, for the reason the count label below is one. --%>
-    <div
-      :if={@rows != []}
-      data-standings-panel
-      data-sorted-ascending={gettext("Sorted by %{column}, ascending", column: "{column}")}
-      data-sorted-descending={gettext("Sorted by %{column}, descending", column: "{column}")}
-    >
-      <%!-- Hidden until the script runs - see the moduledoc above. A select
-            that filters nothing without JavaScript is worse than no control
-            at all. --%>
-      <div
-        :if={@clubs != [] or @federations != [] or @filter_categories != []}
-        class="standings-controls"
-        data-standings-controls
-      >
-        <label :if={@clubs != []} class="standings-filter" for="standings-filter-club">
-          {gettext("Club")}
-          <select id="standings-filter-club" data-filter="club">
-            <option value="">{gettext("All clubs")}</option>
-            <option :for={club <- @clubs} value={club}>{club}</option>
-          </select>
-        </label>
-        <label :if={@federations != []} class="standings-filter" for="standings-filter-federation">
-          {gettext("Federation")}
-          <select id="standings-filter-federation" data-filter="federation">
-            <option value="">{gettext("All federations")}</option>
-            <option :for={federation <- @federations} value={federation}>{federation}</option>
-          </select>
-        </label>
-        <label :if={@filter_categories != []} class="standings-filter" for="standings-filter-category">
-          {gettext("Category")}
-          <select id="standings-filter-category" data-filter="category">
-            <option value="">{gettext("All categories")}</option>
-            <option :for={category <- @filter_categories} value={category}>{category}</option>
-          </select>
-        </label>
-        <button type="button" class="standings-reset" data-standings-reset>
-          {gettext("Reset")}
-        </button>
-        <%!-- Shown here, and said through the page's #announcer - not a live
-              region of its own, because it is `hidden` until a filter is on
-              and the refresher replaces it. --%>
-        <p
-          class="standings-count"
-          data-standings-count
-          data-count-label={
-            gettext("Showing %{shown} of %{total}", shown: "{shown}", total: "{total}")
-          }
-          hidden
-        >
-        </p>
-      </div>
+    <FilterBar.filter_bar
+      :if={@rows != [] or @empty?}
+      action={~p"/t/#{@slug}"}
+      filters={@filters}
+      categories={@bar_categories}
+      federations={@bar_federations}
+      clubs={@bar_clubs}
+      empty?={@empty?}
+    />
 
-      <div class="scroller">
-        <table class="standings" data-standings-table>
-          <caption class="visually-hidden">{standings_caption(@payload)}</caption>
-          <thead>
-            <tr>
-              <.sort_th sort_key="rank" class="num">{gettext("#")}</.sort_th>
-              <.sort_th sort_key="name">{gettext("Player")}</.sort_th>
-              <.sort_th :if={@show.rating} sort_key="rating" class="num">
-                {gettext("Rating")}
-              </.sort_th>
-              <.sort_th :if={@categories? and @show.category} sort_key="category">
-                {gettext("Cat")}
-              </.sort_th>
-              <%= if @keizer? do %>
-                <.sort_th sort_key="value" class="num">{gettext("Value")}</.sort_th>
-                <.sort_th sort_key="points" class="num">{gettext("Keizer points")}</.sort_th>
-                <.sort_th sort_key="score" class="num">{gettext("Score")}</.sort_th>
-              <% else %>
-                <.sort_th sort_key="points" class="num">{gettext("Points")}</.sort_th>
-                <%!-- The placings are unaffected by hiding these. The arbiter
-                      is hiding the arithmetic, not the result - the order is
-                      still exactly the one they computed. --%>
-                <.sort_th
-                  :for={{tiebreak, at} <- Enum.with_index(@tiebreaks)}
-                  :if={@show.tiebreaks}
-                  sort_key={"tb#{at}"}
-                  class="num"
-                >
-                  {Tournament.tiebreak_label(tiebreak)}
-                </.sort_th>
-              <% end %>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              :for={row <- @rows}
-              data-rank={row["rank"]}
-              data-name={@players[row["player"]]["name"]}
-              data-rating={@show.rating && data_value(@players[row["player"]]["rating"])}
-              data-category={(@categories? and @show.category) && data_value(row["category"])}
-              data-club={@show.club && data_value(@players[row["player"]]["club"])}
-              data-federation={@show.federation && data_value(@players[row["player"]]["federation"])}
-              data-points={row["points"]}
-              data-value={@keizer? && row["value"]}
-              data-score={@keizer? && row["score"]}
-            >
-              <td class="num rank">{row["rank"]}</td>
-              <%!-- The row's header: a screen reader moving along a row, or
-                    down the Points column, hears whose number it is. --%>
-              <th scope="row" class="row-head">
-                <.player_link
-                  slug={@slug}
-                  no={row["player"]}
-                  player={@players[row["player"]]}
-                  show={@show}
-                  cards?={@show.player_cards}
-                  detail
-                />
+    <div :if={@rows != []} class="scroller">
+      <table class="standings">
+        <caption class="visually-hidden">{standings_caption(@payload)}</caption>
+        <thead>
+          <tr>
+            <th class="num" scope="col">{gettext("#")}</th>
+            <th scope="col">{gettext("Player")}</th>
+            <th :if={@show.rating} class="num" scope="col">{gettext("Rating")}</th>
+            <th :if={@categories? and @show.category} scope="col">{gettext("Cat")}</th>
+            <%= if @keizer? do %>
+              <th class="num" scope="col">{gettext("Value")}</th>
+              <th class="num" scope="col">{gettext("Keizer points")}</th>
+              <th class="num" scope="col">{gettext("Score")}</th>
+            <% else %>
+              <th class="num" scope="col">{gettext("Points")}</th>
+              <%!-- The placings are unaffected by hiding these. The arbiter
+                    is hiding the arithmetic, not the result - the order is
+                    still exactly the one they computed. --%>
+              <th :for={tiebreak <- @tiebreaks} :if={@show.tiebreaks} class="num" scope="col">
+                {Tournament.tiebreak_label(tiebreak)}
               </th>
-              <td :if={@show.rating} class="num">{dash(@players[row["player"]]["rating"])}</td>
-              <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
-              <%= if @keizer? do %>
-                <td class="num">{number(row["value"])}</td>
-                <td class="num strong">{number(row["points"])}</td>
-                <td class="num">{number(row["score"])}</td>
-              <% else %>
-                <td class="num strong">{number(row["points"])}</td>
-                <% working = Tournament.working_for_row(row) %>
-                <td
-                  :for={{tiebreak, at} <- Enum.with_index(@tiebreaks)}
-                  :if={@show.tiebreaks}
-                  class="num tb-cell"
-                  data-value={Tournament.tiebreak_value(row, at)}
-                >
-                  <.tiebreak_cell
-                    slug={@slug}
-                    players={@players}
-                    show={@show}
-                    code={tiebreak["code"]}
-                    label={Tournament.tiebreak_label(tiebreak)}
-                    key={"#{row["player"]}-#{at}"}
-                    value={Tournament.tiebreak_value(row, at)}
-                    working={working}
-                    explain?={@explain_tiebreaks?}
-                  />
-                </td>
-              <% end %>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={row <- @rows}>
+            <td class="num rank">
+              {row["rank"]}
+              <%!-- The place within the active category filter, e.g. "1 in
+                    U1800" beside the overall rank - see
+                    `Filter.standings/2`'s `places`, keyed by pairing number
+                    and computed from the category alone, independent of the
+                    club/federation/name filters that might also be active. --%>
+              <span :if={Map.get(@places, row["player"])} class="quiet category-place">
+                {gettext("%{place} in %{category}",
+                  place: Map.get(@places, row["player"]),
+                  category: @filters.category
+                )}
+              </span>
+            </td>
+            <%!-- The row's header: a screen reader moving along a row, or
+                  down the Points column, hears whose number it is. --%>
+            <th scope="row" class="row-head">
+              <.player_link
+                slug={@slug}
+                no={row["player"]}
+                player={@players[row["player"]]}
+                show={@show}
+                cards?={@show.player_cards}
+                detail
+              />
+            </th>
+            <td :if={@show.rating} class="num">{dash(@players[row["player"]]["rating"])}</td>
+            <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
+            <%= if @keizer? do %>
+              <td class="num">{number(row["value"])}</td>
+              <td class="num strong">{number(row["points"])}</td>
+              <td class="num">{number(row["score"])}</td>
+            <% else %>
+              <td class="num strong">{number(row["points"])}</td>
+              <% working = Tournament.working_for_row(row) %>
+              <td
+                :for={{tiebreak, at} <- Enum.with_index(@tiebreaks)}
+                :if={@show.tiebreaks}
+                class="num tb-cell"
+              >
+                <.tiebreak_cell
+                  slug={@slug}
+                  players={@players}
+                  show={@show}
+                  code={tiebreak["code"]}
+                  label={Tournament.tiebreak_label(tiebreak)}
+                  key={"#{row["player"]}-#{at}"}
+                  value={Tournament.tiebreak_value(row, at)}
+                  working={working}
+                  explain?={@explain_tiebreaks?}
+                />
+              </td>
+            <% end %>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    """
-  end
 
-  @doc """
-  The standings table's sort/filter script, on its own and rendered
-  unconditionally by `standings.html.heex` - NOT nested inside
-  `standings_table/1` above, even though that is the only markup it acts on.
-
-  This used to be part of `standings_table/1`'s own template, which is only
-  rendered `:if={not starting_rank?}` - see `standings.html.heex`. That was
-  the bug: a spectator who opens a tournament's page before round 1, while
-  `starting_rank_table/1` renders instead, gets a page whose FIRST render
-  never runs this script at all, so `document.addEventListener
-  ("openresults:updated", init)` is never registered. When the arbiter then
-  publishes round 1 and the 20-second refresher swaps in the real
-  `standings_table` markup - sort buttons, filter selects and all - nothing
-  is listening for that swap, and the newly-arrived controls sit there
-  inert until the reader reloads the page by hand.
-
-  Hoisting the script here, so it renders on every visit to this page
-  regardless of which table is showing, fixes that: `init()` already
-  tolerates the table's absence (`if (!tbody) { return; }`), so on the
-  starting-rank render it simply registers the listener and does nothing
-  else, and is ready the moment a later swap brings the real table in - the
-  same pattern `index.html.heex`'s own script already uses for the front
-  page's search box before the first tournament is published.
-  """
-  def standings_script(assigns) do
-    ~H"""
-    <script>
-      (() => {
-        const announce = (text) => window.openResultsAnnounce && window.openResultsAnnounce(text);
-
-        // The reader's sort, kept OUTSIDE `init` so it outlives a refresh.
-        // It used to be reset by every real update: somebody who had sorted
-        // by club - by keyboard, walking back up to the header to do it -
-        // was put back in rank order mid-read, every time a result came in.
-        let sortKey = null;
-        let sortDir = 1;
-
-        // Runs once, from the very first render of THIS page - a script
-        // embedded in HTML that arrives later, via the 20-second refresher's
-        // innerHTML swap, never executes on its own. `init` re-queries the
-        // live DOM every time it runs rather than closing over elements from
-        // one render, which is what lets the SAME registration below survive
-        // that swap - see the root layout's own comment on the event it
-        // dispatches. It also tolerates the standings table not existing yet
-        // at all - see the moduledoc above for why that matters.
-        const init = () => {
-          const panel = document.querySelector("[data-standings-panel]");
-          const table = panel && panel.querySelector("[data-standings-table]");
-          const tbody = table && table.querySelector("tbody");
-          if (!tbody) { return; }
-
-          const controls = panel.querySelector("[data-standings-controls]");
-          const selects = controls
-            ? {
-                club: controls.querySelector('[data-filter="club"]'),
-                federation: controls.querySelector('[data-filter="federation"]'),
-                category: controls.querySelector('[data-filter="category"]'),
-              }
-            : {};
-          const countEl = controls && controls.querySelector("[data-standings-count]");
-          const resetBtn = controls && controls.querySelector("[data-standings-reset]");
-
-          // ---- filtering, and the URL it can be shared through ----
-          const params = new URLSearchParams(location.search);
-          for (const [name, select] of Object.entries(selects)) {
-            if (!select) { continue; }
-            const wanted = params.get(name);
-            if (wanted && Array.from(select.options).some((o) => o.value === wanted)) {
-              select.value = wanted;
-            }
-          }
-
-          // `said` is true when a reader changed a filter, and false for the
-          // quiet re-application on load and after a refresh.
-          const applyFilters = (said) => {
-            const wanted = {};
-            for (const [name, select] of Object.entries(selects)) {
-              wanted[name] = select ? select.value : "";
-            }
-
-            // The table's OWN rows only. Every tiebreak cell carries a
-            // closed <details> with a small working table inside it, and
-            // `querySelectorAll("tr")` finds those rows too - 320 of them on
-            // a 20-player field. Counted, they inflated "shown of total";
-            // sorted, they were appended to the standings one by one.
-            const rows = Array.from(tbody.children);
-            let shown = 0;
-
-            rows.forEach((row) => {
-              const ok = Object.entries(wanted).every(
-                ([name, value]) => !value || row.dataset[name] === value
-              );
-              row.hidden = !ok;
-              if (ok) { shown += 1; }
-            });
-
-            const active = Object.values(wanted).some(Boolean);
-            if (countEl) {
-              const sentence = (countEl.dataset.countLabel || "")
-                .replace("{shown}", shown)
-                .replace("{total}", rows.length);
-
-              countEl.hidden = !active;
-              if (active) { countEl.textContent = sentence; }
-              // Rows vanishing is silent; the count is how a screen reader
-              // user finds out the filter did anything - Reset included.
-              if (said === true) { announce(sentence); }
-            }
-
-            // A local rewrite, not a request - see the moduledoc above for
-            // why that is what keeps this safe for the page cache. Wrapped:
-            // a page embedded in a sandboxed iframe (no allow-same-origin)
-            // has this throw a SecurityError, and unguarded that took the
-            // sort buttons below down with it - they are wired up only
-            // after this function's first call succeeds.
-            try {
-              const next = new URLSearchParams(location.search);
-              for (const [name, value] of Object.entries(wanted)) {
-                if (value) { next.set(name, value); } else { next.delete(name); }
-              }
-              const query = next.toString();
-              history.replaceState(null, "", location.pathname + (query ? `?${query}` : "") + location.hash);
-            } catch (_) {
-              // The filter still applies to the rows on screen; only the
-              // shareable-URL side effect is unavailable here.
-            }
-          };
-
-          for (const select of Object.values(selects)) {
-            select && select.addEventListener("change", () => applyFilters(true));
-          }
-
-          if (resetBtn) {
-            resetBtn.addEventListener("click", () => {
-              for (const select of Object.values(selects)) { if (select) { select.value = ""; } }
-              applyFilters(true);
-            });
-          }
-
-          applyFilters(false);
-
-          // ---- sorting ----
-          // `sortKey` and `sortDir` live outside `init` - see the top.
-
-          // A tiebreak column's value lives on its `<td>`, not the `<tr>` -
-          // there can be several, and they are not fixed columns the way
-          // rank or rating are. Reached by position, the same discipline
-          // `rows[].tiebreaks` itself is read with against `standings.tiebreaks`.
-          const valueFor = (row, key) => {
-            if (key.slice(0, 2) === "tb") {
-              const cell = row.querySelectorAll(".tb-cell")[parseInt(key.slice(2), 10)];
-              return cell ? cell.dataset.value : undefined;
-            }
-            return row.dataset[key];
-          };
-
-          const applySort = () => {
-            if (!sortKey) { return; }
-
-            const rows = Array.from(tbody.children); // own rows only - see applyFilters
-            rows.sort((a, b) => {
-              const av = valueFor(a, sortKey);
-              const bv = valueFor(b, sortKey);
-              const blankA = av === undefined || av === "";
-              const blankB = bv === undefined || bv === "";
-              // A player with nothing in this column sinks to the bottom of
-              // either direction - not the top of a descending sort, which
-              // would put "unknown" above every real value.
-              if (blankA || blankB) {
-                return blankA === blankB ? 0 : (blankA ? 1 : -1);
-              }
-
-              const an = parseFloat(av);
-              const bn = parseFloat(bv);
-              const cmp =
-                !Number.isNaN(an) && !Number.isNaN(bn)
-                  ? an - bn
-                  : String(av).localeCompare(String(bv), undefined, { sensitivity: "base" });
-
-              return cmp * sortDir;
-            });
-
-            rows.forEach((row) => tbody.appendChild(row));
-          };
-
-          const buttons = Array.from(table.querySelectorAll("thead [data-sort-key]"));
-
-          const markSorted = (button) => {
-            buttons.forEach((b) => b.closest("th").removeAttribute("aria-sort"));
-            button
-              .closest("th")
-              .setAttribute("aria-sort", sortDir === 1 ? "ascending" : "descending");
-          };
-
-          buttons.forEach((button) => {
-            button.addEventListener("click", () => {
-              const key = button.dataset.sortKey;
-              sortDir = sortKey === key ? -sortDir : 1;
-              sortKey = key;
-
-              markSorted(button);
-              applySort();
-
-              // `aria-sort` changing on the header is not announced by itself
-              // while focus stays on the button, so it is said.
-              const sentence = panel.dataset[sortDir === 1 ? "sortedAscending" : "sortedDescending"];
-              if (sentence) { announce(sentence.replace("{column}", button.textContent.trim())); }
-            });
-          });
-
-          // A refresh brought fresh rows in rank order: put the reader's sort
-          // back, if its column is still there.
-          const kept = sortKey && buttons.find((b) => b.dataset.sortKey === sortKey);
-          if (kept) {
-            markSorted(kept);
-            applySort();
-          } else {
-            sortKey = null;
-            sortDir = 1;
-          }
-        };
-
-        init();
-        document.addEventListener("openresults:updated", init);
-      })();
-    </script>
+    <%!-- Keizer's ladder is not a FIDE tiebreak table and reads like a broken
+          one if nobody says so: the points move for reasons that are not in
+          the results column. Kept out of `standings.html.heex` and put here
+          instead so it is part of the same conditional as the table it
+          explains, filter and all. --%>
+    <p :if={@rows != [] and @keizer?} class="footnote">
+      {gettext(
+        "These are Keizer points, not FIDE tiebreaks - the whole ladder is recalculated from results, byes and absences every time."
+      )}
+    </p>
     """
   end
 
@@ -878,69 +601,13 @@ defmodule OpenResultsWeb.TournamentHTML do
     """
   end
 
-  # The column header for a sortable value: a real, focusable button rather
-  # than a click handler on the `<th>` itself, so this works by keyboard and
-  # by tap and never only by a mouse hovering over it. Plain text with no JS -
-  # see the moduledoc on `standings_table/1` for why the table underneath it
-  # already works perfectly well without one.
-  attr :sort_key, :string, required: true
-  attr :class, :any, default: nil
-  slot :inner_block, required: true
-
-  defp sort_th(assigns) do
-    ~H"""
-    <th class={@class} scope="col">
-      <button type="button" class="sort-btn" data-sort-key={@sort_key}>
-        {render_slot(@inner_block)}
-      </button>
-    </th>
-    """
-  end
-
-  # The values a filter dropdown offers, from the PLAYER side of a row -
-  # club and federation are not standings fields, they are the player's own.
-  # `nil` when the column is switched off (so nothing an arbiter hid can
-  # resurface in a dropdown) or when every value is the same or absent (so a
-  # control that would filter nothing is not offered at all).
-  defp filter_values(false, _rows, _players, _key), do: []
-
-  defp filter_values(true, rows, players, key) do
-    rows
-    |> Enum.map(&Map.get(players[&1["player"]] || %{}, key))
-    |> distinct_values()
-  end
-
-  # The one filter that reads off the STANDINGS row rather than the player -
-  # `category` travels on both, and the row's own copy is what the visible
-  # column already renders, so the filter has to agree with what is on
-  # screen rather than with a value the arbiter may since have changed on
-  # the player record and not republished.
-  defp filter_values(false, _rows, _key), do: []
-
-  defp filter_values(true, rows, key) do
-    rows |> Enum.map(&Map.get(&1, key)) |> distinct_values()
-  end
-
-  defp distinct_values(values) do
-    values
-    |> Enum.filter(&(is_binary(&1) and &1 != ""))
-    |> Enum.uniq()
-    |> Enum.sort()
-    |> case do
-      # One value splits nothing; the control would just be furniture.
-      [_only_one] -> []
-      several -> several
-    end
-  end
-
   # `nil` and `false` are the two values a HEEx attribute omits outright; an
-  # empty string is not, so it would print `data-club=""` - filterable
-  # against nothing, and indistinguishable in the DOM from a real empty
-  # value nobody would ever choose from the dropdown, but worth closing
-  # rather than relying on that.
-  # Ratings arrive as integers; club, federation and category as strings.
-  # Without this clause a number fell through and `data-rating` was never
-  # written, so the Rating column's sort button reordered nothing.
+  # empty string is not, so it would print `data-city=""` on the front
+  # page's search box - matchable against nothing, and indistinguishable in
+  # the DOM from a real empty value nobody would ever type, but worth
+  # closing rather than relying on that. Numbers pass through as strings for
+  # the same `data-*` attributes; nothing on `index.html.heex` is numeric
+  # today, but a caller should not have to know that to reuse this.
   defp data_value(value) when is_number(value), do: to_string(value)
   defp data_value(value) when is_binary(value) and value != "", do: value
   defp data_value(_absent_or_blank), do: nil
@@ -984,13 +651,26 @@ defmodule OpenResultsWeb.TournamentHTML do
   Not the board's result token. `1-0` is a win for one seat and a loss for
   the other, so each cell carries the score of the player whose ROW it is -
   see `OpenResultsWeb.Tournament.crosstable/1`, where the split happens.
+
+  ## The filter bar filters ROWS only
+
+  `filters` (see `OpenResultsWeb.Tournament.Filter.crosstable_rows/3`)
+  narrows which players get a row here - never the columns, and never the
+  opponent numbers inside a cell: an opponent is named by their overall
+  pairing number whether or not that opponent's own row is currently
+  shown, exactly as it was before this feature existed. There is no sort
+  control on this page - see `crosstable_rows/3`'s own moduledoc for why
+  re-ordering these rows at all would fight the reason they are in
+  starting-number order in the first place.
   """
   attr :payload, :map, required: true
   attr :slug, :string, required: true
+  attr :filters, OpenResultsWeb.FilterParams, required: true
 
   def crosstable_table(assigns) do
     payload = assigns.payload
-    rows = Tournament.crosstable(payload)
+    all_rows = Tournament.crosstable(payload)
+    rows = Filter.crosstable_rows(payload, assigns.filters, all_rows)
     # Published AND no later than the standings beside this page - see
     # `Tournament.within_standings?/2`. `Tournament.crosstable/1` applies the
     # same filter to the same list to build each row's `cells`, so the
@@ -1001,11 +681,20 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> Tournament.round_numbers()
       |> Enum.filter(&Tournament.within_standings?(payload, &1))
 
+    show = display_rules(payload)
+
     assigns =
       assigns
       |> assign(:rows, rows)
+      |> assign(:empty?, all_rows != [] and rows == [] and rounds != [])
       |> assign(:rounds, rounds)
-      |> assign(:show, display_rules(payload))
+      |> assign(:show, show)
+      |> assign(:bar_categories, Filter.categories(payload))
+      |> assign(:bar_clubs, (show.club && Filter.player_values(payload, "club")) || [])
+      |> assign(
+        :bar_federations,
+        (show.federation && Filter.player_values(payload, "federation")) || []
+      )
       # A Keizer ladder's "points" are the ladder's own currency and not the
       # sum of the row they would sit beside: player 1 of the fixture has two
       # wins and 17 points. The game score is the number that belongs at the
@@ -1014,7 +703,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       # Only when the arbiter has actually published placings. Two columns of
       # blanks on a tournament that has not ranked anybody yet is noise, and
       # this page is deliberately readable without a standings block at all.
-      |> assign(:placings?, Enum.any?(rows, &(&1.rank || &1.points || &1.score)))
+      |> assign(:placings?, Enum.any?(all_rows, &(&1.rank || &1.points || &1.score)))
       # Which empty message applies. Before the first standings are
       # published there is nothing this page may show at all - not "no
       # rounds", which is a different and rarer claim about a tournament
@@ -1022,11 +711,22 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:awaiting_standings?, is_nil(Tournament.after_round(payload)))
 
     ~H"""
-    <p :if={@rows == [] or @rounds == []} class="empty">
+    <p :if={@rounds == [] or (@rows == [] and not @empty?)} class="empty">
       {if @awaiting_standings?,
         do: gettext("Results appear here once the standings after round 1 are published."),
         else: gettext("No rounds have been published for this tournament yet.")}
     </p>
+
+    <FilterBar.filter_bar
+      :if={@rounds != [] and (@rows != [] or @empty?)}
+      action={~p"/t/#{@slug}/crosstable"}
+      filters={@filters}
+      categories={@bar_categories}
+      federations={@bar_federations}
+      clubs={@bar_clubs}
+      sort?={false}
+      empty?={@empty?}
+    />
 
     <div :if={@rows != [] and @rounds != []} class="scroller xt-scroller">
       <table class="crosstable">
@@ -1215,28 +915,66 @@ defmodule OpenResultsWeb.TournamentHTML do
   Only the boards that were published are here, because a board the arbiter
   hid was withheld when the document was built. There is no filtering to
   forget and nothing on the server to leak.
+
+  ## The filter bar
+
+  A board STAYS in the table when either seat's player matches the active
+  filters - `Filter.round_boards/3` decides that per board and says which
+  seat(s) matched - because hiding half a board while leaving the other
+  seat's opponent unexplained would be worse than showing the whole board
+  with the match picked out. A non-matching seat renders exactly as
+  before; a matching one gets `.pairing-match` (a visible mark, not colour
+  alone) and `aria-current="true"`, so a screen reader hears which seat -
+  or both - answered the search. There is no sort control here: see
+  `Filter.round_boards/3`'s own moduledoc.
   """
   attr :payload, :map, required: true
   attr :slug, :string, required: true
   attr :round, :map, required: true
   attr :players, :map, required: true
+  attr :filters, OpenResultsWeb.FilterParams, required: true
 
   def pairings_table(assigns) do
     show = display_rules(assigns.payload)
+    all_boards = Tournament.boards(assigns.round)
+    tagged = Filter.round_boards(assigns.payload, assigns.filters, all_boards)
+    shown = Enum.filter(tagged, fn {_board, tag} -> tag.shown? end)
 
     assigns =
       assigns
-      |> assign(:boards, Tournament.boards(assigns.round))
+      |> assign(:tagged, shown)
+      |> assign(:empty?, all_boards != [] and shown == [])
       |> assign(:show, show)
+      |> assign(:bar_categories, Filter.categories(assigns.payload))
+      |> assign(:bar_clubs, (show.club && Filter.player_values(assigns.payload, "club")) || [])
+      |> assign(
+        :bar_federations,
+        (show.federation && Filter.player_values(assigns.payload, "federation")) || []
+      )
       # The points each player carried INTO this round, which is what a
       # pairing list means by score and what explains why these two are on
       # this board. Their points after it are on the standings.
       |> assign(:scores, Tournament.scores_before(assigns.payload, assigns.round["number"]))
 
     ~H"""
-    <p :if={@boards == []} class="empty">{gettext("No boards were published for this round.")}</p>
+    <p :if={@empty? or @tagged == []} class="empty">
+      {if @empty?,
+        do: gettext("No players match these filters."),
+        else: gettext("No boards were published for this round.")}
+      <a :if={@empty?} href={~p"/t/#{@slug}/round/#{@round["number"]}"}>{gettext("Clear filters")}</a>
+    </p>
 
-    <div :if={@boards != []} class="scroller">
+    <FilterBar.filter_bar
+      :if={@tagged != [] or @empty?}
+      action={~p"/t/#{@slug}/round/#{@round["number"]}"}
+      filters={@filters}
+      categories={@bar_categories}
+      federations={@bar_federations}
+      clubs={@bar_clubs}
+      sort?={false}
+    />
+
+    <div :if={@tagged != []} class="scroller">
       <table class="pairings">
         <caption class="visually-hidden">
           {Tournament.round_heading(@payload, @round["number"])}
@@ -1268,13 +1006,13 @@ defmodule OpenResultsWeb.TournamentHTML do
           </tr>
         </thead>
         <tbody>
-          <tr :for={board <- @boards}>
+          <tr :for={{board, tag} <- @tagged}>
             <th scope="row" class="num row-head">{Tournament.board_label(board)}</th>
             <td :if={@show.rating} class="num">{dash(@players[board["white"]]["rating"])}</td>
             <td :if={@show.pairing_scores} class="num">
               <.score points={@scores[board["white"]]} />
             </td>
-            <td>
+            <td class={tag.white? && "pairing-match"} aria-current={tag.white? && "true"}>
               <.player_link
                 slug={@slug}
                 no={board["white"]}
@@ -1283,9 +1021,10 @@ defmodule OpenResultsWeb.TournamentHTML do
                 cards?={@show.player_cards}
                 detail
               />
+              <span :if={tag.white?} class="visually-hidden">{gettext("matches your filter")}</span>
             </td>
             <td class="num"><.result token={board["result"]} /></td>
-            <td>
+            <td class={tag.black? && "pairing-match"} aria-current={tag.black? && "true"}>
               <.player_link
                 slug={@slug}
                 no={board["black"]}
@@ -1294,6 +1033,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 cards?={@show.player_cards}
                 detail
               />
+              <span :if={tag.black?} class="visually-hidden">{gettext("matches your filter")}</span>
             </td>
             <td :if={@show.pairing_scores} class="num">
               <.score points={@scores[board["black"]]} />

@@ -27,6 +27,23 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **A filter and sort bar, on the standings, round pairings and
+  cross-table pages.** Category (when the arbiter shows one), federation,
+  club and a name search - narrow the standings to "Best U1800" or "my club"
+  with a real link you can share or bookmark, no JavaScript required. Round
+  pairings keeps a board when either player matches and marks which seat(s)
+  do; the cross-table narrows which players get a row without touching the
+  opponent numbers inside it. Sort by rank (the default), rating, name or
+  federation on the standings - the rank column always shows the arbiter's
+  own placing, whatever the sort. Filtering by category also shows each
+  row's place within that category, e.g. "3 · 1 in U1800". Moving between
+  the three pages keeps the filter and sort. Reads the category names
+  OpenPairings now sends (see below); an older OpenPairings, or an arbiter
+  who has category display turned off, simply gets no category control.
+- [Change] **The standings table's club/federation/category filter and its
+  sort-by-column buttons are gone**, replaced by the shared filter bar
+  above - the old ones worked only with JavaScript and only on the standings
+  page.
 - [Change] **Dutch says "FIDE-rated", not "FIDE-gerateerd".** The FIDE badge on
   tournament pages uses the term Dutch-speaking arbiters actually say.
 - [Change] **A player's chart waits for a third round, and a short event gets a
