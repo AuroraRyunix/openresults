@@ -19,7 +19,6 @@ defmodule OpenResultsWeb.Admin.SettingsController do
 
   import OpenResultsWeb.Admin.Components, only: [render_not_found: 2, at: 1]
 
-  alias OpenResults.Federations.BEL, as: BelFederation
   alias OpenResults.Moderation
   alias OpenResults.PublicNotice
   alias OpenResults.ServerSettings
@@ -33,8 +32,7 @@ defmodule OpenResultsWeb.Admin.SettingsController do
       settings: Moderation.server_settings(),
       locked: ServerSettings.locked(),
       notice: Moderation.public_notice(),
-      now: DateTime.utc_now(),
-      bel: BelFederation.admin_stats()
+      now: DateTime.utc_now()
     )
   end
 

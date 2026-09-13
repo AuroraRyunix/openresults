@@ -16,7 +16,6 @@ defmodule OpenResultsWeb.InstallationAccess do
   | `:history` | `GET /api/tournaments/:slug/history` | path slug | yes | yes | - |
   | `:registrations` | `GET /api/tournaments/:slug/registrations` | path slug | yes | yes | - |
   | `:delete` | `DELETE /api/tournaments/:slug` | path slug | **no** | **no** | - |
-  | `:bel_players` | `GET /api/federations/bel/players` | - (not tied to a tournament) | yes | yes | rate-limited in the controller itself, see `OpenResultsWeb.Federations.BelController` |
 
   An action this module does not know is the anonymous 401 - a typo in the
   router must fail closed, not open.
@@ -58,9 +57,9 @@ defmodule OpenResultsWeb.InstallationAccess do
   alias OpenResultsWeb.ClientAddress
   alias OpenResultsWeb.Plugs.IngestAuth
 
-  @actions [:mint, :publish, :history, :registrations, :delete, :bel_players]
+  @actions [:mint, :publish, :history, :registrations, :delete]
   @writes [:mint, :publish]
-  @refused_while_suspended [:mint, :publish, :history, :registrations, :bel_players]
+  @refused_while_suspended [:mint, :publish, :history, :registrations]
 
   @doc "The actions a route may opt in to."
   def actions, do: @actions
@@ -189,7 +188,4 @@ defmodule OpenResultsWeb.InstallationAccess do
   defp ownership(conn, installation, :delete) do
     Tournaments.authorize_owner(conn.path_params["slug"], installation, :delete)
   end
-
-  # Not tied to any tournament - there is nothing to own.
-  defp ownership(_conn, _installation, :bel_players), do: :ok
 end

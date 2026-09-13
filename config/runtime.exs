@@ -243,18 +243,6 @@ if lookup_token = System.get_env("FIDE_LOOKUP_TOKEN") do
   config :openresults, :fide_lookup_token, lookup_token
 end
 
-# The Belgian (KBSB/FRBE) roster relay - see docs/federations-bel.md. Both
-# unset (the default) is the feature switched off entirely:
-# `OpenResults.Federations.BEL.Config.enabled?/0` is false, the sync never
-# runs, and the endpoint answers 404 `not_configured`.
-if bel_kbsb_api_url = System.get_env("OPENRESULTS_KBSB_API_URL") do
-  config :openresults, :bel_kbsb_api_url, bel_kbsb_api_url
-end
-
-if bel_kbsb_api_key = System.get_env("OPENRESULTS_KBSB_API_KEY") do
-  config :openresults, :bel_kbsb_api_key, bel_kbsb_api_key
-end
-
 config :openresults, OpenResultsWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 

@@ -248,15 +248,6 @@ Mints a slug bound to this installation. Request body `{}`.
   has none): nothing shows a slug was minted until something is published
   under it.
 
-### `GET /api/federations/bel/players` - installation key or operator token
-
-**Added 2026-09-13.** Not part of this document's original contract - see
-docs/federations-bel.md for the full story. Not tied to any tournament, so
-not on the `:public_publishing` gate: an operator can configure this
-independently of whether public publishing is switched on at all. 404
-`not_configured` when `OPENRESULTS_KBSB_API_URL`/`OPENRESULTS_KBSB_API_KEY`
-are unset. Rate-limited in the controller, gzip, ETag/304.
-
 ### Existing routes, called with an installation key
 
 `POST /api/snapshots`, `DELETE /api/tournaments/:slug`,

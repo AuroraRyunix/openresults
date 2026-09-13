@@ -97,14 +97,5 @@ config :openresults, :retention_interval, :disabled
 config :openresults, :disk_space_interval, :disabled
 config :openresults, :disk_space_reader, {OpenResults.DiskSpace, :unmeasured}
 
-# The BEL roster relay's scheduler does not run itself in test - tests call
-# `OpenResults.Federations.BEL.Sync.run/0` directly - and its store writes to
-# a scratch path rather than the real `priv/bel/players.json`.
-config :openresults, :bel_sync_interval, :disabled
-
-config :openresults,
-       :bel_store_path,
-       Path.join(System.tmp_dir!(), "openresults_test_bel_players.json")
-
 config :openresults, :bel_retries, 0
 config :openresults, :bel_retry_backoff_ms, [0]

@@ -68,10 +68,6 @@ defmodule OpenResults.PublicPublishingFixtures do
     conn |> bearer(bearer) |> tournament_key(tournament_key) |> delete("/api/tournaments/#{slug}")
   end
 
-  def bel_players(bearer, conn \\ build_conn()) do
-    conn |> bearer(bearer) |> get("/api/federations/bel/players")
-  end
-
   def mint(bearer, conn \\ build_conn()) do
     conn
     |> put_req_header("content-type", "application/json")

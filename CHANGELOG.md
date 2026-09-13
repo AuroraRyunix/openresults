@@ -35,21 +35,6 @@ Each entry is tagged so a version can be skimmed:
   a match whose boards merely all show forfeits is not labelled. In Dutch
   and French too.
 - [Feature] **Team tournaments have public pages.** A team event's tournament
-- [Feature] **Relays the Belgian (KBSB/FRBE) national rating list to desktop
-  OpenPairings installs.** A desktop copy has no safe way to hold the KBSB
-  data platform's API key, so it now asks OpenResults instead:
-  `GET /api/federations/bel/players`, authenticated with an installation key
-  or the operator token, gzip, ETag/304. Optional and off by default -
-  `OPENRESULTS_KBSB_API_URL` / `OPENRESULTS_KBSB_API_KEY` - and 404
-  `not_configured` when unset. A daily background sync (plus once at boot if
-  the stored copy is more than a day old) pulls the upstream export, keeps
-  only the fields KBSB already prints on its own public rating lists (name,
-  national id, national rating, club number and name, FIDE id, federation -
-  **never** a birth date, an email, an address or a phone number, whatever
-  the upstream export carries), and writes it with a temp-file-and-rename
-  swap so a request never sees a half-written sync. `/admin/settings` shows
-  the last sync time, player count and last error, read-only. See
-  docs/federations-bel.md. A team event's tournament
   page now shows the team standings - rank, match points, game points and
   the configured team tie-breaks, each with the same expandable "working" a
   player's own tie-break cell offers - instead of an individual table, and,
