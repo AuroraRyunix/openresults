@@ -537,6 +537,10 @@ moderation.
   revoke the moderation journal applies again after a restore. Suspension
   leaves the flag, and a suspended installation still cannot publish or mint.
   A revoked installation cannot be trusted.
+- Ending trust, and lowering an installation's own limits, are journalled
+  like revoke and suspend, so a restore never brings back trust or a looser
+  limit that was taken away; granting trust and raising a limit are not (see
+  the moderation journal under "Moderation API").
 - **Per-installation limits**, optional, blank meaning the server's value:
   `max_tournaments`, `max_snapshot_bytes`, `publishes_per_minute`,
   `max_versions`. Each is validated with the range of the server setting it
@@ -718,8 +722,16 @@ clear_public_notice(actor) :: {:ok, notice} | {:error, :not_set}
 ```
 
 - `revoke/3`'s row gains `was_trusted`.
-- None of these is journalled: none of them makes the site safer in the
-  sense the journal keeps.
+- **(settled in the admin upgrade, 2026-09-13)** The safer direction of these
+  is journalled, like revoke and suspend: `untrust/2`, and
+  `put_installation_limits/3` for every limit whose value in force went down
+  (a smaller own value, or clearing an own value that was above the server's).
+  A restore replays each unless the action log already has a row about the
+  installation at or after the line (a replay's row counts by its
+  `journal_at`); a lowered limit is only re-applied where the restored value in
+  force is still higher. Granting trust and raising a limit are never
+  journalled, and server settings and the public notice are not either: a
+  restore leaves them as the backup had them.
 
 **(settled in the build)** `transfer_all/3`, as built:
 
@@ -747,12 +759,14 @@ clear_public_notice(actor) :: {:ok, notice} | {:error, :not_set}
 - **(settled in the restore fixes, 2026-09-13)** The actions that make the site
   safer - `delete` (and an owner's or the operator's
   `DELETE /api/tournaments/:slug`), `hide`, `revoke`, `suspend`,
-  `block_address`, closing `registration_open` and setting
-  `public_publishing_paused` - are also appended, after they commit, to a
+  `block_address`, closing `registration_open`, setting
+  `public_publishing_paused`, and **(settled in the admin upgrade, 2026-09-13)**
+  `untrust` and lowering an installation's own limits - are also appended, after they commit, to a
   journal file beside the database (`OpenResults.ModerationJournal`), which no
   backup contains. At boot every journalled action the restored database does
   not know about is applied again, only in that direction: approve, unhide,
-  unsuspend, unblock, opening registration and unpausing are never journalled
+  unsuspend, unblock, opening registration, unpausing, granting trust and
+  raising an installation's limit are never journalled
   and never replayed. Each re-applied action writes one action log row with
   the actor `restore-replay`.
 

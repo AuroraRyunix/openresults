@@ -177,6 +177,112 @@ defmodule OpenResults.ModerationJournalTest do
     end
   end
 
+  describe "trust and per-installation limits, after a restore" do
+    test "ending trust and lowering limits come back; granting trust and raising limits do not",
+         %{dir: dir, journal: journal} do
+      live = live_database(dir)
+
+      # Before the backup: in_revokeme trusted with a generous tournament
+      # limit, in_suspendme untrusted with a tight snapshot cap, and in_owner
+      # untrusted with its own version cap above the server's 20.
+      with_repo(live, fn ->
+        {:ok, _} =
+          Repo.query(
+            "UPDATE installations SET trusted = 1, max_tournaments = 200 WHERE id = 'in_revokeme'"
+          )
+
+        {:ok, _} =
+          Repo.query(
+            "UPDATE installations SET max_snapshot_bytes = 1000 WHERE id = 'in_suspendme'"
+          )
+
+        {:ok, _} = Repo.query("UPDATE installations SET max_versions = 50 WHERE id = 'in_owner'")
+      end)
+
+      {:ok, backup} = Backup.create(dir: Path.join(dir, "backups"), source: live)
+
+      with_repo(live, fn ->
+        # Safer: journalled.
+        {:ok, _} = Moderation.untrust("in_revokeme", @ops)
+
+        {:ok, _} =
+          Moderation.put_installation_limits("in_revokeme", %{"max_tournaments" => "5"}, @ops)
+
+        # Clearing an override that was above the server's value is lowering.
+        {:ok, _} = Moderation.put_installation_limits("in_owner", %{}, @ops)
+
+        # Less safe: never journalled.
+        {:ok, _} = Moderation.trust("in_suspendme", @ops, list_pending: false)
+        {:ok, _} = Moderation.put_installation_limits("in_suspendme", %{}, @ops)
+      end)
+
+      assert Enum.map(lines(journal), &{&1["action"], &1["target"], &1["limits"]}) == [
+               {"untrust", "in_revokeme", nil},
+               {"lower_limits", "in_revokeme", %{"max_tournaments" => 5}},
+               {"lower_limits", "in_owner", %{"max_versions" => nil}}
+             ]
+
+      # No restore: all known.
+      assert with_repo(live, fn -> ModerationJournal.replay() end) == 0
+
+      {:ok, restored} = Backup.restore(backup)
+
+      with_repo(restored, fn ->
+        assert %{trusted: true, max_tournaments: 200} = Installations.get("in_revokeme")
+        assert %{max_versions: 50} = Installations.get("in_owner")
+
+        assert ModerationJournal.replay() == 3
+
+        assert %{trusted: false, max_tournaments: 5} = Installations.get("in_revokeme")
+        assert %{max_versions: nil} = Installations.get("in_owner")
+
+        # Granting trust and raising the cap happened after the backup and are
+        # NOT replayed.
+        assert %{trusted: false, max_snapshot_bytes: 1000} = Installations.get("in_suspendme")
+
+        replayed = Moderation.list_actions(actor: "restore-replay")
+
+        assert Enum.map(replayed, &{&1.action, &1.target}) |> Enum.sort() == [
+                 {"set_installation_limits", "in_owner"},
+                 {"set_installation_limits", "in_revokeme"},
+                 {"untrust", "in_revokeme"}
+               ]
+
+        assert Enum.all?(replayed, &is_binary(&1.details["journal_at"]))
+        assert ModerationJournal.replay() == 0
+
+        # The operator trusts it again on purpose; the next boot keeps that.
+        {:ok, _} = Moderation.trust("in_revokeme", @ops, list_pending: false)
+        assert ModerationJournal.replay() == 0
+        assert %{trusted: true} = Installations.get("in_revokeme")
+      end)
+    end
+
+    test "a limit already as low as the journal's is left alone, and an unknown installation too" do
+      now = DateTime.utc_now()
+
+      {:ok, %{installation: installation}} =
+        Installations.register(%{"client" => "OpenPairings"}, nil)
+
+      {:ok, _} =
+        Moderation.put_installation_limits(installation.id, %{"max_versions" => "2"}, @ops)
+
+      # Lines newer than anything the database knows: a limit the installation
+      # is already below changes nothing, and an installation that does not
+      # exist is passed over.
+      ModerationJournal.record_lower_limits(
+        installation.id,
+        %{max_versions: 5},
+        DateTime.add(now, 3600, :second)
+      )
+
+      ModerationJournal.record_untrust("in_nobody", DateTime.add(now, 3600, :second))
+
+      assert ModerationJournal.replay() == 0
+      assert %{max_versions: 2} = Installations.get(installation.id)
+    end
+  end
+
   describe "what is written" do
     test "DELETE /api/tournaments/:slug is journalled, by the operator or by the owner", %{
       journal: journal

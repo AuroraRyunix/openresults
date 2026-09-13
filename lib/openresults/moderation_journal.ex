@@ -31,12 +31,18 @@ defmodule OpenResults.ModerationJournal do
       {"v":1,"at":"...","action":"block_address","cidr":"192.0.2.0/24","expires_at":"..."}
       {"v":1,"at":"...","action":"put_setting","target":"registration_open","value":false}
       {"v":1,"at":"...","action":"put_setting","target":"public_publishing_paused","value":true}
+      {"v":1,"at":"...","action":"untrust","target":"in_XWtJ..."}
+      {"v":1,"at":"...","action":"lower_limits","target":"in_XWtJ...","limits":{"max_versions":5,"max_tournaments":null}}
 
   **Only the safer direction is journalled**: `delete` - the admin panel's,
   and an owner's or the operator's `DELETE /api/tournaments/:slug` (`by` says
   which) - `hide`, `revoke`, `suspend`, `block_address`, closing registration
-  and pausing publishing. Approve, unhide, unsuspend, unblock, opening
-  registration and unpausing are never written, so never replayed: after a
+  and pausing publishing, and (the admin upgrade, 2026-09-13) ending an
+  installation's trust (`untrust`) and lowering its own limits
+  (`lower_limits`: only the limits whose value in force went down, each with
+  the installation's own value afterwards, `null` for the server's). Approve,
+  unhide, unsuspend, unblock, opening registration, unpausing, granting trust
+  and raising a limit are never written, so never replayed: after a
   restore they stay as the backup had them, and the operator redoes them
   deliberately. `at` is the action log row's own time where there is one.
 
@@ -58,7 +64,8 @@ defmodule OpenResults.ModerationJournal do
       slug after the delete is newer than the line, and stays.
     * `hide`, `suspend`, and the two switches: if the action log has any row
       about the same target at or after the line's time - the action itself,
-      a later reversal, an earlier replay - the database already reflects it,
+      a later reversal, an earlier replay of this line or a later one (a
+      replay's row counts by its `journal_at`) - the database already reflects it,
       and nothing happens. Otherwise the change is made if it is not already
       in force. A `hide` is also passed over when a later line deleted the
       slug.
@@ -66,6 +73,13 @@ defmodule OpenResults.ModerationJournal do
       revoked (hiding its tournaments too if the original did).
     * `block_address`: as the others, keyed on the range; never re-created
       once its expiry has passed, and not twice.
+    * `untrust`: as `suspend` - passed over when the action log has a row
+      about the installation at or after the line; otherwise a trusted
+      installation's trust is cleared.
+    * `lower_limits`: passed over the same way; otherwise every journalled
+      limit whose value in force is still HIGHER than the journalled one
+      (a blank counting as the server's value now) is set to it. A limit
+      already as low or lower is left alone.
 
   Every re-applied action writes one action log row with the actor
   `restore-replay` and the line's time in `journal_at`, which is also what
@@ -88,10 +102,12 @@ defmodule OpenResults.ModerationJournal do
   alias OpenResults.AddressBlocks
   alias OpenResults.Backup
   alias OpenResults.Installations
+  alias OpenResults.Installations.Installation
   alias OpenResults.Moderation
   alias OpenResults.Moderation.Action
   alias OpenResults.Registrations.Registration
   alias OpenResults.Repo
+  alias OpenResults.ServerSettings
   alias OpenResults.Settings
   alias OpenResults.Snapshots.Snapshot
   alias OpenResults.Takedown
@@ -101,7 +117,7 @@ defmodule OpenResults.ModerationJournal do
 
   require Logger
 
-  @actions ~w(delete hide revoke suspend block_address put_setting)
+  @actions ~w(delete hide revoke suspend block_address put_setting untrust lower_limits)
   @margin_days 7
 
   # The switch and the value that makes the site safer. The other direction is
@@ -146,6 +162,29 @@ defmodule OpenResults.ModerationJournal do
   @doc "An installation suspended."
   def record_suspend(id, %DateTime{} = at) when is_binary(id),
     do: append(%{"action" => "suspend", "target" => id}, at)
+
+  @doc "An installation's trust ended."
+  def record_untrust(id, %DateTime{} = at) when is_binary(id),
+    do: append(%{"action" => "untrust", "target" => id}, at)
+
+  @doc """
+  An installation's own limits lowered: `limits` maps each limit whose value
+  in force went down to the installation's own value afterwards (`nil` for
+  the server's). The caller leaves out every limit that did not go down.
+  """
+  def record_lower_limits(id, limits, %DateTime{} = at) when is_binary(id) and is_map(limits) do
+    if limits == %{},
+      do: :ok,
+      else:
+        append(
+          %{
+            "action" => "lower_limits",
+            "target" => id,
+            "limits" => Map.new(limits, fn {k, v} -> {to_string(k), v} end)
+          },
+          at
+        )
+  end
 
   @doc "An address or range blocked, until `expires_at`."
   def record_block(cidr, %DateTime{} = expires_at, %DateTime{} = at) when is_binary(cidr),
@@ -286,8 +325,28 @@ defmodule OpenResults.ModerationJournal do
     end
   end
 
+  defp well_formed(%{"action" => "lower_limits", "target" => id, "limits" => limits} = entry)
+       when is_binary(id) and is_map(limits) do
+    names = Enum.map(Installation.limits(), &Atom.to_string/1)
+
+    parsed =
+      Enum.reduce_while(limits, %{}, fn
+        {name, value}, acc when is_integer(value) or is_nil(value) ->
+          if name in names,
+            do: {:cont, Map.put(acc, String.to_existing_atom(name), value)},
+            else: {:halt, :error}
+
+        _other, _acc ->
+          {:halt, :error}
+      end)
+
+    if is_map(parsed) and parsed != %{},
+      do: {:ok, %{entry | "limits" => parsed}},
+      else: :error
+  end
+
   defp well_formed(%{"action" => action, "target" => target} = entry)
-       when action in ~w(delete hide revoke suspend) and is_binary(target),
+       when action in ~w(delete hide revoke suspend untrust) and is_binary(target),
        do: {:ok, entry}
 
   defp well_formed(_entry), do: :error
@@ -431,6 +490,48 @@ defmodule OpenResults.ModerationJournal do
     end
   end
 
+  defp reapply(%{"action" => "untrust", "target" => id, "at" => at} = entry, _later, _now) do
+    if known?("installation", id, at) do
+      false
+    else
+      Repo.transaction(fn ->
+        case Installations.set_trusted(id, false) do
+          {:ok, _installation} -> replayed!("untrust", "installation", id, entry, %{})
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+      |> applied?(entry)
+    end
+  end
+
+  defp reapply(%{"action" => "lower_limits", "target" => id, "at" => at} = entry, _later, _now) do
+    with false <- known?("installation", id, at),
+         %Installation{} = installation <- Repo.get(Installation, id),
+         changes when changes != %{} <- still_higher(installation, entry["limits"]) do
+      Repo.transaction(fn ->
+        from(i in Installation, where: i.id == ^id)
+        |> Repo.update_all(set: Enum.to_list(changes) ++ [updated_at: DateTime.utc_now()])
+
+        replayed!("set_installation_limits", "installation", id, entry, %{
+          from: Map.new(changes, fn {field, _} -> {field, Map.get(installation, field)} end),
+          to: changes
+        })
+      end)
+      |> applied?(entry)
+    else
+      _known_gone_or_already_as_low -> false
+    end
+  end
+
+  # The journalled limits the restored installation is still above, in force.
+  defp still_higher(installation, limits) do
+    for {field, value} <- limits,
+        global = ServerSettings.get(OpenResults.PublicPublishing.global_for(field)),
+        (Map.get(installation, field) || global) > (value || global),
+        into: %{},
+        do: {field, value}
+  end
+
   defp reblock(cidr, expires_at, entry, now) do
     Repo.transaction(fn ->
       reason = "kept in force after a restore (blocked #{DateTime.to_iso8601(entry["at"])})"
@@ -485,10 +586,22 @@ defmodule OpenResults.ModerationJournal do
       Repo.exists?(from t in Tournament, where: t.slug == ^slug and t.inserted_at < ^at)
   end
 
+  # A row about the target at or after the line. A replay's own row counts by
+  # the time of the line it replayed (`journal_at`), not by when the replay
+  # wrote it: otherwise replaying one line about an installation would make
+  # every other line about it - an untrust and a lowered limit, say - look
+  # known, and the second would never be applied.
   defp known?(target_type, target, at) do
+    replay = Moderation.restore_replay_actor()
+    at_text = DateTime.to_iso8601(at)
+
     Repo.exists?(
       from a in Action,
-        where: a.target_type == ^target_type and a.target == ^target and a.inserted_at >= ^at
+        where:
+          a.target_type == ^target_type and a.target == ^target and
+            ((a.actor != ^replay and a.inserted_at >= ^at) or
+               (a.actor == ^replay and
+                  fragment("json_extract(?, '$.journal_at')", a.details) >= ^at_text))
     )
   end
 

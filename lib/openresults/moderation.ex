@@ -28,7 +28,8 @@ defmodule OpenResults.Moderation do
   ## The moderation journal
 
   The actions that make the site safer - `delete`, `hide`, `revoke`,
-  `suspend`, `block_address`, closing registration, pausing publishing - also
+  `suspend`, `block_address`, closing registration, pausing publishing,
+  `untrust`, and lowering an installation's own limits - also
   append a line to `OpenResults.ModerationJournal` once they have committed:
   a file outside the database, which a restore cannot take back.
 
@@ -514,12 +515,18 @@ defmodule OpenResults.Moderation do
     transaction(fn ->
       case Installations.set_trusted(to_string(id), false) do
         {:ok, installation} ->
-          log!(email, "untrust", "installation", installation.id, %{})
-          installation
+          row = log!(email, "untrust", "installation", installation.id, %{})
+          {installation, row}
 
         {:error, reason} ->
           Repo.rollback(reason)
       end
+    end)
+    |> committed(fn {installation, row} ->
+      # Ending trust makes the site safer, so a restore must not bring it
+      # back - see `OpenResults.ModerationJournal`.
+      ModerationJournal.record_untrust(installation.id, row.inserted_at)
+      installation
     end)
   end
 
@@ -559,18 +566,39 @@ defmodule OpenResults.Moderation do
           transaction(fn ->
             updated = Installations.update_limits!(changeset)
 
-            log!(email, "set_installation_limits", "installation", installation.id, %{
-              from: stringify(before),
-              to: stringify(Map.take(updated, Installation.limits()))
-            })
+            row =
+              log!(email, "set_installation_limits", "installation", installation.id, %{
+                from: stringify(before),
+                to: stringify(Map.take(updated, Installation.limits()))
+              })
 
-            updated
+            {updated, row}
           end)
-          |> committed(fn updated -> Installations.get(updated.id) end)
+          |> committed(fn {updated, row} ->
+            # Only the limits that went DOWN in effect - the safer direction -
+            # are journalled; a raise stays as a restored backup had it.
+            lowered = lowered_limits(before, Map.take(updated, Installation.limits()))
+
+            if lowered != %{},
+              do: ModerationJournal.record_lower_limits(updated.id, lowered, row.inserted_at)
+
+            Installations.get(updated.id)
+          end)
         else
           {:error, changeset}
         end
     end
+  end
+
+  # Each limit whose value in force is now lower than before, with the
+  # installation's own value after the change (`nil` for the server's). The
+  # server's value stands in for a blank on both sides, read now.
+  defp lowered_limits(before, after_change) do
+    for field <- Installation.limits(),
+        global = ServerSettings.get(OpenResults.PublicPublishing.global_for(field)),
+        (after_change[field] || global) < (before[field] || global),
+        into: %{},
+        do: {field, after_change[field]}
   end
 
   # ---------------------------------------------------------------------------

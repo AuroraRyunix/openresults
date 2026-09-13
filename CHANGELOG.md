@@ -56,6 +56,10 @@ Each entry is tagged so a version can be skimmed:
   Revoking ends trust. Any installation can also be given its own tournament
   limit, snapshot size cap, publishes per minute and version cap, with an empty
   field meaning the server's value.
+  Ending trust and lowering an installation's limits are kept in the
+  moderation journal, so restoring an older backup does not bring back trust
+  or a looser limit that was taken away; granting trust and raising a limit
+  are not kept, like approving.
 - [Feature] **A public notice.** The operator can put a short message on every
   public page ("Maintenance tonight 22:00-22:30") from the settings page: in
   English, with optional Dutch and French, as information or a warning, with
