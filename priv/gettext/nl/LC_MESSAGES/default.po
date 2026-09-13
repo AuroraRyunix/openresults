@@ -240,7 +240,7 @@ msgstr "FIDE-ID"
 #: lib/openresults_web/controllers/tournament_html.ex:71
 #, elixir-autogen, elixir-format
 msgid "FIDE rated"
-msgstr "FIDE-gerateerd"
+msgstr "FIDE-rated"
 
 #: lib/openresults_web/controllers/registration_html.ex:142
 #: lib/openresults_web/controllers/tournament_html.ex:358

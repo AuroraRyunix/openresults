@@ -25,6 +25,11 @@ Each entry is tagged so a version can be skimmed:
 | [Security] | a vulnerability closed, or judged not to apply |
 | [Verified] | checked against a reference, no code change |
 
+## [Unreleased]
+
+- [Change] **Dutch says "FIDE-rated", not "FIDE-gerateerd".** The FIDE badge on
+  tournament pages uses the term Dutch-speaking arbiters actually say.
+
 ## [0.14.1] - 2026-09-13
 
 - [Fix] **A restore no longer drops a removal that shared its timestamp with
