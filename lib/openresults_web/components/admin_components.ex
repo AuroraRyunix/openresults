@@ -139,19 +139,21 @@ defmodule OpenResultsWeb.Admin.Components do
   attr :reports, :list, required: true
   attr :show_tournament, :boolean, default: true
   attr :id, :string, default: "reports"
+  attr :caption, :string, default: "Reports", doc: "what a screen reader hears the table called"
 
   def reports_table(assigns) do
     ~H"""
     <p :if={@reports == []} class="quiet">No reports.</p>
     <div :if={@reports != []} class="scroller">
       <table class="admin-table" id={@id}>
+        <caption class="visually-hidden">{@caption}</caption>
         <thead>
           <tr>
-            <th>Received</th>
-            <th :if={@show_tournament}>Tournament</th>
-            <th>Reason</th>
-            <th>Details</th>
-            <th>Status</th>
+            <th scope="col">Received</th>
+            <th :if={@show_tournament} scope="col">Tournament</th>
+            <th scope="col">Reason</th>
+            <th scope="col">Details</th>
+            <th scope="col">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -175,19 +177,21 @@ defmodule OpenResultsWeb.Admin.Components do
 
   attr :actions, :list, required: true
   attr :id, :string, default: "admin-actions"
+  attr :caption, :string, default: "Actions", doc: "what a screen reader hears the table called"
 
   def actions_table(assigns) do
     ~H"""
     <p :if={@actions == []} class="quiet">Nothing logged.</p>
     <div :if={@actions != []} class="scroller">
       <table id={@id} class="admin-table">
+        <caption class="visually-hidden">{@caption}</caption>
         <thead>
           <tr>
-            <th>When</th>
-            <th>Who</th>
-            <th>Action</th>
-            <th>Target</th>
-            <th>Details</th>
+            <th scope="col">When</th>
+            <th scope="col">Who</th>
+            <th scope="col">Action</th>
+            <th scope="col">Target</th>
+            <th scope="col">Details</th>
           </tr>
         </thead>
         <tbody>

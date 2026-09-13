@@ -51,14 +51,15 @@ defmodule OpenResultsWeb.Admin.InstallationHTML do
 
     <div :if={@installations != []} class="scroller">
       <table class="admin-table" id="installations">
+        <caption class="visually-hidden">Installations</caption>
         <thead>
           <tr>
-            <th>Installation</th>
-            <th>Client</th>
-            <th>Status</th>
-            <th>Registered</th>
-            <th>Last seen</th>
-            <th class="num">Pending and listed</th>
+            <th scope="col">Installation</th>
+            <th scope="col">Client</th>
+            <th scope="col">Status</th>
+            <th scope="col">Registered</th>
+            <th scope="col">Last seen</th>
+            <th class="num" scope="col">Pending and listed</th>
           </tr>
         </thead>
         <tbody>
@@ -156,12 +157,13 @@ defmodule OpenResultsWeb.Admin.InstallationHTML do
       <p :if={@tournaments == []} class="quiet">None.</p>
       <div :if={@tournaments != []} class="scroller">
         <table class="admin-table" id="installation-tournaments-table">
+          <caption class="visually-hidden">Its tournaments</caption>
           <thead>
             <tr>
-              <th>Tournament</th>
-              <th>Status</th>
-              <th>Last publish</th>
-              <th class="num">Open reports</th>
+              <th scope="col">Tournament</th>
+              <th scope="col">Status</th>
+              <th scope="col">Last publish</th>
+              <th class="num" scope="col">Open reports</th>
             </tr>
           </thead>
           <tbody>

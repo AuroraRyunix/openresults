@@ -14,6 +14,7 @@
           everything in the panel is a link or a plain form post. --%>
   </head>
   <body class="admin">
+    <a class="skip-link" href="#admin-main">Skip to content</a>
     <header class="admin-bar">
       <a class="admin-brand" href={~p"/admin"}>
         <.logo /> OpenResults <span class="admin-badge">Admin</span>
@@ -51,7 +52,7 @@
         </a>
       </nav>
 
-      <main class="admin-main">
+      <main class="admin-main" id="admin-main" tabindex="-1">
         <p
           :for={{kind, message} <- flash_messages(assigns)}
           class={["admin-flash", "admin-flash-#{kind}"]}

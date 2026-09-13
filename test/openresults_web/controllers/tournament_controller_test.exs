@@ -84,7 +84,9 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     } do
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
-      assert texts(document, "table.standings thead th") ==
+      # `> thead`: each tiebreak cell's working has a small table with its own
+      # (visually hidden) headings inside it.
+      assert texts(document, "table.standings > thead th") ==
                ["#", "Player", "Rating", "Cat", "Points"] ++
                  ["Buchholz Cut-1", "Buchholz", "Sonneborn-Berger", "Progressive score"]
     end
@@ -124,8 +126,9 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{short["tournament"]["slug"]}") |> doc()
 
       # Rank 1 is player 9 now that standings stop after round 2 - no
-      # title, so the name renders alone.
-      assert cell_values(document, "table.standings > tbody > tr:first-child > td") ==
+      # title, so the name renders alone. `> *`: the name is the row's header
+      # cell, a `th`.
+      assert cell_values(document, "table.standings > tbody > tr:first-child > *") ==
                ["1", "De Smet, Jean-Baptiste", "1742", "B", "2", "1", "1.5", "", ""]
     end
 
@@ -149,7 +152,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       assert texts(document, "table.standings thead th") ==
                ["#", "Player", "Rating", "Value", "Keizer points", "Score"]
 
-      assert texts(document, "table.standings tbody tr:first-child td") ==
+      assert texts(document, "table.standings > tbody > tr:first-child > *") ==
                ["1", "Ó Braonáin, Cillian", "1690", "12", "8", "1"]
     end
 
@@ -163,7 +166,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # player 10's Buchholz Cut-1 and Buchholz each carry one round less
       # than they used to. Nothing here changed - the numbers it is given
       # did.
-      assert cell_values(document, "table.standings > tbody > tr:last-child > td") ==
+      assert cell_values(document, "table.standings > tbody > tr:last-child > *") ==
                ["10", "Nguyễn, Thị Hà", "-", "B", "0", "1", "1", "0", "0"]
     end
 
@@ -283,7 +286,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # Elo, and the points each player carried INTO the round - which is what
       # a pairing list means by score, and what explains why these two are on
       # board 1. The points they end the round with are on the standings.
-      assert texts(document, "table.pairings tbody tr:first-child td") ==
+      assert texts(document, "table.pairings tbody tr:first-child > *") ==
                ["1", "2601", "0", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana", "0", "2033"]
     end
 
@@ -303,7 +306,9 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     test "a game with no result yet is a hyphen, not a blank", %{conn: conn, slug: slug} do
       document = conn |> get(~p"/t/#{slug}/round/3") |> doc()
 
-      assert texts(document, "table.pairings tbody tr:last-child td.num .result") == ["-"]
+      assert texts(document, "table.pairings tbody tr:last-child td.num .result") == [
+               "- not yet reported"
+             ]
     end
 
     test "a result token this server has never seen is shown as it arrived", %{
@@ -418,7 +423,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       assert texts(document, "[data-projector] .projector-round") == ["Round 1 2026-03-01"]
 
-      assert texts(document, "table.projector-pairings tbody tr:first-child td") ==
+      assert texts(document, "table.projector-pairings tbody tr:first-child > *") ==
                ["1", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana"]
     end
 
@@ -428,7 +433,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       assert texts(document, "[data-projector]") == []
       assert texts(document, "table.pairings.projector-pairings") == []
 
-      assert texts(document, "table.pairings tbody tr:first-child td") ==
+      assert texts(document, "table.pairings tbody tr:first-child > *") ==
                ["1", "2601", "0", "GM Müller, Jörg", "1-0", "WIM Ștefănescu, Ioana", "0", "2033"]
     end
 
@@ -534,7 +539,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
 
       {label_at, label_span} =
         document
-        |> LazyHTML.query("table.card tbody tr:nth-child(2) td")
+        |> LazyHTML.query("table.card tbody tr:nth-child(2) > *")
         |> Enum.reduce_while(0, fn cell, column ->
           span = cell |> LazyHTML.attribute("colspan") |> List.first("1") |> String.to_integer()
 

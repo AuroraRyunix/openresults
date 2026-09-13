@@ -57,9 +57,12 @@ defmodule OpenResultsWeb.RegistrationHTML do
         token that nothing on this server verifies would be decoration, and
         verifying one means a session cookie on a site that sets none.
       --%>
-      <p :if={@alarm} class="alarm" role="alert">{@alarm}</p>
+      <%!-- `tabindex="-1"` so the page's script can put focus here when the
+            form comes back refused: the reader hears what happened before
+            anything else, and the next Tab is the first field. --%>
+      <p :if={@alarm} class="alarm" role="alert" tabindex="-1">{@alarm}</p>
 
-      <p :if={@form.errors != []} class="alarm" role="alert">
+      <p :if={@form.errors != []} class="alarm" role="alert" tabindex="-1">
         {gettext("Nothing has been sent. Fix what is marked below and send it again.")}
       </p>
 
@@ -71,15 +74,29 @@ defmodule OpenResultsWeb.RegistrationHTML do
             Sits above the name field rather than beside it because it is the
             first thing to try, and because a player who finds themselves here
             can skip the four fields underneath. --%>
-      <div :if={@fide_search?} class="fide-search" id="fide-search" data-endpoint={@fide_url}>
+      <%!-- The two `data-` sentences are what the script says to a screen
+            reader when a search comes back and when a result fills the form -
+            attributes, because a string built in JavaScript is a string
+            outside the catalogue. --%>
+      <div
+        :if={@fide_search?}
+        class="fide-search"
+        id="fide-search"
+        data-endpoint={@fide_url}
+        data-found={gettext("Matching players are listed below the search box.")}
+        data-filled={
+          gettext("Filled in from the FIDE list. Check the fields, and add your email address.")
+        }
+      >
         <label for="fide-query">{gettext("Find yourself on the FIDE list")}</label>
         <input
           type="search"
           id="fide-query"
           autocomplete="off"
+          aria-describedby="fide-hint"
           placeholder={gettext("Start typing your name, or paste your FIDE ID")}
         />
-        <p class="hint">
+        <p class="hint" id="fide-hint">
           {gettext(
             "Optional. It fills in the fields below - check them, and correct anything that is out of date. If you are not on the FIDE list, just fill them in yourself."
           )}
@@ -161,6 +178,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
         }
         inputmode="numeric"
         maxlength="4"
+        autocomplete="bday-year"
       />
 
       <.byes_field :if={@rounds != []} field={@form[:requested_byes]} rounds={@rounds} />
@@ -196,8 +214,10 @@ defmodule OpenResultsWeb.RegistrationHTML do
     field = assigns.field
     errors = Enum.map(field.errors, &translate_error/1)
 
+    # The error before the hint: what is wrong is the first thing to hear
+    # after the field's name, the same order the page shows them in.
     described_by =
-      [assigns.hint && "#{field.id}_hint", errors != [] && "#{field.id}_error"]
+      [errors != [] && "#{field.id}_error", assigns.hint && "#{field.id}_hint"]
       |> Enum.filter(&is_binary/1)
       |> Enum.join(" ")
 
@@ -212,9 +232,12 @@ defmodule OpenResultsWeb.RegistrationHTML do
 
     ~H"""
     <div class={["field", @errors != [] && "field-wrong"]}>
+      <%!-- The word is for the eye. The input's own `required` attribute is
+            what a screen reader announces, and reading both gave "Name
+            required, edit, required". --%>
       <label for={@field.id}>
         {@label}
-        <span :if={@rest[:required]} class="required">{gettext("required")}</span>
+        <span :if={@rest[:required]} class="required" aria-hidden="true">{gettext("required")}</span>
       </label>
 
       <select
@@ -283,10 +306,21 @@ defmodule OpenResultsWeb.RegistrationHTML do
         _absent_or_wrong_shape -> []
       end
 
-    assigns = assigns |> assign(:errors, errors) |> assign(:chosen, chosen)
+    assigns =
+      assigns
+      |> assign(:errors, errors)
+      |> assign(:chosen, chosen)
+      |> assign(
+        :described_by,
+        [errors != [] && "#{field.id}_error", "#{field.id}_hint"]
+        |> Enum.filter(&is_binary/1)
+        |> Enum.join(" ")
+      )
 
     ~H"""
-    <fieldset class={["field", @errors != [] && "field-wrong"]}>
+    <%!-- The error and the hint belong to the group, not to one box, so the
+          fieldset carries them: a screen reader reads them on the way in. --%>
+    <fieldset class={["field", @errors != [] && "field-wrong"]} aria-describedby={@described_by}>
       <legend>{gettext("Rounds you already know you cannot play")}</legend>
 
       <div class="checks">
@@ -301,8 +335,8 @@ defmodule OpenResultsWeb.RegistrationHTML do
         </label>
       </div>
 
-      <p :if={@errors != []} class="wrong">{Enum.join(@errors, ". ")}</p>
-      <p class="hint">
+      <p :if={@errors != []} class="wrong" id={"#{@field.id}_error"}>{Enum.join(@errors, ". ")}</p>
+      <p class="hint" id={"#{@field.id}_hint"}>
         {gettext(
           "Asking is not the same as getting. What a missed round is worth - a half point, nothing at all - is the arbiter's decision and their tournament's rules, not this form's."
         )}

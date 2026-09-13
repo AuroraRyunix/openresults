@@ -221,6 +221,49 @@ Each entry is tagged so a version can be skimmed:
   `5.5` and dates printing `2026-08-29` in every language, since fixed for
   Dutch and French (the entry at the top of this section).
 
+- [Fix] **Keyboard and screen reader users keep their place when the page
+  updates itself.** Every real update from the 20-second refresher dropped
+  keyboard focus to the top of the page, closed any tie-break working a reader
+  had opened, scrolled a wide cross-table back to its first round, emptied the
+  front page's search box and put a sorted standings table back in rank order.
+  All five now survive an update, and an update waits while a filter or a
+  search box is in use instead of replacing it under the reader.
+- [Fix] **What the page says is read out.** "updated just now", "not updating -
+  connection lost", the standings filter's "Showing 4 of 32" and the entry
+  form's FIDE search results were written where a screen reader could not
+  announce them. They are now spoken, along with the new order after sorting a
+  column and the front page's "No tournaments match your search."
+- [Fix] **The player card behaves like a dialog.** Opened by right-click, or
+  from the keyboard with the context-menu key or Shift+F10 on a player's name:
+  focus now moves into the card, Tab stays inside it, and closing it - Escape,
+  Close or a click outside - puts focus back on the name.
+- [Feature] **A "Skip to content" link**, the first thing Tab reaches on every
+  page, past the brand, the languages and the theme picker. The page's content
+  is now marked as its main region, and the masthead as its banner, for screen
+  readers that jump between them. The admin panel has the same link.
+- [Change] **Stronger contrast where it was too weak.** The grey for things set
+  aside - an unpublished round, a tie-break contribution that did not count, a
+  result not yet in - was as faint as 2.3 to 1 and is now at least 4.5 to 1 in
+  every theme: darker on Paper and Board, lighter on Night and Slate, same hue.
+  Text boxes and dropdowns have a visible edge, and everything the keyboard can
+  reach shows a focus ring in the theme's accent.
+- [Fix] **Tables and forms tell a screen reader what they are.** Every table is
+  named and every row has a header - the player, the board or the round - so
+  moving along a row says whose numbers they are. A hyphen for a result not yet
+  in, and an empty cross-table cell, say what they mean instead of "dash" and
+  "blank". The current page in the round strip is announced as current, and a
+  round link reads "Round 3" rather than "3". On both forms every error belongs
+  to its field, required choices are announced as required, a refused form puts
+  focus on the sentence saying nothing was sent, and the birth year can be
+  filled in by the browser. The theme picker says which theme is on.
+- [Fix] **No sideways scrolling at 320 pixels or 400% zoom.** The masthead and a
+  player's tie-break summary pushed narrow screens sideways; both wrap now.
+- [Verified] First accessibility pass, against WCAG 2.2 AA:
+  `docs/accessibility-2026-09-13.md`, with a keyboard and an NVDA checklist.
+  Every page is now audited by the test suite on every run - labels, names,
+  table headers, landmarks, language - and every theme's contrast is computed
+  from the stylesheet.
+
 ## [0.13.0] - 2026-09-12
 
 - [Feature] **The version number in the footer is now a link to this

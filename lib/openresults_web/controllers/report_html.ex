@@ -52,14 +52,21 @@ defmodule OpenResultsWeb.ReportHTML do
       csrf_token={false}
     >
       <%!-- No CSRF token, for the entry form's reason: see the router. --%>
-      <p :if={@form.errors != []} class="alarm" role="alert">
+      <p :if={@form.errors != []} class="alarm" role="alert" tabindex="-1">
         {gettext("Nothing has been sent. Fix what is marked below and send it again.")}
       </p>
 
-      <fieldset class={["field", @reason_errors != [] && "field-wrong"]}>
+      <%!-- `required` on the radios is what a screen reader announces as
+            required; the visible word beside the legend is for the eye, and
+            hidden from the reader so it is not said twice. The error is tied
+            to the group, which is what it is about. --%>
+      <fieldset
+        class={["field", @reason_errors != [] && "field-wrong"]}
+        aria-describedby={@reason_errors != [] && "#{@reason.id}_error"}
+      >
         <legend>
           {gettext("What is wrong with this page?")}
-          <span class="required">{gettext("required")}</span>
+          <span class="required" aria-hidden="true">{gettext("required")}</span>
         </legend>
 
         <div class="radios">
@@ -69,12 +76,15 @@ defmodule OpenResultsWeb.ReportHTML do
               name={@reason.name}
               value={code}
               checked={to_string(@reason.value) == code}
+              required
             />
             <span>{reason_label(code)}</span>
           </label>
         </div>
 
-        <p :if={@reason_errors != []} class="wrong">{Enum.join(@reason_errors, ". ")}</p>
+        <p :if={@reason_errors != []} class="wrong" id={"#{@reason.id}_error"}>
+          {Enum.join(@reason_errors, ". ")}
+        </p>
       </fieldset>
 
       <div class={["field", @details_errors != [] && "field-wrong"]}>
@@ -83,9 +93,17 @@ defmodule OpenResultsWeb.ReportHTML do
           id={@details.id}
           name={@details.name}
           maxlength={Report.max_details()}
-          aria-describedby={"#{@details.id}_hint"}
+          aria-describedby={
+            if(@details_errors != [],
+              do: "#{@details.id}_error #{@details.id}_hint",
+              else: "#{@details.id}_hint"
+            )
+          }
+          aria-invalid={@details_errors != [] && "true"}
         >{Phoenix.HTML.Form.normalize_value("textarea", @details.value)}</textarea>
-        <p :if={@details_errors != []} class="wrong">{Enum.join(@details_errors, ". ")}</p>
+        <p :if={@details_errors != []} class="wrong" id={"#{@details.id}_error"}>
+          {Enum.join(@details_errors, ". ")}
+        </p>
         <p class="hint" id={"#{@details.id}_hint"}>
           {gettext(
             "Which results, which player, what should not be there. Up to 2000 characters. Please do not repeat personal data here that is not already on the page."

@@ -43,13 +43,14 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
 
     <div :if={@tournaments != []} class="scroller">
       <table class="admin-table" id="tournaments">
+        <caption class="visually-hidden">Tournaments</caption>
         <thead>
           <tr>
-            <th>Tournament</th>
-            <th>Status</th>
-            <th>Owner</th>
-            <th>Last publish</th>
-            <th class="num">Open reports</th>
+            <th scope="col">Tournament</th>
+            <th scope="col">Status</th>
+            <th scope="col">Owner</th>
+            <th scope="col">Last publish</th>
+            <th class="num" scope="col">Open reports</th>
           </tr>
         </thead>
         <tbody>

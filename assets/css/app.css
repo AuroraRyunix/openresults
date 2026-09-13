@@ -49,6 +49,22 @@
    dark-set phone gets paper.
    --------------------------------------------------------------------------- */
 
+/* ## Contrast
+
+   Every text colour here reaches WCAG AA (4.5:1) on both `--bg` and
+   `--panel`, in every theme, and `test/openresults_web/contrast_test.exs`
+   reads this file to keep it that way - change a value and that test says
+   whether it still holds. `--rule` is the exception, by design: it draws
+   hairlines between rows, which are decoration, and it is never the only
+   edge a control has (see "form controls" below).
+
+   `--withheld` was lighter until 2026-09-13 - 2.3:1 on paper - and it colours
+   real text: an unpublished round in the card table, a tie-break contribution
+   that did not count, a result not yet in. Each value was darkened (or, on the
+   dark themes, lightened) only as far as 4.5:1 needs, keeping its hue; the
+   dashed borders and the words beside it still say "set aside" on their own.
+   See docs/accessibility-2026-09-13.md for the before and after. */
+
 :root {
   --bg: #fbfbfa;
   --panel: #ffffff;
@@ -56,7 +72,7 @@
   --quiet: #6a6a68;
   --rule: #dcdcd8;
   --accent: #7a2e1e;
-  --withheld: #a8a8a4;
+  --withheld: #74746f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,7 +83,7 @@
     --quiet: #9b9b98;
     --rule: #313339;
     --accent: #e2a08c;
-    --withheld: #63656b;
+    --withheld: #83868d;
   }
 }
 
@@ -78,7 +94,7 @@
   --quiet: #6a6a68;
   --rule: #dcdcd8;
   --accent: #7a2e1e;
-  --withheld: #a8a8a4;
+  --withheld: #74746f;
 }
 
 :root[data-theme="night"] {
@@ -88,7 +104,7 @@
   --quiet: #9b9b98;
   --rule: #313339;
   --accent: #e2a08c;
-  --withheld: #63656b;
+  --withheld: #83868d;
 }
 
 :root[data-theme="board"] {
@@ -98,7 +114,7 @@
   --quiet: #5f6d61;
   --rule: #d3c9b4;
   --accent: #2f5d43;
-  --withheld: #a39982;
+  --withheld: #746a55;
 }
 
 :root[data-theme="slate"] {
@@ -108,7 +124,7 @@
   --quiet: #8d9bad;
   --rule: #2b3542;
   --accent: #7fb2e5;
-  --withheld: #5a6675;
+  --withheld: #7a8899;
 }
 
 /* Deliberately harsher than the rest. Pure black on pure white, a rule
@@ -134,6 +150,10 @@ body {
   color: var(--ink);
   font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-text-size-adjust: 100%;
+  /* A word longer than the screen is wide - a module name in the changelog,
+     a club that writes its name as one - breaks rather than pushing the page
+     sideways at 320px. Table cells set `nowrap` and are unaffected. */
+  overflow-wrap: break-word;
 }
 
 /* Wide, because the content is tables. 60rem is a reading measure and it was
@@ -161,6 +181,57 @@ body {
 
 a {
   color: var(--accent);
+}
+
+/* ---- focus, and the way past the masthead ----
+
+   One visible ring for everything a keyboard can reach, in the accent, which
+   is at least 6:1 against both grounds in every theme - well over the 3:1 a
+   focus indicator needs. Browsers' own rings were left to themselves before,
+   and their default blue is lost on night and slate. `:focus-visible`, so a
+   mouse click does not leave a ring behind. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Targets that take focus only so a skip link or a script can move focus to
+   them. They are not controls, and a ring around the whole page or dialog
+   says nothing the move itself has not. */
+#main:focus,
+#admin-main:focus,
+.card-dialog:focus,
+.card-dialog h2:focus,
+.alarm:focus {
+  outline: none;
+}
+
+/* The first thing a Tab reaches, and invisible until it does: past the
+   brand, three languages and the theme picker to the page itself. */
+.skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+/* A row's own header cell - the player, the board, the round - which a screen
+   reader announces moving along a row. Looks exactly as the cell it replaced:
+   no browser bold, no centring. */
+th.row-head {
+  font-weight: inherit;
 }
 
 .brand {
@@ -339,7 +410,8 @@ h2 .title {
   color: var(--withheld);
 }
 
-tr.withheld td {
+tr.withheld td,
+tr.withheld th {
   color: var(--withheld);
 }
 
@@ -411,10 +483,17 @@ html.has-js .index-controls {
   max-width: 22rem;
 }
 
+/* ## Form controls
+
+   Every text box and dropdown on this site is edged in `--quiet`, not
+   `--rule`. The hairline colour sits at 1.3-1.5:1 against the ground, and on
+   paper a white box on an off-white page has no other edge at all - an empty
+   field was close to invisible. WCAG asks 3:1 for the boundary that shows
+   where a control is; `--quiet` is over 4.6:1 in every theme. */
 .index-search-input {
   width: 100%;
   padding: 0.5rem 0.7rem;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--quiet);
   border-radius: 6px;
   background: var(--panel);
   color: var(--ink);
@@ -459,7 +538,7 @@ html.has-js .standings-controls {
 
 .standings-filter select {
   padding: 0.3rem 0.5rem;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--quiet);
   border-radius: 4px;
   background: var(--panel);
   color: var(--ink);
@@ -577,7 +656,7 @@ th[aria-sort="descending"] .sort-btn::after {
 .field textarea {
   width: 100%;
   padding: 0.45rem 0.55rem;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--quiet);
   border-radius: 4px;
   background: var(--panel);
   color: var(--ink);
@@ -963,7 +1042,7 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
 .field select {
   width: 100%;
   padding: 0.5rem 0.6rem;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--quiet);
   border-radius: 4px;
   background: var(--panel);
   color: var(--ink);
@@ -990,7 +1069,7 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
 .fide-search input {
   width: 100%;
   padding: 0.5rem 0.6rem;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--quiet);
   border-radius: 4px;
   background: var(--bg);
   color: var(--ink);
@@ -1045,11 +1124,16 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
 /* The brand and the theme picker share a line, so the picker is anchored to
    the top of the page and its panel opens downwards into a page that has room
    for it. See the layout for what went wrong with it in the footer. */
+/* Wrapping, because at 320px - a small phone, or 400% zoom - the brand and
+   the tools do not fit one line, and without it the page scrolled sideways.
+   The tools keep to the right when they drop to a second line, so the theme
+   panel still opens leftwards into the page rather than off its left edge. */
 .masthead-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem 1rem;
   margin-bottom: 1.5rem;
 }
 
@@ -1061,6 +1145,7 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  margin-left: auto;
 }
 
 /* Three plain links, and deliberately not a popover like the theme picker
@@ -1139,6 +1224,13 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   vertical-align: baseline;
 }
 
+/* "from 9 rounds, 1 discarded, 2 unplayed" is the one cell here that is a
+   phrase rather than a value. Not in a scroller, so on a narrow phone it has
+   to wrap or the whole page scrolls sideways. */
+.tiebreak-summary td.quiet {
+  white-space: normal;
+}
+
 .working-block {
   margin-bottom: 1.25rem;
 }
@@ -1164,7 +1256,8 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
 
 /* A row that did not count is legible but plainly set aside - the same
    treatment a withheld round already gets in the card table. */
-.working-table tr.withheld td {
+.working-table tr.withheld td,
+.working-table tr.withheld th {
   color: var(--withheld);
 }
 
@@ -1204,6 +1297,13 @@ html[data-theme-source="user"][data-theme="contrast"] .theme-picker-item[data-th
   min-width: 0;
   margin-top: 0.35rem;
   font-size: 0.8125rem;
+}
+
+/* Column headings for a screen reader only - their words are visually
+   hidden inside them - so the row they sit in takes up no room at all. */
+.tb-working-head th {
+  padding: 0;
+  border: 0;
 }
 
 .tag {
@@ -1345,6 +1445,13 @@ a.xt-opp:hover {
   --xt-key: 3.25rem;
   width: max-content;
   min-width: 100%;
+}
+
+/* The pinned columns cover whatever scrolls under them - including a link a
+   keyboard has just tabbed back to. Scroll padding the width of both keeps a
+   focused cell clear of them (WCAG 2.4.11). */
+.xt-scroller {
+  scroll-padding-left: calc(3.25rem + 11rem);
 }
 
 .crosstable .xt-no,
@@ -1993,7 +2100,7 @@ a.xt-opp:hover {
 .admin-filters input[type="search"],
 .admin-filters select {
   padding: 0.35rem 0.5rem;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--quiet);
   border-radius: 4px;
   background: var(--panel);
   color: var(--ink);
@@ -2125,7 +2232,7 @@ a.xt-opp:hover {
 .field input[type="number"] {
   width: 100%;
   padding: 0.45rem 0.55rem;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--quiet);
   border-radius: 4px;
   background: var(--panel);
   color: var(--ink);
