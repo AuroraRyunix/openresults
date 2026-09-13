@@ -642,8 +642,9 @@ minutes after boot, then every 24 hours.
 **Authentication happens at the edge, not in this app.**
 
 - A Cloudflare Access application covers `openresults.zerotwo.cloud/admin*`,
-  with Keycloak as identity provider and a policy requiring the Keycloak
-  group `openresults-admin`.
+  with Keycloak as identity provider and a policy that allows only the
+  admins: the Keycloak group `openresults-admin`, or, with a single admin
+  (as on the zerotwo server), that admin's email address.
 - The app verifies independently, because a mistaken Access policy must never
   equal an open admin:
   - the `Cf-Access-Jwt-Assertion` header is an RS256 JWT signed by a key from

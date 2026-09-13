@@ -49,6 +49,17 @@ domain**. It looks like `<team-name>.cloudflareaccess.com`. You need it twice
 below. (Renaming the team later changes it, and the panel then answers "Not
 Found" until the variable is updated too.)
 
+## A single admin: skip Keycloak entirely
+
+The zerotwo server has one admin, `jorian@zerotwo.cloud`. With one admin there is
+no need for the `openresults-admin` group, the `groups` mapper or the `groups`
+OIDC claim, so **steps 1 and 2 are skipped**. In step 3 the policy's **Include**
+is **Emails** → `jorian@zerotwo.cloud` instead of the group claim, and the
+application's only identity provider stays **Keycloak** (so the address can
+only have come from a Keycloak sign-in, never a one-time PIN). The server's own
+check is unchanged: `OPENRESULTS_ADMIN_EMAILS=jorian@zerotwo.cloud`. Both
+locks still hold. Switch to the group the day a second admin is added.
+
 ## 1. Keycloak: the group, and groups in the token
 
 If Keycloak is already an identity provider in Zero Trust for other
@@ -121,7 +132,7 @@ Add one policy:
 |---|---|
 | Policy name | `openresults-admin group` |
 | Action | **Allow** |
-| Include | selector **OIDC Claims** (shown as *IdP OIDC Claim* in some dashboards), claim name `groups`, claim value `openresults-admin` |
+| Include | selector **OIDC Claims** (shown as *IdP OIDC Claim* in some dashboards), claim name `groups`, claim value `openresults-admin`. **A single admin:** selector **Emails**, value their address |
 | Require (optional) | selector **Login Methods**, value `Keycloak` |
 
 No other policy. In particular no *Bypass*, no *Service Auth* and no
