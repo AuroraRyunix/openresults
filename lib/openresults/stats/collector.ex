@@ -28,12 +28,13 @@ defmodule OpenResults.Stats.Collector do
   ## Bounds
 
   60 minutes and 96 quarter hours, each a few fixed-size lists, plus event
-  counts (a dozen names) and tournament slugs. A minute keeps its
-  200 busiest slugs and a quarter hour its 500; the rest of either is
-  added to that bucket's "other". With the hot table's own cap of 2,000
-  slugs a minute, the worst case is 60 × 200 + 97 × 500 = 60,500 slug
-  entries, a few megabytes, and only if that many different published
-  tournaments are read within one day.
+  counts (a dozen names) and tournament slugs - views and refreshes kept and
+  capped apart. A minute keeps its 200 busiest of each and a quarter hour
+  its 500 of each; the rest of either is added to that counter's own
+  "other". With the hot table's own cap of 2,000 slugs a minute for views
+  and 2,000 for refreshes, the worst case is twice 60 × 200 + 97 × 500 =
+  121,000 slug entries, still a few megabytes, and only if that many
+  different published tournaments are read within one day.
 
   ## Time
 
@@ -328,6 +329,8 @@ defmodule OpenResults.Stats.Collector do
       events: %{},
       slugs: %{},
       slug_other: 0,
+      refreshes: %{},
+      refresh_other: 0,
       cpu: {0, 0},
       load: {0, 0}
     }
@@ -354,7 +357,11 @@ defmodule OpenResults.Stats.Collector do
   defp add_row(agg, {:slug, slug}, [n]),
     do: %{agg | slugs: Map.update(agg.slugs, slug, n, &(&1 + n))}
 
+  defp add_row(agg, {:refresh, slug}, [n]),
+    do: %{agg | refreshes: Map.update(agg.refreshes, slug, n, &(&1 + n))}
+
   defp add_row(agg, :slug_other, [n]), do: %{agg | slug_other: agg.slug_other + n}
+  defp add_row(agg, :refresh_other, [n]), do: %{agg | refresh_other: agg.refresh_other + n}
   defp add_row(agg, _distinct_or_unknown, _values), do: agg
 
   @doc "Adds two buckets together."
@@ -365,6 +372,8 @@ defmodule OpenResults.Stats.Collector do
       events: Map.merge(a.events, b.events, fn _event, x, y -> x + y end),
       slugs: Map.merge(a.slugs, b.slugs, fn _slug, x, y -> x + y end),
       slug_other: a.slug_other + b.slug_other,
+      refreshes: Map.merge(a.refreshes, b.refreshes, fn _slug, x, y -> x + y end),
+      refresh_other: a.refresh_other + b.refresh_other,
       cpu: add_pair(a.cpu, b.cpu),
       load: add_pair(a.load, b.load)
     }
@@ -374,17 +383,27 @@ defmodule OpenResults.Stats.Collector do
   defp add_pair({s1, n1}, {s2, n2}), do: {s1 + s2, n1 + n2}
 
   @doc false
-  # Keeps a bucket's `keep` busiest slugs and adds the rest to "other".
-  def trim_slugs(%{slugs: slugs} = agg, keep) when map_size(slugs) <= keep, do: agg
-
+  # Keeps a bucket's `keep` busiest slugs, and its `keep` most-refreshed
+  # ones, adding the rest of each to its own "other".
   def trim_slugs(agg, keep) do
-    {kept, dropped} = agg.slugs |> Enum.sort_by(fn {_slug, n} -> -n end) |> Enum.split(keep)
+    agg
+    |> trim_map(:slugs, :slug_other, keep)
+    |> trim_map(:refreshes, :refresh_other, keep)
+  end
 
-    %{
+  defp trim_map(agg, key, other_key, keep) do
+    map = Map.fetch!(agg, key)
+
+    if map_size(map) <= keep do
       agg
-      | slugs: Map.new(kept),
-        slug_other: agg.slug_other + Enum.sum(Enum.map(dropped, &elem(&1, 1)))
-    }
+    else
+      {kept, dropped} = map |> Enum.sort_by(fn {_slug, n} -> -n end) |> Enum.split(keep)
+      moved = Enum.sum(Enum.map(dropped, &elem(&1, 1)))
+
+      agg
+      |> Map.put(key, Map.new(kept))
+      |> Map.update!(other_key, &(&1 + moved))
+    end
   end
 
   @doc "The first minute of the quarter hour `minute` is in."

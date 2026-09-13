@@ -271,6 +271,85 @@ defmodule OpenResultsWeb.AdminStatsTest do
     end
   end
 
+  describe "views against refreshes" do
+    test "a navigating request counts a view" do
+      slug = unique_slug("nav")
+      assert json_response(publish(payload(slug), operator_token()), 200)
+
+      build_conn()
+      |> put_req_header("sec-fetch-mode", "navigate")
+      |> put_req_header("sec-fetch-dest", "document")
+      |> get("/t/#{slug}")
+      |> served()
+
+      bucket = counted()
+      assert bucket.slugs[slug] == 1
+      refute Map.has_key?(bucket.refreshes, slug)
+    end
+
+    test "a request with no Sec-Fetch header at all counts a view too" do
+      slug = unique_slug("legacy")
+      assert json_response(publish(payload(slug), operator_token()), 200)
+
+      build_conn() |> get("/t/#{slug}") |> served()
+
+      bucket = counted()
+      assert bucket.slugs[slug] == 1
+      refute Map.has_key?(bucket.refreshes, slug)
+    end
+
+    test "a same-origin fetch (Sec-Fetch-Mode: cors) counts a refresh, not a view" do
+      slug = unique_slug("poll")
+      assert json_response(publish(payload(slug), operator_token()), 200)
+
+      build_conn()
+      |> put_req_header("sec-fetch-mode", "cors")
+      |> put_req_header("sec-fetch-dest", "empty")
+      |> get("/t/#{slug}")
+      |> served()
+
+      bucket = counted()
+      assert bucket.refreshes[slug] == 1
+      refute Map.has_key?(bucket.slugs, slug)
+    end
+
+    test "the refresh marker counts a refresh even on a request that says it navigated" do
+      slug = unique_slug("marked")
+      assert json_response(publish(payload(slug), operator_token()), 200)
+
+      build_conn()
+      |> put_req_header("sec-fetch-mode", "navigate")
+      |> put_req_header("x-openresults-refresh", "1")
+      |> get("/t/#{slug}")
+      |> served()
+
+      bucket = counted()
+      assert bucket.refreshes[slug] == 1
+      refute Map.has_key?(bucket.slugs, slug)
+    end
+
+    test "the stats page shows both counters and the live-followers estimate" do
+      slug = unique_slug("shown")
+      assert json_response(publish(payload(slug), operator_token()), 200)
+
+      build_conn()
+      |> put_req_header("sec-fetch-mode", "navigate")
+      |> get("/t/#{slug}")
+      |> served()
+
+      build_conn()
+      |> put_req_header("sec-fetch-mode", "cors")
+      |> get("/t/#{slug}")
+      |> served()
+
+      doc = doc(admin_get("/admin/stats"))
+
+      assert text(doc, "#stats-top-hour") =~ slug
+      assert text(doc, "#stats-refreshes-hour") =~ slug
+      assert text(doc, "#stats-live-followers") =~ ~r/Live followers/
+    end
+  end
+
   defp contains?(term, term), do: true
 
   defp contains?(tuple, target) when is_tuple(tuple),

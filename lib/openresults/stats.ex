@@ -46,8 +46,10 @@ defmodule OpenResults.Stats do
   | `{minute, group, scheduler}` | 5 status classes (2xx, 304, other 3xx, 4xx, 5xx), `Histogram.size/0` duration buckets, then page cache hits, misses and 304 revalidations |
   | `{minute, :repo, scheduler}` | queries, query-time buckets, queue-time buckets, queries that reported a queue time |
   | `{minute, {:event, name}, 0}` | a count: publishes, mints, registrations, refusals by code |
-  | `{minute, {:slug, slug}, scheduler}` | a tournament's page requests |
-  | `{minute, :slug_distinct, 0}` / `{minute, :slug_other, 0}` | slug rows created this minute; requests folded away past the cap |
+  | `{minute, {:slug, slug}, scheduler}` | a tournament's real page loads (views) |
+  | `{minute, :slug_distinct, 0}` / `{minute, :slug_other, 0}` | slug rows created this minute; views folded away past the cap |
+  | `{minute, {:refresh, slug}, scheduler}` | a tournament's auto-refresh polls, counted apart from its views |
+  | `{minute, :refresh_distinct, 0}` / `{minute, :refresh_other, 0}` | the same cap and folding, for refresh rows |
 
   The collector takes every finished minute's rows out of the table and
   folds them into its own per-minute and per-quarter-hour buckets, so the
@@ -61,10 +63,12 @@ defmodule OpenResults.Stats do
 
   ## Bounded
 
-  At most `slug_cap/0` slug rows are created per minute; requests for
-  any more land in one "other" row. Only a tournament that has published is
-  counted at all (`OpenResultsWeb.StatsTelemetry`), so a scan of made-up
-  slugs cannot add a row. The collector's own bounds are in its moduledoc.
+  At most `slug_cap/0` slug rows are created per minute, and the same again
+  for refresh rows - each counted, and capped, on its own. Requests for any
+  more land in that counter's "other" row. Only a tournament that has
+  published is counted at all (`OpenResultsWeb.StatsTelemetry`), so a scan
+  of made-up slugs cannot add a row. The collector's own bounds are in its
+  moduledoc.
   """
 
   alias OpenResults.Stats.Collector
@@ -158,14 +162,26 @@ defmodule OpenResults.Stats do
     do: increment(table, {minute, {:event, event}, 0}, [{2, 1}], 2)
 
   @doc """
-  Counts one page request for a published tournament. Callers decide that it
-  is one; see `OpenResultsWeb.StatsTelemetry`.
+  Counts one real page load for a published tournament. Callers decide that
+  it is one, rather than a poll; see `OpenResultsWeb.StatsTelemetry`.
   """
-  def record_view(table, minute, slug) when is_binary(slug) do
-    key = {minute, {:slug, slug}, scheduler()}
+  def record_view(table, minute, slug) when is_binary(slug),
+    do: record_hit(table, minute, {:slug, slug}, :slug_distinct, :slug_other)
+
+  @doc """
+  Counts one poll of a published tournament's page - the auto-refresh a
+  reader's open tab sends every 20 seconds, not a new visitor. Bounded the
+  same way as `record_view/3`, in its own counters so the two are never
+  added together silently.
+  """
+  def record_refresh(table, minute, slug) when is_binary(slug),
+    do: record_hit(table, minute, {:refresh, slug}, :refresh_distinct, :refresh_other)
+
+  defp record_hit(table, minute, tag, distinct_tag, other_tag) do
+    key = {minute, tag, scheduler()}
 
     case :ets.update_counter(table, key, {2, 1}, {key, 0}) do
-      1 -> admit_slug(table, minute, key)
+      1 -> admit_slug(table, minute, key, distinct_tag, other_tag)
       _seen -> :ok
     end
 
@@ -174,12 +190,13 @@ defmodule OpenResults.Stats do
     ArgumentError -> :ok
   end
 
-  # The first request for a slug this minute: over the cap, its row is taken
-  # back out and its count moved to "other". A row taken while another
-  # process increments it is recreated and comes through here again, so the
-  # distinct counter may overcount - which only tightens the bound.
-  defp admit_slug(table, minute, key) do
-    distinct = {minute, :slug_distinct, 0}
+  # The first request for a slug (or a slug's refreshes) this minute: over
+  # the cap, its row is taken back out and its count moved to "other". A row
+  # taken while another process increments it is recreated and comes through
+  # here again, so the distinct counter may overcount - which only tightens
+  # the bound.
+  defp admit_slug(table, minute, key, distinct_tag, other_tag) do
+    distinct = {minute, distinct_tag, 0}
 
     if :ets.update_counter(table, distinct, {2, 1}, {distinct, 0}) > @slug_cap do
       moved =
@@ -188,7 +205,7 @@ defmodule OpenResults.Stats do
           [] -> 0
         end
 
-      other = {minute, :slug_other, 0}
+      other = {minute, other_tag, 0}
       :ets.update_counter(table, other, {2, moved}, {other, 0})
     end
   end

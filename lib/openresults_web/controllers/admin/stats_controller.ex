@@ -39,7 +39,9 @@ defmodule OpenResultsWeb.Admin.StatsController do
 
   defp statuses(report) do
     for points <- [report.hour, report.day],
-        {slug, _count} <- elem(Report.top_slugs(Report.total(points), 10), 0),
+        total = Report.total(points),
+        {slug, _count} <-
+          elem(Report.top_slugs(total, 10), 0) ++ elem(Report.top_refreshes(total, 10), 0),
         into: %{},
         do: {slug, Tournaments.status(slug)}
   end

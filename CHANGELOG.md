@@ -45,6 +45,22 @@ Each entry is tagged so a version can be skimmed:
   terms link is set**, as `https://<host>/terms`, so OpenPairings' consent
   dialog links a real page with no configuration. A terms link set in the
   panel or the environment still wins.
+- [Fix] **The stats page's "views" no longer count a tournament page's own
+  auto-refresh.** A public tournament page polls its own URL every 20 seconds
+  to stay live, and every poll used to count as a view - a single reader with
+  a tab open for a couple of hours could look like hundreds of visitors (an
+  operator saw 450 "hits" on one page embedded elsewhere, from what was really
+  one person). A request now counts as a view only when it looks like a
+  browser navigating to the page (`Sec-Fetch-Mode: navigate`, or no
+  `Sec-Fetch-Mode` at all, for older clients); the refresher's own `fetch()`
+  calls also carry an explicit `x-openresults-refresh` header so they are
+  never mistaken for one either way. Polls are still counted, just apart from
+  views, as "refreshes" on `/admin/stats`, next to a rough **"live followers"**
+  estimate (refreshes per minute ÷ 3, since one open page polls about that
+  often) - labelled as an estimate of open pages, not of visitors. (Both
+  refreshers already paused their polling while their tab was hidden and
+  caught up once when it became visible again - checked while fixing this,
+  unchanged here.)
 
 ## [0.14.0] - 2026-09-13
 

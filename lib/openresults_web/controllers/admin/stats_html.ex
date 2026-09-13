@@ -195,9 +195,9 @@ defmodule OpenResultsWeb.Admin.StatsHTML do
 
       <h3>Busiest tournaments</h3>
       <p class="quiet">
-        Requests for the pages of a published tournament, 304 re-polls included. At most {thousands(
-          Stats.slug_cap()
-        )} different tournaments are counted per minute; any more are added to the last row.
+        Real page loads of a published tournament - a browser navigating to it, including inside
+        another site's embed - not the auto-refresh an open page polls with every 20 seconds; see
+        "Refreshes" below for that. At most {thousands(Stats.slug_cap())} different tournaments are counted per minute; any more are added to the last row.
       </p>
       <div class="admin-columns">
         <.top_slugs
@@ -209,6 +209,35 @@ defmodule OpenResultsWeb.Admin.StatsHTML do
         <.top_slugs
           id="stats-top-day"
           caption="Busiest tournaments, last 24 hours"
+          bucket={@day_total}
+          statuses={@statuses}
+        />
+      </div>
+
+      <h3>Refreshes</h3>
+      <p class="quiet">
+        An open tournament page polls for updates roughly every 20 seconds; these are that
+        polling, not visitors - do not read them as traffic. At most {thousands(Stats.slug_cap())} different tournaments are counted per minute; any more are added to the last row.
+      </p>
+      <dl class="admin-facts" id="stats-live-followers">
+        <dt>Live followers, estimated</dt>
+        <dd>{live_followers(Report.live_followers(Enum.take(@full_hour, -3)))}</dd>
+      </dl>
+      <p class="quiet">
+        Not a visitor count: one open page polls about 3 times a minute, so this is refreshes in
+        the last few minutes divided by 3 - a rough, constantly-adjusting estimate of how many
+        tournament pages are open somewhere right now, across every tournament.
+      </p>
+      <div class="admin-columns">
+        <.top_refreshes
+          id="stats-refreshes-hour"
+          caption="Most-refreshed tournaments, last hour"
+          bucket={@hour_total}
+          statuses={@statuses}
+        />
+        <.top_refreshes
+          id="stats-refreshes-day"
+          caption="Most-refreshed tournaments, last 24 hours"
           bucket={@day_total}
           statuses={@statuses}
         />
@@ -402,6 +431,49 @@ defmodule OpenResultsWeb.Admin.StatsHTML do
     """
   end
 
+  attr :id, :string, required: true
+  attr :caption, :string, required: true
+  attr :bucket, :map, required: true
+  attr :statuses, :map, required: true
+
+  defp top_refreshes(assigns) do
+    {top, rest} = Report.top_refreshes(assigns.bucket, 10)
+    assigns = assign(assigns, top: top, rest: rest)
+
+    ~H"""
+    <div>
+      <p :if={@top == []} class="quiet" id={@id}>{@caption}: none counted.</p>
+      <table :if={@top != []} class="admin-table" id={@id}>
+        <caption>{@caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Tournament</th>
+            <th scope="col">Refreshes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={{slug, count} <- @top}>
+            <th scope="row">
+              <a href={"/admin/tournaments/#{slug}"}>{slug}</a>
+              <span
+                :if={@statuses[slug] in [:hidden, :pending]}
+                class={"admin-status admin-status-#{@statuses[slug]}"}
+              >
+                {@statuses[slug]}
+              </span>
+            </th>
+            <td class="num">{thousands(count)}</td>
+          </tr>
+          <tr :if={@rest > 0}>
+            <th scope="row">Every other tournament</th>
+            <td class="num">{thousands(@rest)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
   attr :system, :map, default: nil
 
   defp health(%{system: nil} = assigns) do
@@ -522,6 +594,9 @@ defmodule OpenResultsWeb.Admin.StatsHTML do
 
   defp pct(nil), do: "-"
   defp pct(value), do: :erlang.float_to_binary(value / 1, decimals: 1) <> "%"
+
+  defp live_followers(nil), do: "not enough data yet"
+  defp live_followers(n), do: "≈ #{round(n)}"
 
   defp cpu_now(%{cpu_percent: cpu}) when is_number(cpu), do: pct(cpu) <> " busy, last 5 seconds"
   defp cpu_now(%{load: nil}), do: "not measured (no /proc/stat on this system)"

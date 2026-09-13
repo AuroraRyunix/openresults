@@ -127,16 +127,43 @@ defmodule OpenResults.Stats.Report do
 
   @doc """
   The `n` busiest tournaments in a bucket, `{[{slug, count}], rest}`, where
-  `rest` is every other counted request - the slugs past the top `n` and the
-  ones folded into "other" by a cap.
+  `rest` is every other counted view - the slugs past the top `n` and the
+  ones folded into "other" by a cap. Views only; see `top_refreshes/2` for
+  the auto-refresh polls.
   """
-  def top_slugs(bucket, n) do
-    {top, others} =
-      bucket.slugs
-      |> Enum.sort_by(fn {slug, count} -> {-count, slug} end)
-      |> Enum.split(n)
+  def top_slugs(bucket, n), do: top(bucket.slugs, bucket.slug_other, n)
 
-    {top, bucket.slug_other + Enum.sum(Enum.map(others, &elem(&1, 1)))}
+  @doc """
+  The `n` most-polled tournaments in a bucket, shaped like `top_slugs/2`.
+  These are one open tab's auto-refresh, not distinct visitors - see
+  `live_followers/1`.
+  """
+  def top_refreshes(bucket, n), do: top(bucket.refreshes, bucket.refresh_other, n)
+
+  defp top(counts, other, n) do
+    {top, others} =
+      counts |> Enum.sort_by(fn {slug, count} -> {-count, slug} end) |> Enum.split(n)
+
+    {top, other + Enum.sum(Enum.map(others, &elem(&1, 1)))}
+  end
+
+  @doc "Every refresh counted in a bucket, top tournaments and \"other\" alike."
+  def refresh_total(bucket), do: Enum.sum(Map.values(bucket.refreshes)) + bucket.refresh_other
+
+  @doc """
+  An estimate of how many tournament pages are open right now, from how
+  often an open page polls: about once every 20 seconds, so about 3 times a
+  minute. `points` are the most recent few `{time, bucket}` minutes (finished
+  ones - a partial current minute would understate the rate); the estimate
+  is their total refreshes divided by 3 times how many minutes that is, or
+  `nil` with no minutes to divide by. This is an estimate of open pages, not
+  of distinct visitors: two readers sharing one screen are one page.
+  """
+  def live_followers([]), do: nil
+
+  def live_followers(points) do
+    refreshes = points |> Enum.map(fn {_t, bucket} -> refresh_total(bucket) end) |> Enum.sum()
+    refreshes / (3 * length(points))
   end
 
   @doc "The average of a sampled gauge (`:cpu` or `:load`) in a bucket, or `nil`."

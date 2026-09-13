@@ -18,12 +18,38 @@ defmodule OpenResultsWeb.StatsTelemetry do
 
   The method, the path's first segment, the status, the duration and - for a
   tournament page - its slug and the visibility `OpenResultsWeb.Plugs.Visibility`
-  assigned. Never the address, the headers or the query string.
+  assigned. Never the address or the query string.
 
   A tournament page is counted in "busiest tournaments" only when that
   visibility says something has published under the slug (`:pending` or
   `:listed`) and the page answered 2xx or 304, so a scan of made-up slugs -
   `:none`, and a 404 - adds nothing.
+
+  ## Views against refreshes
+
+  A public tournament page polls its own URL every 20 seconds so a reader
+  watching it sees updates without reloading (`root.html.heex`, and the
+  projector board in `tournament_html.ex`) - one reader with a tab open for a
+  couple of hours can throw hundreds of these at a slug that never had
+  hundreds of visitors. Only a genuine navigation is counted as a view; a
+  poll is counted separately, as a refresh (`OpenResults.Stats.record_refresh/3`).
+
+  The distinction reads at most two request headers, only on a tournament
+  page that already reached the visibility check below - never on a request
+  that would not be counted at all:
+
+    * the refresher's own `fetch()` calls send `x-openresults-refresh: 1`.
+      Same-origin, so no CORS preflight. Whatever `Sec-Fetch-Mode` says, its
+      presence alone means a poll.
+    * otherwise, `Sec-Fetch-Mode: navigate` (a browser loading the page,
+      including inside another site's `<iframe>`) means a view; any other
+      value (`cors`, `same-origin`, `no-cors` - a script's own `fetch`,
+      an on-page peek like the player-card popup) means a poll.
+    * a request with no `Sec-Fetch-Mode` at all - older browsers, most
+      non-browser clients, some bots - is counted as a view. That
+      slightly over-counts a scripted client working through the API-less
+      HTML pages, which this cannot tell from a real reader without the
+      header; it is the same trade `Sec-Fetch` support itself makes.
 
   Publishes, mints and registrations are recognised here from their route and
   success status, so the controllers that do them are not touched; refusals
@@ -129,7 +155,10 @@ defmodule OpenResultsWeb.StatsTelemetry do
     with %{tournament_visibility: visibility} when visibility in [:pending, :listed] <-
            conn.assigns,
          %{"slug" => slug} when is_binary(slug) <- conn.path_params do
-      Stats.record_view(@table, minute, slug)
+      case poll?(conn) do
+        true -> Stats.record_refresh(@table, minute, slug)
+        false -> Stats.record_view(@table, minute, slug)
+      end
     end
 
     :ok
@@ -145,6 +174,24 @@ defmodule OpenResultsWeb.StatsTelemetry do
   end
 
   defp after_request(_group, _conn, _minute), do: :ok
+
+  # `true` for one of the refresher's own polls, `false` for a real page
+  # load - see the moduledoc. At most two headers read, and only reached
+  # once a tournament page has already matched the `with` above.
+  defp poll?(conn) do
+    case Plug.Conn.get_req_header(conn, "x-openresults-refresh") do
+      [_ | _] -> true
+      [] -> not navigate?(conn)
+    end
+  end
+
+  defp navigate?(conn) do
+    case Plug.Conn.get_req_header(conn, "sec-fetch-mode") do
+      [] -> true
+      ["navigate" | _] -> true
+      [_other | _] -> false
+    end
+  end
 
   defp credential(%Plug.Conn{assigns: %{credential: {:installation, _}}}), do: :installation
   defp credential(_operator), do: :operator

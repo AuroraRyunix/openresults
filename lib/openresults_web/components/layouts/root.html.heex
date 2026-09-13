@@ -600,7 +600,9 @@
             // phone in a pocket should not be polling a server all round.
             if (document.hidden || inUse()) { return; }
 
-            fetch(window.location.href, {headers: {"accept": "text/html"}})
+            fetch(window.location.href, {
+              headers: {"accept": "text/html", "x-openresults-refresh": "1"}
+            })
               .then((r) => r.ok ? r.text() : Promise.reject(r.status))
               .then((html) => {
                 failures = 0;

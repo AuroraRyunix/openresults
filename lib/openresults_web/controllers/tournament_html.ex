@@ -1695,7 +1695,9 @@ defmodule OpenResultsWeb.TournamentHTML do
         const refreshRows = () => {
           if (document.hidden) { return; }
 
-          fetch(window.location.href, { headers: { accept: "text/html" } })
+          fetch(window.location.href, {
+            headers: { accept: "text/html", "x-openresults-refresh": "1" }
+          })
             .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
             .then((html) => {
               const doc = new DOMParser().parseFromString(html, "text/html");

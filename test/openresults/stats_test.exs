@@ -311,6 +311,64 @@ defmodule OpenResults.StatsTest do
       refute Map.has_key?(trimmed.slugs, "s50")
       assert trimmed.slug_other == Enum.sum(1..50)
     end
+
+    test "refreshes are counted, capped and trimmed apart from views" do
+      {pid, table} = start_collector()
+
+      Stats.record_view(table, @m0, "s1")
+      Stats.record_view(table, @m0, "s1")
+      Stats.record_refresh(table, @m0, "s1")
+      Stats.record_refresh(table, @m0, "s1")
+      Stats.record_refresh(table, @m0, "s1")
+      Stats.record_refresh(table, @m0, "s2")
+
+      bucket = Collector.report(pid, @t0 + 10).hour |> List.last() |> elem(1)
+      assert Report.top_slugs(bucket, 10) == {[{"s1", 2}], 0}
+      assert Report.top_refreshes(bucket, 10) == {[{"s1", 3}, {"s2", 1}], 0}
+      assert Report.refresh_total(bucket) == 4
+
+      trimmed =
+        %{Collector.empty() | refreshes: Map.new(1..250, &{"r#{&1}", &1})}
+        |> Collector.trim_slugs(200)
+
+      assert map_size(trimmed.refreshes) == 200
+      assert trimmed.refreshes["r250"] == 250
+      refute Map.has_key?(trimmed.refreshes, "r50")
+      assert trimmed.refresh_other == Enum.sum(1..50)
+      # Trimming refreshes never touches the (empty, here) views side.
+      assert trimmed.slugs == %{}
+      assert trimmed.slug_other == 0
+    end
+
+    test "past the cap, a slug's refreshes go to their own other row, apart from views" do
+      {_pid, table} = start_collector()
+      cap = Stats.slug_cap()
+
+      for i <- 1..(cap + 5), do: Stats.record_refresh(table, @m0, "r-#{i}")
+
+      refresh_rows = :ets.select_count(table, [{{{@m0, {:refresh, :_}, :_}, :_}, [], [true]}])
+      assert refresh_rows == cap
+      assert [{_, 5}] = :ets.lookup(table, {@m0, :refresh_other, 0})
+      # A view of the same slug in the same minute is counted, unaffected by
+      # the refresh cap having already been hit.
+      Stats.record_view(table, @m0, "r-1")
+      assert [_key, 1] = row(table, {@m0, {:slug, "r-1"}})
+    end
+  end
+
+  describe "live followers" do
+    test "is nil with no finished minutes to estimate from" do
+      assert Report.live_followers([]) == nil
+    end
+
+    test "is refreshes over the points divided by 3 per minute" do
+      minute = %{Collector.empty() | refreshes: %{"a" => 6}}
+      other = %{Collector.empty() | refreshes: %{"a" => 3}, refresh_other: 3}
+
+      # 6 + (3 + 3) = 12 refreshes over 2 minutes: 6 a minute, "about 3 taps
+      # a minute per open page" makes that 2 open pages.
+      assert Report.live_followers([{1, minute}, {2, other}]) == 2.0
+    end
   end
 
   describe "the histogram" do
