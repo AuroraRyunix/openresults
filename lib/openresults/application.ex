@@ -97,6 +97,13 @@ defmodule OpenResults.Application do
       # Forgets old client addresses, releases minted slugs that never
       # published, and removes expired address blocks - once a day.
       OpenResults.Retention.Scheduler,
+      # The Belgian (KBSB/FRBE) roster relay - owns the ETS table
+      # `GET /api/federations/bel/players` serves from, and loads any copy
+      # already on disk. Before the endpoint, like the caches above. A no-op
+      # when `OpenResults.Federations.BEL.Config.enabled?/0` is false. See
+      # docs/federations-bel.md.
+      OpenResults.Federations.BEL.Store,
+      OpenResults.Federations.BEL.Scheduler,
       OpenResultsWeb.Endpoint
     ]
 

@@ -39,7 +39,9 @@ defmodule OpenResultsWeb.ApiError do
     storage_low:
       {503,
        "this server is low on disk space; installation keys may publish again when it has room, and may still delete"},
-    rate_limited: {429, "too many requests; wait `retry_after` seconds"}
+    rate_limited: {429, "too many requests; wait `retry_after` seconds"},
+    not_configured:
+      {404, "this server does not relay a Belgian (KBSB/FRBE) roster; ask the operator"}
   }
 
   @doc "The codes this module knows, for tests."

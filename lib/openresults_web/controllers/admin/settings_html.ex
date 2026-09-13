@@ -91,6 +91,32 @@ defmodule OpenResultsWeb.Admin.SettingsHTML do
       <% end %>
     </section>
 
+    <section class="admin-section" id="bel-roster">
+      <h2>Belgian (KBSB/FRBE) roster relay</h2>
+      <p>
+        Read-only: see docs/federations-bel.md. Configured with <code>OPENRESULTS_KBSB_API_URL</code>
+        / <code>OPENRESULTS_KBSB_API_KEY</code>, below.
+      </p>
+      <%= if @bel.configured? do %>
+        <dl class="admin-facts" id="bel-roster-facts">
+          <dt>Last successful sync</dt>
+          <dd>{at(@bel.updated_at)}</dd>
+          <dt>Players</dt>
+          <dd>{thousands(@bel.count)}</dd>
+          <dt>Last error</dt>
+          <dd>
+            <%= if @bel.last_error do %>
+              {@bel.last_error} <span class="quiet">({at(@bel.last_error_at)})</span>
+            <% else %>
+              none
+            <% end %>
+          </dd>
+        </dl>
+      <% else %>
+        <p class="quiet" id="bel-roster-state">Not configured on this server.</p>
+      <% end %>
+    </section>
+
     <section class="admin-section" id="locked-settings">
       <h2>Set only in the environment</h2>
       <p>
