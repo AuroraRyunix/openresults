@@ -301,7 +301,6 @@ defmodule OpenResults.ModerationTest do
       {_from, slug} = published_by_installation()
       {revoked, _} = installation!()
       {:ok, _} = Moderation.revoke(revoked.id, @actor, hide_tournaments: false)
-      count = length(actions())
 
       assert Moderation.transfer(slug, "in_nobody", @actor) == {:error, :not_found}
       assert Moderation.transfer(slug, revoked.id, @actor) == {:error, :installation_revoked}

@@ -33,9 +33,15 @@ Defaults assume `BACKUP_RETENTION` is unset (30 days).
 
 `openresults-moderation.jsonl` (`OpenResults.ModerationJournal`), kept beside
 the database so a restore cannot undo moderation, records blocked ranges
-(`cidr`) and deleted slugs. It is not in any backup and **nothing rotates or
-scrubs it today**: a range written there stays until the file is removed by
-hand. It is the one copy of an address range here without a bound.
+(`cidr`) and deleted slugs. It is not in any backup, and it **is** trimmed:
+`ModerationJournal.trim/1` runs after each boot's replay and after each
+scheduled backup, and drops lines older than the oldest backup that could still
+be restored - `BACKUP_RETENTION` days plus a week's margin, or longer if an
+older backup is still on disk (the newest backup is always kept, whatever its
+age). So a blocked range lives in the journal for at most about
+`BACKUP_RETENTION` + 7 days after the block, or for as long as the oldest backup
+on disk is older than that. It cannot be shorter without a restore losing the
+block it exists to keep.
 
 ## Configuration
 
