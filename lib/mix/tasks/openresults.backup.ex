@@ -78,7 +78,7 @@ defmodule Mix.Tasks.Openresults.Backup do
 
         case Backup.prune() do
           0 -> :ok
-          n -> Mix.shell().info("Removed #{n} older backup(s), keeping #{Backup.retention()}.")
+          n -> Mix.shell().info("Removed #{n} backup(s) older than #{Backup.retention()} days.")
         end
 
       {:error, reason} ->

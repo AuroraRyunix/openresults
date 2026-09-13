@@ -103,27 +103,58 @@ defmodule OpenResults.Backup do
   end
 
   @doc """
-  Deletes all but the newest `keep`, returning how many went.
+  Deletes every backup older than the retention window, except the newest,
+  and returns how many went.
 
-  A count rather than an age: a server that was off for a fortnight should
-  still have its last backups when it comes back.
+  **Retention is an age, in days** (`BACKUP_RETENTION`, 30 by default): a
+  backup is kept while it was written less than that many days ago, by the
+  time in its own header. Until 2026-09-13 it was a count of files, and every
+  boot and every manual run spent one, so "30" was a month only on a box
+  nobody restarted (restore drill, finding 12). `OpenResults.Backup.Scheduler`
+  no longer writes one at a boot that already has a recent one, so the window
+  holds about one a day plus whatever was taken by hand.
 
-  Never fewer than one, whatever it is given. `Enum.drop(list, 0)` is the
-  whole list, so a count of 0 deleted every backup including the one the
-  scheduler had just written, and a negative count drops from the other end -
-  it kept the OLDEST and deleted the newest. Both were a `BACKUP_RETENTION`
-  typo away.
+  **The newest is always kept**, whatever its age and whatever `:days` says:
+  a server that was off for a fortnight still has its last backup when it
+  comes back. `:days` below one is treated as one - a count of 0 used to
+  delete every backup including the one the scheduler had just written, and a
+  negative count deleted the newest (finding 7); `config/runtime.exs` refuses
+  such a value at boot.
+
+  `opts`: `:days` (default `retention/0`), `:now` for tests, `:dir`.
   """
   @spec prune(keyword()) :: non_neg_integer()
   def prune(opts \\ []) do
-    keep = opts |> Keyword.get(:keep, retention()) |> at_least_one()
+    days = opts |> Keyword.get(:days, retention()) |> at_least_one()
+    now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
+    cutoff = DateTime.add(now, -days * 86_400, :second)
 
-    list(opts)
-    |> Enum.drop(keep)
-    |> Enum.map(& &1.path)
-    |> Enum.reduce(0, fn path, gone ->
-      if File.rm(path) == :ok, do: gone + 1, else: gone
-    end)
+    case list(opts) do
+      [] ->
+        0
+
+      [_newest | older] ->
+        older
+        |> Enum.filter(&(DateTime.compare(&1.created_at, cutoff) != :gt))
+        |> Enum.reduce(0, fn backup, gone ->
+          if File.rm(backup.path) == :ok, do: gone + 1, else: gone
+        end)
+    end
+  end
+
+  @doc """
+  How old the newest backup is, in milliseconds, or `nil` when there is none.
+  Never negative: a backup stamped in the future (a clock that stepped back)
+  counts as just written.
+  """
+  @spec newest_age_ms(keyword()) :: non_neg_integer() | nil
+  def newest_age_ms(opts \\ []) do
+    now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
+
+    case list(opts) do
+      [] -> nil
+      [newest | _] -> max(DateTime.diff(now, newest.created_at, :millisecond), 0)
+    end
   end
 
   @doc """
@@ -210,7 +241,7 @@ defmodule OpenResults.Backup do
       Path.join(Path.dirname(database_path()), "backups")
   end
 
-  @doc "How many are kept - never fewer than one, see `prune/1`."
+  @doc "How many days a backup is kept - never fewer than one, see `prune/1`."
   def retention do
     case Application.get_env(:openresults, :backup_retention, 30) do
       n when is_integer(n) -> at_least_one(n)
@@ -409,20 +440,36 @@ defmodule OpenResults.Backup do
        "the file is corrupt or has been tampered with"}
   end
 
+  # The first lines only, and the size from the file system: listing used to
+  # read every backup whole - every snapshot this site holds, thirty times -
+  # to find a header of a few hundred bytes, and the scheduler now lists at
+  # boot to decide whether one is due.
+  @head_bytes 16_384
+
   defp summarise(path) do
-    with {:ok, raw} <- File.read(path),
-         [@magic, header, _] <- String.split(raw, "\n", parts: 3),
+    with {:ok, %{size: size}} <- File.stat(path),
+         {:ok, head} <- read_head(path),
+         [@magic, header, _] <- String.split(head, "\n", parts: 3),
          {:ok, decoded} <- Jason.decode(header),
          {:ok, created_at, _} <- DateTime.from_iso8601(decoded["created_at"] || "") do
       %{
         path: path,
-        size: byte_size(raw),
+        size: size,
         created_at: created_at,
         encrypted: decoded["encrypted"] == true
       }
     else
       _ -> nil
     end
+  end
+
+  defp read_head(path) do
+    File.open(path, [:read, :binary], fn device ->
+      case IO.binread(device, @head_bytes) do
+        data when is_binary(data) -> data
+        _eof_or_error -> ""
+      end
+    end)
   end
 
   ## ---------- plumbing ----------

@@ -59,17 +59,19 @@ if passphrase = System.get_env("OPENRESULTS_BACKUP_PASSPHRASE") do
 end
 
 if keep = System.get_env("BACKUP_RETENTION") do
-  # A whole number of at least one, or the app does not start. 0 used to delete
-  # every backup - the one just written included - on every run, and a
-  # negative count deleted the NEWEST ones (`OpenResults.Backup.prune/1` now
-  # refuses to keep fewer than one regardless; this says so at boot instead of
-  # quietly keeping one).
+  # DAYS - how long a backup is kept - and a whole number of at least one, or
+  # the app does not start. It was a count of files until 2026-09-13, which
+  # every boot spent (see `OpenResults.Backup.prune/1`). 0 used to delete every
+  # backup - the one just written included - on every run, and a negative
+  # count deleted the NEWEST ones; `prune/1` keeps at least a day's worth and
+  # always the newest regardless, and this says so at boot instead of quietly
+  # doing something else.
   case Integer.parse(keep) do
-    {n, ""} when n >= 1 ->
-      config :openresults, :backup_retention, n
+    {days, ""} when days >= 1 ->
+      config :openresults, :backup_retention, days
 
     _ ->
-      raise "BACKUP_RETENTION must be a whole number of at least 1, got: #{inspect(keep)}"
+      raise "BACKUP_RETENTION is a number of days, a whole number of at least 1, got: #{inspect(keep)}"
   end
 end
 

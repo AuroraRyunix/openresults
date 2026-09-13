@@ -27,6 +27,18 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Change] **`BACKUP_RETENTION` is now a number of DAYS, not a number of
+  files - and a restart no longer spends a backup.** It was a count, and every
+  boot wrote a backup five minutes in and every manual run another, so the
+  default "30" was a month only on a box nobody restarted: the restore drill's
+  instance had four backups inside twenty minutes. Now a backup is kept while
+  it is younger than that many days (by the time in its own header), **the
+  newest is always kept** whatever its age, and the scheduler skips the
+  boot-time backup when the newest on disk is less than a day old, scheduling
+  the next one for when that one comes due. **If you set `BACKUP_RETENTION`,
+  read it again as days**; a value that is not a whole number of at least 1
+  still stops the boot. Listing backups reads each file's header instead of
+  the whole file.
 - [Fix] **Restoring a backup is now a written, rehearsed procedure - and the
   commands this site used to print for it could restore nothing.**
   `mix openresults.backup --restore` said to move the database file aside and

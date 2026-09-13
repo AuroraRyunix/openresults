@@ -240,7 +240,7 @@ defmodule OpenResults.BackupRestoreTest do
 
   describe "retention" do
     for keep <- [0, -1, -3] do
-      test "a count of #{keep} still never removes the newest", %{dir: dir} do
+      test "a window of #{keep} days still never removes the newest", %{dir: dir} do
         src = full_source(dir)
 
         for day <- 1..4 do
@@ -254,8 +254,8 @@ defmodule OpenResults.BackupRestoreTest do
 
         # `Enum.drop(list, 0)` deleted every backup, the one just written
         # included, and a negative count dropped from the other end - keeping
-        # the OLDEST and deleting the newest.
-        Backup.prune(dir: dir, keep: unquote(keep))
+        # the OLDEST and deleting the newest. Below one is one day now.
+        Backup.prune(dir: dir, days: unquote(keep), now: ~U[2026-09-04 12:00:00Z])
 
         assert [%{created_at: newest}] = Backup.list(dir: dir)
         assert newest.day == 4
