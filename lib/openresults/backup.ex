@@ -8,6 +8,16 @@ defmodule OpenResults.Backup do
   Every row in it - the snapshots, the registration queue, the tournament keys
   - exists only here, so all of it is copied.
 
+  ## Except the client addresses
+
+  Since 2026-09-13 no backup holds a client address: where an installation
+  registered from and was last seen from, and where a report came from, are
+  nulled in the copy before it is written. They exist only to judge an
+  address block, and retention forgets them after 30 days in the live
+  database - but a month of backups held them for about two months, and a
+  restore brought back ones already forgotten (restore drill, finding 8).
+  The rows stay; only the addresses go.
+
   ## What is actually at risk
 
   The snapshots are a published record. An arbiter who loses their own machine
@@ -77,9 +87,69 @@ defmodule OpenResults.Backup do
     with :ok <- File.mkdir_p(dir) |> normalise("could not create #{dir}"),
          :ok <- sweep_staging(dir),
          {:ok, staged} <- vacuum_into(source, dir),
+         :ok <- forget_client_addresses(staged),
          {:ok, bytes} <- File.read(staged) |> normalise("could not read the staged copy") do
       File.rm(staged)
       write_envelope(dir, stamp, bytes)
+    end
+  end
+
+  # Every client address, out of the copy before it is written: where each
+  # installation registered from and was last seen from, and where each report
+  # came from. They exist for one thing - judging an address block - and a
+  # backup is not where that happens. Retention nulls them after 30 days in the
+  # live database, but a backup kept 30 days held addresses up to about two
+  # months old, and a restore put back ones retention had already forgotten
+  # (restore drill, finding 8). Losing them on a restore costs nothing that
+  # matters: the next request from that installation records its address again.
+  #
+  # Then a VACUUM, which is what makes the old values actually gone from the
+  # file. `PRAGMA secure_delete` looked like the cheaper way and is not enough:
+  # measured with 400 installations, it zeroes freed cells, but the page
+  # rebalancing that shrinking every row triggers rebuilds pages without
+  # clearing the gap between cells, and 43 addresses were still readable in
+  # the copy. A second VACUUM over the staged copy costs a rewrite of it; an
+  # address in a backup costs what this exists to prevent. Tables are checked
+  # for, not assumed: `source:` can be an older schema.
+  #
+  # Not touched, deliberately, and written down as a policy question instead:
+  # a report's optional contact email, the entry form's email addresses, and
+  # the address or range in the action log's `block_address`/`unblock` rows.
+  defp forget_client_addresses(staged) do
+    with {:ok, conn} <- open(staged) do
+      try do
+        with {:ok, tables} <- tables(conn) do
+          statements =
+            if("installations" in tables,
+              do: ["UPDATE installations SET created_from = NULL, last_seen_from = NULL"],
+              else: []
+            ) ++
+              if("reports" in tables, do: ["UPDATE reports SET client_address = NULL"], else: []) ++
+              ["VACUUM"]
+
+          Enum.reduce_while(statements, :ok, fn sql, :ok ->
+            case Exqlite.Sqlite3.execute(conn, sql) do
+              :ok ->
+                {:cont, :ok}
+
+              {:error, reason} ->
+                {:halt,
+                 {:error,
+                  "could not remove client addresses from the copy: #{reason_text(reason)}"}}
+            end
+          end)
+        end
+      after
+        Exqlite.Sqlite3.close(conn)
+      end
+    end
+    |> case do
+      :ok ->
+        :ok
+
+      {:error, _} = error ->
+        File.rm(staged)
+        error
     end
   end
 

@@ -27,6 +27,19 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Security] **Backups no longer hold client addresses.** Where each
+  installation registered from and was last seen from, and where each report
+  came from, are nulled in the copy before it is written - the rows stay,
+  only the addresses go - and the copy is vacuumed so the old values are gone
+  from the file, not left in its free space (nulling alone left 43 of 400 test
+  addresses readable). Retention forgets addresses after 30 days in the live
+  database, but the restore drill measured backups holding them for about two
+  months, and a restore bringing back addresses retention had already
+  forgotten. They exist only for judging an address block, so losing them on
+  a restore is harmless: the next request records a current one. Still in a
+  backup, and left as a policy question in the drill document: a report's
+  optional contact email, the entry form's email addresses, and the address
+  or range recorded in the action log's block entries.
 - [Change] **`BACKUP_RETENTION` is now a number of DAYS, not a number of
   files - and a restart no longer spends a backup.** It was a count, and every
   boot wrote a backup five minutes in and every manual run another, so the

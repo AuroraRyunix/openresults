@@ -156,6 +156,62 @@ defmodule OpenResults.BackupRestoreTest do
       end
     end
 
+    test "no client address is in the backup, and nothing else is lost with them", %{dir: dir} do
+      src = full_source(dir)
+
+      # Enough installations that nulling their addresses rebalances pages -
+      # which leaves old cell bytes in the gaps even with `secure_delete` on,
+      # and which a handful of rows never does. Without the VACUUM that
+      # follows the UPDATE, 43 of these addresses were readable in the copy.
+      {:ok, conn} = Exqlite.Sqlite3.open(src)
+
+      for n <- 1..400 do
+        :ok =
+          Exqlite.Sqlite3.execute(conn, """
+          INSERT INTO installations (id, key_hash, client, client_version, status, created_from,
+                                     last_seen_at, last_seen_from, inserted_at, updated_at)
+          VALUES ('in_bulk#{n}', 'hash#{n}', 'OpenPairings', '0.60.0', 'active',
+                  '2001:db8:ffff:ffff::c#{n}', '2026-09-13T00:00:00.000000Z',
+                  '2001:db8:eeee:eeee::d#{n}', '2026-09-13T00:00:00.000000Z',
+                  '2026-09-13T00:00:00.000000Z')
+          """)
+      end
+
+      :ok = Exqlite.Sqlite3.close(conn)
+
+      # The installation's and the report's addresses are there to begin with.
+      assert File.read!(src) =~ "198.51.100.10"
+      assert File.read!(src) =~ "192.0.2.50"
+      assert File.read!(src) =~ "2001:db8:ffff:ffff::c399"
+
+      {:ok, path} = Backup.create(dir: dir, source: src)
+
+      # Not a byte of any of them in the database the file carries.
+      [_magic, _header, payload] = path |> File.read!() |> String.split("\n", parts: 3)
+      database = :zlib.gunzip(payload)
+      refute database =~ "198.51.100.10"
+      refute database =~ "192.0.2.50"
+      refute database =~ "2001:db8:ffff:ffff::c"
+      refute database =~ "2001:db8:eeee:eeee::d"
+
+      {:ok, restored} = Backup.restore(path)
+
+      assert [[0]] =
+               query(
+                 restored,
+                 "SELECT COUNT(*) FROM installations WHERE created_from IS NOT NULL OR last_seen_from IS NOT NULL"
+               )
+
+      assert [[nil]] = query(restored, "SELECT client_address FROM reports")
+
+      # What restore drill finding 8 left to policy is untouched: a report's
+      # contact email, and the rows themselves - the installations, their
+      # last-seen times, the report.
+      assert [["reporter@example.org"]] = query(restored, "SELECT contact_email FROM reports")
+      assert counts(restored) == counts(src)
+      assert [[401]] = query(restored, "SELECT COUNT(last_seen_at) FROM installations")
+    end
+
     test "it comes back in WAL mode with no sidecar files, so the first boot does not race its pool into it",
          %{dir: dir} do
       src = full_source(dir)
