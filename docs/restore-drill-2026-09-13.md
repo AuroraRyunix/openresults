@@ -37,6 +37,7 @@ Still recommended, not done: log an owner's `DELETE /api/tournaments/:slug`
 to the action log as well (the journal now keeps it, the admin panel still
 does not show it); set `OPENRESULTS_BACKUP_PASSPHRASE`; decide a retention
 for report contact emails and the addresses in block log rows.
+
 ## How it was run
 
 Local only, on a Windows 11 workstation (16 threads). No SSH, no deploy, no
