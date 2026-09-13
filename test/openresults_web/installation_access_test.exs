@@ -295,6 +295,24 @@ defmodule OpenResultsWeb.InstallationAccessTest do
       end
     end
 
+    test "a status this version does not know is not permission", %{
+      installation: installation,
+      key: key,
+      slug: slug,
+      tkey: tkey
+    } do
+      # Nothing in the table stops one: a hand-edited row, or a status a later
+      # version added and this one never learned. It is refused as revoked.
+      installation |> Ecto.Changeset.change(status: "frozen") |> OpenResults.Repo.update!()
+
+      republished = slug |> payload() |> SnapshotPayloads.republished()
+
+      assert error(mint(key), 403) == "installation_revoked"
+      assert error(publish(republished, key, tkey), 403) == "installation_revoked"
+      assert error(history(slug, key), 403) == "installation_revoked"
+      assert error(registrations(slug, key, tkey), 403) == "installation_revoked"
+    end
+
     test "a revoked key that was also used to hide its tournaments can still delete them", %{
       installation: installation,
       key: key,

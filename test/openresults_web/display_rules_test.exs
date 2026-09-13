@@ -272,11 +272,17 @@ defmodule OpenResultsWeb.DisplayRulesTest do
     end
 
     test "byes can be hidden without hiding the boards", %{conn: conn} do
-      slug = publish(hiding(["byes"]))
-      html = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
+      # Round 2, because the fixture's round 1 has no byes: asked of round 1,
+      # and refuting the CSS selector "table.byes" rather than the markup, this
+      # held whether or not the tick did anything.
+      slug = publish(SnapshotPayloads.swiss())
+      assert conn |> get(~p"/t/#{slug}/round/2") |> html_response(200) =~ ~s(<table class="byes">)
 
-      refute html =~ "table.byes"
-      assert html =~ "table"
+      slug = publish(hiding(["byes"]))
+      html = conn |> get(~p"/t/#{slug}/round/2") |> html_response(200)
+
+      refute html =~ ~s(<table class="byes">)
+      assert html =~ ~s(<table class="pairings">)
     end
 
     test "a withheld page says so rather than claiming not to exist", %{conn: conn} do

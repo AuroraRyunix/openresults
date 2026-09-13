@@ -130,6 +130,24 @@ defmodule OpenResultsWeb.AdminAccess.JWTTest do
       assert_received {:key_asked, "kid-9"}
     end
 
+    test "a signature the crypto library cannot even check is refused, not waved through", %{
+      key_for: key_for
+    } do
+      # `:public_key.verify/4` raises rather than answering false for a key term
+      # that is not an RSA public key, and can for a signature of the wrong
+      # size. The rescue has to answer :bad_signature - one that answered :ok
+      # would admit every token whose check blew up.
+      [header, payload, _signature] = claims() |> sign() |> String.split(".")
+
+      for junk <- [<<0>>, :crypto.strong_rand_bytes(600)] do
+        assert {:error, :bad_signature} =
+                 verify(Enum.join([header, payload, b64(junk)], "."), key_for)
+      end
+
+      not_a_key = fn _kid -> {:ok, :not_an_rsa_key} end
+      assert {:error, :bad_signature} = verify(sign(claims()), not_a_key)
+    end
+
     test "a missing kid is malformed, and no key is asked for", %{key_for: key_for} do
       header = b64(Jason.encode!(%{"alg" => "RS256", "typ" => "JWT"}))
       payload = b64(Jason.encode!(claims()))
@@ -164,6 +182,16 @@ defmodule OpenResultsWeb.AdminAccess.JWTTest do
       token = sign(claims(%{"exp" => now - JWT.leeway_seconds() - 1, "iat" => now - 7200}))
 
       assert {:error, :expired} = verify(token, key_for)
+    end
+
+    test "expiry is exact at the edge of the leeway, not a second later", %{key_for: key_for} do
+      # `:now` pins the clock, so the boundary is tested rather than raced.
+      now = System.os_time(:second)
+      edge = now - JWT.leeway_seconds()
+      claims = claims(%{"iat" => now - 7200, "nbf" => now - 7200})
+
+      assert {:error, :expired} = verify(sign(%{claims | "exp" => edge}), key_for, now: now)
+      assert {:ok, _} = verify(sign(%{claims | "exp" => edge + 1}), key_for, now: now)
     end
 
     test "not valid before a time still in the future", %{key_for: key_for} do
