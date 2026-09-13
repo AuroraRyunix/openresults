@@ -89,3 +89,10 @@ config :openresults, :moderation_journal, false
 # environment gate switch it off themselves (and are not async).
 config :openresults, :public_publishing, true
 config :openresults, :retention_interval, :disabled
+
+# Free disk space (`OpenResults.DiskSpace`) is measured once at boot and not
+# again, and never with the real `df`: the suite must not start answering
+# `storage_low` because the machine running it has a full disk. The tests
+# about the floor inject a reader of their own and measure on demand.
+config :openresults, :disk_space_interval, :disabled
+config :openresults, :disk_space_reader, {OpenResults.DiskSpace, :unmeasured}

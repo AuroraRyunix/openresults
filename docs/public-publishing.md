@@ -70,6 +70,7 @@ different things to an arbiter. Existing codes keep their spelling:
 | `snapshot_too_large` | 413 | publish with an installation key | `limit_bytes` |
 | `registration_closed` | 503 | `POST /api/installations` | |
 | `publishing_paused` | 503 | mint, publish | |
+| `storage_low` | 503 | mint, publish; also sets `Retry-After` **(settled in the storage bounds, 2026-09-13)** - see "Storage bounds" | `retry_after` (seconds, 300) |
 | `rate_limited` | 429 | registration, mint, publish; also sets `Retry-After` | `retry_after` (seconds) |
 
 A key that exists but is suspended or revoked gets its own 403 rather than the
@@ -96,9 +97,20 @@ receive it.
   shape.
 - When several refusals apply, an installation-key request gets the first of:
   suspended/revoked, `rate_limited`, `address_blocked`, `publishing_paused`,
-  `snapshot_too_large`, `not_owner`/`tournament_hidden`, then the tournament
-  key's own `key_required`/`key_mismatch`, then `tournament_limit` (mint).
-  Cheap checks first, so a flood costs an ETS counter before a query.
+  `storage_low`, `snapshot_too_large`, `not_owner`/`tournament_hidden`, then
+  the tournament key's own `key_required`/`key_mismatch`, then
+  `tournament_limit` (mint). Cheap checks first, so a flood costs an ETS
+  counter before a query.
+- **(settled in the storage bounds, 2026-09-13)** `storage_low` reads a cached
+  measurement, so it costs what the checks before it cost. It comes after
+  `address_blocked`, because a block is the refusal an arbiter has to act on
+  and a passing 503 must not hide it; after `publishing_paused`, because with
+  both in force the operator's deliberate pause is the one to report -
+  OpenPairings notices a pause ending from `GET /api/server`, which says
+  nothing about disk; and before `snapshot_too_large`, as the pause is. Like
+  `address_blocked` and `publishing_paused`, a `storage_low` refusal has
+  already been counted against the installation's writes a minute: the
+  budget is taken first.
 
 ## Endpoints
 
@@ -210,6 +222,10 @@ Mints a slug bound to this installation. Request body `{}`.
 - **(settled in the build)** Delete is also allowed from a blocked address,
   and is never rate limited: `address_blocked` and `rate_limited` are listed
   above for registration, mint and publish only.
+- **(settled in the storage bounds, 2026-09-13)** Delete is also allowed while
+  the server is below its free-disk floor, and so are history and
+  registrations: `storage_low` is for mint and publish only. Deleting is what
+  makes room.
 - **(settled in the build)** A hidden tournament's owner may still read its
   history and registrations. The visibility table's "delete only" row is about
   publishing and deleting; the queue holds entries people sent the arbiter,
@@ -263,15 +279,102 @@ publishing working for up to eleven codes. Round robins and Keizer events are
 far smaller. A publish over the cap is refused whole with
 `snapshot_too_large` and `limit_bytes`; nothing is stored or claimed.
 
-What the cap does not bound: storage. Every changed version is kept, so an
-installation spending its whole budget on changed documents at the cap could
-write about 90 MiB a minute, and many installations many times that. Nothing
-in this contract limits a pending tournament's history or an installation's
-total bytes. **Open, not settled in the build** - decide before switching
-public publishing on. The admin panel shows the figures that decision needs:
-stored snapshot bytes server-wide and the database file on the dashboard, per
-installation on its page, and per tournament (current snapshot and all
-versions) on the tournament's page.
+What the cap does not bound on its own: storage. Every changed version used
+to be kept, so an installation spending its whole budget on changed documents
+at the cap could write about 90 MiB a minute, and many installations many
+times that, onto a disk this server shares with OpenPairings. That was the
+open risk this document carried until 2026-09-13; "Storage bounds", next, is
+what was decided.
+
+### Storage bounds
+
+**(settled in the storage bounds, 2026-09-13)** Decided before switching
+public publishing on. Two rules for two kinds of growth: a version cap bounds
+what one tournament can hold, and a free-disk floor decides what the server
+does when the disk fills anyway, whatever filled it.
+
+**The version cap.** A tournament owned by an installation keeps its newest
+**20** stored versions (`OPENRESULTS_INSTALLATION_MAX_VERSIONS`; the hosted
+server runs with 100). An operator-published tournament - no owning
+installation - keeps every version, as before.
+
+- Pruned after every accepted installation-key publish, in the same immediate
+  transaction as the ownership check, the key check and the insert: every
+  version of that slug beyond the newest N is deleted. Newest by insertion -
+  the row id - as everywhere else here, never by `received_at`. A
+  byte-identical repeat, which stores nothing, prunes too, so a lowered cap
+  applies at the next publish of any kind.
+- Only the oldest go, and never the current one. N is at least 1 (a value
+  below 1 stops the boot), and the newest row is always among those kept. So
+  what the public reads - the pages, `GET /api/tournaments/:slug`, the ETag,
+  the page cache, all keyed on the newest id - never names a pruned row.
+- `/history?at=` answers exactly as before for any instant from the oldest
+  kept version on. For an instant before it the answer is `not_found`, as it
+  always was for an instant before the first publish. Pruning can turn an
+  answer into `not_found`; it can never turn it into a different document,
+  because the rows it removes are all older than every row it keeps.
+- Withholding and retraction are unchanged: nothing is rewritten, the current
+  document is never touched, and an older version holding a round the arbiter
+  has since retracted only becomes unreachable sooner.
+- Lazy. A tournament already over the cap - published before this, or before
+  the cap was lowered - is pruned by its next accepted installation-key
+  publish, and not before; nothing sweeps. An operator-token publish,
+  break-glass included, never prunes, even to an installation's tournament.
+  A tournament transferred to an installation is that installation's from then
+  on, and its next publish by that installation prunes it like any other.
+- No action log row and no moderation journal line. Pruning is housekeeping
+  on a publish, not moderation - and the journal's replay reads an action-log
+  row about a tournament as the database already knowing about a moderation
+  action, so a housekeeping row there would be misread after a restore.
+- A restore brings back the versions its backup held; that tournament's next
+  publish prunes them again. The journal's replay of a delete is unaffected:
+  pruning always leaves the newest row, and it cannot run before the replay,
+  which finishes before the endpoint starts.
+- SQLite reuses the freed pages for later writes. Nothing is vacuumed on the
+  request path, so the database file stops growing rather than shrinking.
+  (Backups are written with `VACUUM INTO`, so they do shrink.)
+
+At the cap, one tournament's history holds at most N x 3 MiB - 60 MiB at 20,
+300 MiB at 100 - and one installation's 50 tournaments fifty times that. More
+than a small box should give a stranger, which is why the floor exists.
+
+**The free-disk floor.** When the free space on the volume holding the
+database is below **10%** (`OPENRESULTS_MIN_FREE_DISK_PERCENT`), installation
+keys are refused on mint and publish with 503 `storage_low`, `retry_after`
+300 and `Retry-After: 300`.
+
+- Free space is what this service can still write - `df`'s Available, which
+  leaves out the blocks reserved for root - as a share of the volume's size,
+  for the filesystem holding the database's directory. The backups live on
+  that volume too, so they count.
+- Deleting is allowed below the floor: withdrawing a tournament is never the
+  harmful action, and it is the one that makes room. Reading history and
+  registrations is not refused. Registration is not refused either: an
+  installation row is a few hundred bytes. The operator token is unaffected.
+- Measured once a minute by a supervised process that keeps the answer in
+  ETS; a request only reads it. A measurement that cannot be made - no `df`,
+  as on Windows; output that cannot be read; a `df` that has not answered in
+  five seconds - is `unknown`, and **unknown allows publishing**, with a
+  warning logged when a measurement first fails. Refusing every arbiter
+  because the server could not measure its own disk would be the wrong way
+  round.
+- `0` switches the floor off. A value that is not a whole number from 0 to
+  100 stops the boot.
+- 300 seconds is five measurements: a retry sooner would be answered from the
+  same one.
+- `GET /api/server` does not describe it, and `public_publishing` stays
+  `active`. OpenPairings reads any value but `active` and `paused` as
+  `unavailable` - "this server needs a token from its operator" - so a new
+  value there would mislead every copy already released. A client learns of
+  low storage from a refusal, and of its end from the next send that
+  succeeds.
+- The admin dashboard shows the free space against the floor, and a warning
+  at the top of the page while it is below it.
+
+The admin panel shows the figures behind both rules: stored snapshot bytes
+server-wide, the database file, the free space, the floor and the cap on the
+dashboard; per installation on its page; and per tournament (current snapshot
+and all kept versions) on the tournament's page.
 
 ## Tournament visibility
 
@@ -409,7 +512,14 @@ counts() :: %{
   address_blocks: n                    # live ones
 }
 storage() :: %{snapshots: n, snapshot_bytes: n, tournaments: n,
-               database_bytes: n | nil}
+               database_bytes: n | nil,
+               max_versions: n,          # (settled in the storage bounds)
+               disk: disk_reading}       # (settled in the storage bounds)
+disk_reading :: %{status: :ok | :low | :unknown,
+                  free_percent: float | nil, available_bytes: n | nil,
+                  total_bytes: n | nil, floor_percent: 0..100,
+                  path: String.t(), measured_at: DateTime.t() | nil,
+                  error: String.t() | nil}
 installation_storage(id) :: %{tournaments: n, snapshots: n, snapshot_bytes: n}
 tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
                             current_bytes: n | nil,
@@ -425,6 +535,15 @@ tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
   owns now; a transfer moves them.
 - First and last publish are the first and newest stored versions by
   insertion, as everywhere else here.
+- **(settled in the storage bounds, 2026-09-13)** `max_versions` is the
+  version cap in force. `disk` is the last free-space measurement of the
+  volume holding the database, read from the cache the refusal reads:
+  `status` is `:low` only when a measurement exists and is below a floor that
+  is on, `:unknown` when none could be made (`error` says why, and nothing is
+  refused), and `free_percent` is Available / size x 100. Because pruning
+  removes the oldest versions, an installation's tournament past the cap has
+  a `first_published_at` that is its oldest KEPT version, not its first
+  publish; the tournament's page says so.
 
 **(settled in the build)** `transfer_all/3`, as built:
 
@@ -577,6 +696,14 @@ minutes after boot, then every 24 hours.
   other environment, and a prod boot with it enabled refuses to start.
 - Pages: dashboard (both switches, counts, recent actions), tournaments,
   installations, reports, address blocks, action log.
+- **(settled in the storage bounds, 2026-09-13)** The dashboard's storage
+  section keeps the stored snapshot bytes and the database file, and adds the
+  free space on the database's volume beside the floor, when it was measured,
+  and the version cap. While the free space is below the floor, a warning at
+  the top of the dashboard says so: installation keys are being refused
+  `storage_low` for publishing and new tournaments, deleting still works, the
+  operator token is unaffected, and what to do. A measurement that could not
+  be made is shown as not measured, with the reason, and is not a warning.
 - **(settled in the build)** The routes, all under `/admin`. Each action is
   a GET (its confirmation page) and a POST (the action) on the same path:
 
@@ -666,6 +793,7 @@ own server, keep today's behaviour exactly.
 |---|---|---|
 | `rate_limited` | nothing unless it persists | back off at least `retry_after` |
 | `publishing_paused` | amber: the results site has paused publishing | keep, retry later |
+| `storage_low` | amber: the results site is low on storage; everything waiting is sent when it has room again | keep, back off at least `retry_after` **(settled in the storage bounds, 2026-09-13)** |
 | `installation_suspended` | red: contact the operator | keep |
 | `installation_revoked` | red: this installation's key is no longer accepted | stop |
 | `tournament_limit` | red, with the limit | stop for that tournament |
@@ -694,6 +822,8 @@ Defaults live in config; each may be overridden from the environment.
 | publishes per installation per minute | 30 | `OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE` |
 | pending + listed tournaments per installation | 50 | `OPENRESULTS_INSTALLATION_MAX_TOURNAMENTS` |
 | snapshot size for installation keys | 3,145,728 bytes (3 MiB), measured - see "Snapshot size cap" | `OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES` |
+| stored versions kept per installation-owned tournament, at least 1 **(settled in the storage bounds, 2026-09-13)** | 20 (the hosted server: 100) - see "Storage bounds" | `OPENRESULTS_INSTALLATION_MAX_VERSIONS` |
+| free space on the database's volume below which installation keys get `storage_low`, 0 for off **(settled in the storage bounds, 2026-09-13)** | 10 (%) | `OPENRESULTS_MIN_FREE_DISK_PERCENT` |
 | Access team domain | none | `OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN` |
 | Access application audience | none | `OPENRESULTS_ADMIN_ACCESS_AUD` |
 | admin emails | none | `OPENRESULTS_ADMIN_EMAILS` |
@@ -704,5 +834,9 @@ Defaults live in config; each may be overridden from the environment.
    `/admin` loads for an admin and refuses everyone else.
 2. A terms and acceptable-use page with a takedown contact exists and
    `OPENRESULTS_TERMS_URL` points at it.
-3. `OPENRESULTS_PUBLIC_PUBLISHING=enabled`, then `registration_open` flipped
+3. **(settled in the storage bounds, 2026-09-13)** The dashboard's storage
+   section shows the free space on the database's volume as a measurement,
+   not "not measured": a disk the server cannot measure refuses nothing, so
+   the floor would not be there.
+4. `OPENRESULTS_PUBLIC_PUBLISHING=enabled`, then `registration_open` flipped
    in the panel.

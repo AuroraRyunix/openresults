@@ -246,8 +246,12 @@ what will happen, then a button. Nothing needs JavaScript. Every change is
 written to the action log with your address.
 
 - **Dashboard.** The two switches, what needs attention (pending tournaments,
-  open reports), what published tournaments take on disk, and the latest
-  actions. **Pausing public publishing takes arbiters' live updates offline
+  open reports), what published tournaments take on disk, the free space on
+  the database's volume against the free-disk floor, the version cap, and the
+  latest actions. While free space is below the floor a warning sits at the
+  top: installation keys cannot publish or create tournaments until there is
+  room (deleting still works). "Not measured" means the floor is not
+  protecting anything. **Pausing public publishing takes arbiters' live updates offline
   in the middle of their events**: every tournament published from
   OpenPairings desktop stops updating until you resume. Tournaments published
   with the operator token are not affected. When

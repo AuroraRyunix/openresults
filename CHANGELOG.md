@@ -27,6 +27,24 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Public publishing can no longer fill the disk.** Every changed
+  version of a tournament used to be kept, so one installation could store
+  about 90 MiB a minute on a disk this server shares. Two bounds, decided
+  before public publishing goes live (`docs/public-publishing.md`, "Storage
+  bounds"): a tournament owned by an installation keeps its newest **20**
+  versions (`OPENRESULTS_INSTALLATION_MAX_VERSIONS`), the oldest pruned in the
+  same transaction as each publish - never the current one, and a tournament
+  already over the cap is pruned on its next publish; operator-published
+  tournaments keep every version. And when free space on the database's
+  volume is below **10%** (`OPENRESULTS_MIN_FREE_DISK_PERCENT`), installation
+  keys get 503 `storage_low` with `Retry-After: 300` when publishing or
+  creating a tournament; deleting, reading, registering and the operator
+  token are unaffected. Free space is measured with `df` every minute; where
+  it cannot be (Windows, no `df`) nothing is refused and a warning is logged.
+  The admin dashboard shows free space against the floor and the cap, with a
+  warning while below it, and a pruned tournament's page says "Oldest kept
+  version" instead of "First publish". Both values must be whole numbers in
+  range or the app does not start.
 - [Fix] **A restore no longer undoes moderation.** The restore drill restored a
   backup after the operator had kept working, and the restored site had
   undone all of it: a revoked installation minted a slug again, closed

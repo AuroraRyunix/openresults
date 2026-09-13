@@ -113,6 +113,32 @@ for {variable, key} <- [
   config :openresults, key, String.to_integer(value)
 end
 
+# The storage bounds - docs/public-publishing.md, "Storage bounds". Checked
+# for range as well as for being a number, like BACKUP_RETENTION: a version
+# cap of 0 would prune the version the public is reading, and a floor above
+# 100 would refuse every installation for ever.
+if max_versions = System.get_env("OPENRESULTS_INSTALLATION_MAX_VERSIONS") do
+  case Integer.parse(max_versions) do
+    {versions, ""} when versions >= 1 ->
+      config :openresults, :installation_max_versions, versions
+
+    _ ->
+      raise "OPENRESULTS_INSTALLATION_MAX_VERSIONS is how many versions an installation's " <>
+              "tournament keeps, a whole number of at least 1, got: #{inspect(max_versions)}"
+  end
+end
+
+if free_percent = System.get_env("OPENRESULTS_MIN_FREE_DISK_PERCENT") do
+  case Integer.parse(free_percent) do
+    {percent, ""} when percent in 0..100 ->
+      config :openresults, :min_free_disk_percent, percent
+
+    _ ->
+      raise "OPENRESULTS_MIN_FREE_DISK_PERCENT is a whole percentage from 0 (off) to 100, " <>
+              "got: #{inspect(free_percent)}"
+  end
+end
+
 # The admin panel - see `OpenResultsWeb.Plugs.AdminAuth` and docs/admin.md.
 # All three or the panel does not exist: any one missing and every `/admin`
 # path answers 404, the same as a route that was never written. Outside the

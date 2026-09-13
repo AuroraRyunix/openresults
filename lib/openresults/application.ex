@@ -60,6 +60,10 @@ defmodule OpenResults.Application do
       # same reason as the caches above. See
       # `OpenResults.Tournaments.StatusCache`.
       OpenResults.Tournaments.StatusCache,
+      # Free space on the database's volume, measured on a timer so the
+      # `storage_low` check is an ETS read. Before the endpoint, like the
+      # caches above. See `OpenResults.DiskSpace`.
+      OpenResults.DiskSpace,
 
       # Cloudflare Access's signing keys for the admin gate. Owns its table
       # and does every fetch itself, so a burst of admin requests with an

@@ -134,7 +134,11 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
       <dt :if={@tournament.minted_at}>Minted</dt>
       <dd :if={@tournament.minted_at}>{at(@tournament.minted_at)}</dd>
 
-      <dt>First publish</dt>
+      <%!-- Past the version cap, the oldest versions of an installation's
+            tournament are pruned, so the first stored one is no longer the
+            first publish. --%>
+      <dt :if={pruned?(@tournament, @stats)}>Oldest kept version</dt>
+      <dt :if={not pruned?(@tournament, @stats)}>First publish</dt>
       <dd>{at(@stats.first_published_at, "not yet")}</dd>
 
       <dt>Last publish</dt>
@@ -206,6 +210,11 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
     </.confirmation>
     """
   end
+
+  defp pruned?(tournament, stats),
+    do:
+      not is_nil(tournament.installation_id) and
+        stats.snapshots >= OpenResults.PublicPublishing.installation_max_versions()
 
   attr :installation_id, :string, default: nil
 

@@ -9,7 +9,7 @@ defmodule OpenResultsWeb.InstallationAccess do
 
   ## The actions
 
-  | action | route | owner check | refused while suspended | while revoked | budget, block, pause |
+  | action | route | owner check | refused while suspended | while revoked | budget, block, pause, storage |
   |---|---|---|---|---|---|
   | `:mint` | `POST /api/tournaments` | - | yes | yes | yes |
   | `:publish` | `POST /api/snapshots` | payload's slug | yes | yes | yes, and the size cap |
@@ -27,8 +27,12 @@ defmodule OpenResultsWeb.InstallationAccess do
 
   ## Order
 
-  Status, then the budget, then address block, then pause, then size, then
-  ownership. The cheap ones first: a flood from a suspended key costs a
+  Status, then the budget, then address block, then pause, then storage
+  (`storage_low`, below the free-disk floor - an ETS read of
+  `OpenResults.DiskSpace`'s last measurement), then size, then ownership. A
+  block outranks storage because it is the refusal the arbiter must act on;
+  the operator's pause outranks it because OpenPairings learns a pause has
+  ended from `GET /api/server`, which says nothing about disk. The cheap ones first: a flood from a suspended key costs a
   lookup it already paid for, and a flood from an active one costs an ETS
   counter before anything reads the database. Ownership comes last because
   it is the one that has to read a tournament; the publish path checks it a
@@ -42,6 +46,7 @@ defmodule OpenResultsWeb.InstallationAccess do
   import Plug.Conn
 
   alias OpenResults.AddressBlocks
+  alias OpenResults.DiskSpace
   alias OpenResults.Installations
   alias OpenResults.Installations.Installation
   alias OpenResults.PublicPublishing
@@ -69,6 +74,7 @@ defmodule OpenResultsWeb.InstallationAccess do
          :ok <- budget(installation, action),
          :ok <- address_block(address, action),
          :ok <- pause(action),
+         :ok <- storage(action),
          :ok <- size(conn, action),
          :ok <- ownership(conn, installation, action) do
       assign(conn, :credential, {:installation, installation})
@@ -119,6 +125,20 @@ defmodule OpenResultsWeb.InstallationAccess do
   end
 
   defp pause(_action), do: :ok
+
+  # Five measurements: a retry sooner would be answered from the same one.
+  @storage_retry_after 300
+
+  # Mint and publish only. Delete is what makes room, and a measurement that
+  # could not be made reads `:unknown`, which is not low - see
+  # `OpenResults.DiskSpace`.
+  defp storage(action) when action in @writes do
+    if DiskSpace.low?(),
+      do: {:error, :storage_low, %{retry_after: @storage_retry_after}},
+      else: :ok
+  end
+
+  defp storage(_action), do: :ok
 
   # The bytes actually read off the wire, counted by `OpenResultsWeb.BodyReader`
   # while `Plug.Parsers` read them - not a `content-length` a client can

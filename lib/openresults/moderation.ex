@@ -650,7 +650,11 @@ defmodule OpenResults.Moderation do
       snapshots: snapshots,
       snapshot_bytes: bytes,
       tournaments: tournaments,
-      database_bytes: database_bytes()
+      database_bytes: database_bytes(),
+      # The storage bounds (docs/public-publishing.md): the version cap in
+      # force, and the free-disk reading the `storage_low` refusal reads.
+      max_versions: OpenResults.PublicPublishing.installation_max_versions(),
+      disk: OpenResults.DiskSpace.reading()
     }
   end
 
