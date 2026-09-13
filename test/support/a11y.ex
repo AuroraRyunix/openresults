@@ -31,10 +31,12 @@ defmodule OpenResultsWeb.A11y do
       a name, ignoring anything `aria-hidden`
     * `:img_alt` - every `<img>` has an `alt` attribute, empty or not
     * `:svg` - every `<svg>` is `aria-hidden` or a named `role="img"`
-    * `:table_headers` - every `<table>` has header cells, and every `<th>`
-      says which way it points: `scope="col"` in a `<thead>`, `scope="row"`
-      in a `<tbody>`
-    * `:table_name` - every `<table>` has a `<caption>` or an `aria-label`
+    * `:table_headers` - every data `<table>` has header cells (a table marked
+      `role="presentation"` is layout, not data, and is exempt from all three
+      table rules)
+    * `:th_scope` - every `<th>` says which way it points: `scope="col"` in a
+      `<thead>`, `scope="row"` in a `<tbody>`
+    * `:table_name` - every data `<table>` has a `<caption>` or an `aria-label`
     * `:tabindex` - no `tabindex` above 0
     * `:idref` - every `for`, `aria-labelledby`, `aria-describedby` and
       `aria-controls` points at an id on the page
@@ -82,6 +84,7 @@ defmodule OpenResultsWeb.A11y do
       img_alt: &img_alt/1,
       svg: &svg/1,
       table_headers: &table_headers/1,
+      th_scope: &th_scope/1,
       table_name: &table_name/1,
       tabindex: &tabindex/1,
       idref: &idref/1,
@@ -148,8 +151,10 @@ defmodule OpenResultsWeb.A11y do
     end
   end
 
+  # The first element a Tab can actually reach: a button inside a `hidden`
+  # banner is in the markup first and still not where the keyboard starts.
   defp skip_link(ctx) do
-    case Enum.find(ctx.elements, &focusable?/1) do
+    case Enum.find(ctx.elements, &(focusable?(&1) and not inside_hidden?(&1))) do
       %{tag: "a", attrs: %{"href" => "#" <> target}} = link when target != "" ->
         cond do
           not Map.has_key?(ctx.ids, target) ->
@@ -205,20 +210,27 @@ defmodule OpenResultsWeb.A11y do
     end
   end
 
-  defp table_headers(ctx) do
-    Enum.flat_map(find(ctx, "table"), fn table ->
-      headers = own(ctx, table, "th")
+  # A table laid out for position rather than data says so with
+  # `role="presentation"`, and is then not a table to a screen reader at all.
+  defp data_tables(ctx),
+    do: Enum.reject(find(ctx, "table"), &(&1.attrs["role"] in ["presentation", "none"]))
 
-      if headers == [] do
-        ["#{describe(table)} has no header cells"]
-      else
-        for th <- headers, message = scope_problem(th), message != nil, do: message
-      end
-    end)
+  defp table_headers(ctx) do
+    for table <- data_tables(ctx), own(ctx, table, "th") == [] do
+      "#{describe(table)} has no header cells"
+    end
+  end
+
+  defp th_scope(ctx) do
+    for table <- data_tables(ctx),
+        th <- own(ctx, table, "th"),
+        message = scope_problem(th),
+        message != nil,
+        do: message
   end
 
   defp table_name(ctx) do
-    for table <- find(ctx, "table"),
+    for table <- data_tables(ctx),
         blank?(table.attrs["aria-label"]),
         blank?(labelledby(table, ctx)),
         not Enum.any?(own(ctx, table, "caption"), &(not blank?(text(&1.children)))) do
@@ -408,6 +420,11 @@ defmodule OpenResultsWeb.A11y do
   end
 
   defp inside_svg?(el), do: Enum.any?(el.ancestors, &(&1.tag == "svg"))
+
+  defp inside_hidden?(el),
+    do:
+      Map.has_key?(el.attrs, "hidden") or
+        Enum.any?(el.ancestors, &Map.has_key?(&1.attrs, "hidden"))
 
   defp scope_problem(th) do
     section = Enum.find_value(th.ancestors, &(&1.tag in ~w(thead tbody tfoot) && &1.tag))

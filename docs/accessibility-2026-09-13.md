@@ -321,12 +321,16 @@ readable without colour. **Size: small.**
 
 - `test/support/a11y.ex` - `OpenResultsWeb.A11y.audit/2`, the invariants: `lang`
   (and that it matches the locale asked for), a `<title>`, one `<h1>`, heading
-  order, one `<main>`, a skip link first, a name for every form control, link,
-  button and `<summary>`, `alt` on every `<img>`, SVGs hidden or named, header
-  cells with `scope` in every table, a caption or name on every table, no
-  positive `tabindex`, no dangling id references, no duplicate ids, dialogs
-  named and modal, nothing focusable under `aria-hidden`, no live region
-  rendered `hidden`.
+  order, one `<main>`, a skip link as the first thing a Tab reaches, a name for
+  every form control, link, button and `<summary>`, `alt` on every `<img>`,
+  SVGs hidden or named, header cells in every data table (`:table_headers`),
+  `scope` on every header cell (`:th_scope`), a caption or name on every data
+  table (a `role="presentation"` table is exempt from all three), no positive
+  `tabindex`, no dangling id references, no duplicate ids, dialogs named and
+  modal, nothing focusable under `aria-hidden`, no live region rendered
+  `hidden`. The same module, renamed, audits OpenPairings; the two copies were
+  brought level after that pass, which split `:th_scope` out and taught
+  `:skip_link` to look past controls inside a `hidden` banner.
 - `test/openresults_web/accessibility_test.exs` (8 tests) - every public page
   walked from the router in every state that changes its markup, both forms
   sent back refused (in three languages for the entry form), the rate-limit

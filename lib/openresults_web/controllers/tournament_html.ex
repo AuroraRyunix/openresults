@@ -1339,7 +1339,8 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   def said_as(assigns) do
     ~H"""
-    <span aria-hidden="true">{render_slot(@inner_block)}</span><span class="visually-hidden">{@words}</span>
+    <span aria-hidden="true">{render_slot(@inner_block)}</span>
+    <span class="visually-hidden">{@words}</span>
     """
   end
 
