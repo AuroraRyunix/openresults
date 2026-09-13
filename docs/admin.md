@@ -146,9 +146,35 @@ variable must be updated.
 
 ## 5. The three variables
 
-As a systemd drop-in, not in `openresults.service` itself: the deploy
-rewrites the unit on every run and would wipe hand-added lines (see
-"Secrets" in [`deployment.md`](deployment.md)).
+**On the zerotwo server, put them in the deploy script's `.env`**
+(`openpairings-deploy/.env`) and deploy. The script writes them into the
+`openresults` unit on every run, so nothing is hand-edited on the host and no
+deploy can lose them:
+
+```ini
+OPENRESULTS_ADMIN_ACCESS_TEAM_DOMAIN=<team-name>.cloudflareaccess.com
+OPENRESULTS_ADMIN_ACCESS_AUD=<the AUD tag>
+OPENRESULTS_ADMIN_EMAILS=first.admin@example.org,second.admin@example.org
+```
+
+The same `.env` also carries public publishing itself, if you are switching it
+on (see [`public-publishing.md`](public-publishing.md), "Before switching it
+on"):
+
+```ini
+OPENRESULTS_PUBLIC_PUBLISHING=enabled
+OPENRESULTS_OPERATOR_NAME=ZeroTwo
+# optional, linked from OpenPairings' consent dialog:
+OPENRESULTS_TERMS_URL=https://openresults.zerotwo.cloud/terms
+```
+
+The deploy warns, loudly, about the two half-states: only some of the three
+admin variables set (the panel stays off), and public publishing enabled
+without the admin panel (safe - registration starts closed - but nobody can
+open it or moderate).
+
+**On a host that does not use that deploy script**, use a systemd drop-in
+instead - not `openresults.service` itself, which a deploy rewrites:
 
 ```ini
 # /etc/systemd/system/openresults.service.d/admin.conf
