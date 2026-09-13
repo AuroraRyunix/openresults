@@ -27,6 +27,35 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **A restore no longer undoes moderation.** The restore drill restored a
+  backup after the operator had kept working, and the restored site had
+  undone all of it: a revoked installation minted a slug again, closed
+  registration issued a key, a blocked range registered, a tournament deleted
+  for personal data was back with its history, and a tournament its arbiter
+  withdrew from OpenPairings was online again with its entry form open. Every
+  action that makes the site safer - deleting a tournament (the admin panel's,
+  and an owner's or the operator's `DELETE /api/tournaments/:slug`), hiding,
+  revoking, suspending, blocking an address, closing registration, pausing
+  publishing - now also appends a line, once it has committed, to a journal
+  kept beside the database and outside it (`openresults-moderation.jsonl` next
+  to `openresults.db`), which no backup contains and no restore touches. At
+  every start, before the site serves anything, each journalled action the
+  database does not know about is applied again, with an action log row from
+  `restore-replay`. **Only in that direction**: approving, unhiding,
+  unsuspending, unblocking, opening registration and unpausing are never
+  journalled, so after a restore they stay as the backup had them and are
+  redone deliberately. A tournament published again under a deleted address
+  after the delete, and anything the operator reverses after the restore, are
+  left alone. The journal is trimmed to what a remaining backup could still
+  bring back. It holds slugs, installation ids, switches, and for a block the
+  range and its expiry - not the block's reason.
+- [Fix] **A server run refuses to start on a database that is behind the code,
+  instead of answering some pages and 500ing the rest.** The drill's backup
+  from before 2026-09-12 booted under `mix phx.server`, which does not
+  migrate, and failed every tournament page, `GET /api/server` and every
+  publish. A production run that does not migrate now checks first and, with
+  migrations pending, says how many, which, and to run `mix ecto.migrate`, and
+  stops - as OpenPairings does. A release still migrates at boot.
 - [Security] **Backups no longer hold client addresses.** Where each
   installation registered from and was last seen from, and where each report
   came from, are nulled in the copy before it is written - the rows stay,

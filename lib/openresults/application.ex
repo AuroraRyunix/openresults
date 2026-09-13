@@ -5,6 +5,8 @@ defmodule OpenResults.Application do
 
   use Application
 
+  require Logger
+
   @impl true
   def start(_type, _args) do
     # Before anything else starts: a production node with the admin panel's
@@ -13,6 +15,12 @@ defmodule OpenResults.Application do
     # `OpenResultsWeb.AdminAccess.Config.check_boot!/0`.
     OpenResultsWeb.AdminAccess.Config.check_boot!()
     OpenResultsWeb.AdminAccess.Config.log_boot_state()
+
+    # A run that does not migrate (`mix phx.server`, which is how the service
+    # runs) refuses to start on a database that is behind the code - see
+    # `refuse_pending_migrations!/0`.
+    if skip_migrations?() and Application.get_env(:openresults, :refuse_pending_migrations, false),
+      do: refuse_pending_migrations!()
 
     # The value every page's ETag is keyed with. Drawn here rather than
     # lazily, so it is one value for the whole node from before the first
@@ -57,6 +65,13 @@ defmodule OpenResults.Application do
       # and does every fetch itself, so a burst of admin requests with an
       # unknown key waits on one fetch instead of each making its own.
       OpenResultsWeb.AdminAccess.KeyCache,
+      # After the migrations and the caches it clears, before the endpoint,
+      # and it finishes before anything after it starts: a restored backup can
+      # bring back a revoked key, closed registration, a lifted block or a
+      # withdrawn tournament, and the first request after the boot would
+      # already be served by it. This applies again what the journal kept -
+      # see `OpenResults.ModerationJournal`.
+      OpenResults.ModerationJournal,
       # Start to serve requests, typically the last entry
       OpenResults.Backup.Scheduler,
       # Forgets old client addresses, releases minted slugs that never
@@ -82,5 +97,69 @@ defmodule OpenResults.Application do
   defp skip_migrations?() do
     # By default, sqlite migrations are run when using a release
     System.get_env("RELEASE_NAME") == nil
+  end
+
+  # The service is not a release: it runs `mix phx.server` with MIX_ENV=prod,
+  # so the Migrator above skips, and the deploy migrates as its own step. The
+  # restore drill of 2026-09-13 restored a backup from before 2026-09-12 by the
+  # old instructions: the app booted, answered `/changelog`, and 500'd every
+  # tournament page, `GET /api/server` and every publish. The moderation
+  # journal's replay reads those tables at boot too, so on such a database the
+  # boot would now fail anyway - with an error about a missing table instead
+  # of the reason. So a run that does not migrate checks first and says what
+  # to do. Configured in `config/prod.exs`, as OpenPairings does it: dev has
+  # Phoenix's own pending-migrations page, tests migrate in their alias.
+  # Migrations recorded that this code has no file for (a rollback) are logged,
+  # not refused.
+  defp refuse_pending_migrations! do
+    for repo <- Application.fetch_env!(:openresults, :ecto_repos) do
+      {:ok, migrations, _apps} =
+        Ecto.Migrator.with_repo(repo, &Ecto.Migrator.migrations/1, pool_size: 1)
+
+      case migration_refusal(migrations) do
+        :ok ->
+          :ok
+
+        {:error, message} ->
+          Logger.error(message)
+          raise message
+      end
+    end
+  end
+
+  @doc false
+  # The decision, apart from the database - for `OpenResults.ApplicationTest`.
+  def migration_refusal(migrations) do
+    unknown = for {:up, version, "** FILE NOT FOUND **"} <- migrations, do: version
+
+    if unknown != [] do
+      Logger.warning(
+        "The database records #{length(unknown)} migration(s) this code has no file for " <>
+          "(#{Enum.join(unknown, ", ")}): it is newer than the code."
+      )
+    end
+
+    case for({:down, version, name} <- migrations, do: "#{version}_#{name}") do
+      [] ->
+        :ok
+
+      pending ->
+        {:error,
+         """
+         The database is #{length(pending)} migration(s) behind this code, and OpenResults \
+         will not start on it.
+
+         This run does not migrate at boot (it is `mix phx.server`, not a release), and \
+         serving a database that is behind the code answers some pages and 500s the rest - \
+         which is what a backup older than the code did in the 2026-09-13 restore drill.
+
+         Migrate it first, as the service account and with the service's environment \
+         (docs/deployment.md, "Restoring a backup"):
+
+             mix ecto.migrate
+
+         then start again. Pending: #{Enum.join(pending, ", ")}
+         """}
+    end
   end
 end

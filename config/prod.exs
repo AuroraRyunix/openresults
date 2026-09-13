@@ -23,5 +23,11 @@ config :openresults, OpenResultsWeb.Endpoint,
 # Do not print debug messages in production
 config :logger, level: :info
 
+# A production run that does not migrate at boot - `mix phx.server`, which is
+# how the service runs - refuses to start on a database that is behind the
+# code rather than serving pages that fail. A release migrates at boot and
+# never gets as far as asking. See `OpenResults.Application`.
+config :openresults, :refuse_pending_migrations, true
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

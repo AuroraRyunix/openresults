@@ -449,6 +449,17 @@ tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
 - Every mutating function writes the action log: who, what, target, when.
 - Break-glass uses are written to the same log, with the actor recorded as
   break-glass.
+- **(settled in the restore fixes, 2026-09-13)** The actions that make the site
+  safer - `delete` (and an owner's or the operator's
+  `DELETE /api/tournaments/:slug`), `hide`, `revoke`, `suspend`,
+  `block_address`, closing `registration_open` and setting
+  `public_publishing_paused` - are also appended, after they commit, to a
+  journal file beside the database (`OpenResults.ModerationJournal`), which no
+  backup contains. At boot every journalled action the restored database does
+  not know about is applied again, only in that direction: approve, unhide,
+  unsuspend, unblock, opening registration and unpausing are never journalled
+  and never replayed. Each re-applied action writes one action log row with
+  the actor `restore-replay`.
 
 **(settled in the build)** What the panel gets back:
 
@@ -482,7 +493,10 @@ tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
   `installation`. Installation structs from `list_installations` carry
   `tournament_count` (pending plus listed); `get_installation` preloads
   `tournaments`. An installation's `id` is its `in_...` identifier.
-- Action log rows: `actor` (an email, `break-glass` or `retention`), `action`
+- Action log rows: `actor` (an email, `break-glass`, `retention`, or
+  `restore-replay` **(settled in the restore fixes, 2026-09-13)** - an action a
+  restored backup had undone, applied again at boot from the moderation
+  journal, with the original action's time in `details.journal_at`), `action`
   (`put_setting`, `approve`, `hide`, `unhide`, `delete`, `transfer`,
   `transfer_all` **(settled in the build)**, `suspend`, `unsuspend`, `revoke`,
   `resolve_report`, `block_address`,

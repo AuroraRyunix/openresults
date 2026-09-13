@@ -79,6 +79,12 @@ config :phoenix,
 
 config :openresults, :backup_interval, :disabled
 
+# No moderation journal (`OpenResults.ModerationJournal`): beside the test
+# database it would collect a line from every moderation test, run after run,
+# and the boot replay would apply them to whatever the next run left in the
+# database. Its own tests point it at a file of their own.
+config :openresults, :moderation_journal, false
+
 # On in test, so the suite exercises the feature; the tests that prove the
 # environment gate switch it off themselves (and are not async).
 config :openresults, :public_publishing, true

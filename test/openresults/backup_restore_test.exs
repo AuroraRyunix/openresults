@@ -156,6 +156,46 @@ defmodule OpenResults.BackupRestoreTest do
       end
     end
 
+    test "a backup one migration older than the code is refused at boot, not served", %{dir: dir} do
+      src = full_source(dir)
+      [[newest]] = query(src, "SELECT max(version) FROM schema_migrations")
+      {:ok, conn} = Exqlite.Sqlite3.open(src)
+
+      :ok =
+        Exqlite.Sqlite3.execute(conn, "DELETE FROM schema_migrations WHERE version = #{newest}")
+
+      :ok = Exqlite.Sqlite3.close(conn)
+
+      {:ok, path} = Backup.create(dir: dir, source: src)
+      {:ok, restored} = Backup.restore(path)
+
+      repo =
+        start_supervised!(%{
+          id: :behind_repo,
+          start:
+            {OpenResults.Repo, :start_link,
+             [[name: nil, database: restored, pool: DBConnection.ConnectionPool, pool_size: 1]]}
+        })
+
+      previous = OpenResults.Repo.put_dynamic_repo(repo)
+
+      try do
+        # The question a `mix phx.server` boot in production now asks first.
+        migrations = Ecto.Migrator.migrations(OpenResults.Repo)
+        assert {:error, message} = OpenResults.Application.migration_refusal(migrations)
+        assert message =~ "1 migration(s) behind"
+        assert message =~ to_string(newest)
+        assert message =~ "mix ecto.migrate"
+      after
+        OpenResults.Repo.put_dynamic_repo(previous)
+      end
+
+      assert Config.Reader.read!("config/prod.exs")[:openresults][:refuse_pending_migrations] ==
+               true
+
+      refute Application.get_env(:openresults, :refuse_pending_migrations, false)
+    end
+
     test "no client address is in the backup, and nothing else is lost with them", %{dir: dir} do
       src = full_source(dir)
 

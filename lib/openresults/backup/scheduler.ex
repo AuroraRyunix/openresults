@@ -74,6 +74,9 @@ defmodule OpenResults.Backup.Scheduler do
     case Backup.create() do
       {:ok, path} ->
         pruned = Backup.prune()
+        # What no remaining backup can bring back is no longer worth keeping in
+        # the moderation journal - see `OpenResults.ModerationJournal.trim/1`.
+        OpenResults.ModerationJournal.trim()
 
         Logger.info(
           "Backup written: #{Path.basename(path)}" <>

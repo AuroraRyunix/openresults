@@ -16,12 +16,21 @@ defmodule OpenResults.Moderation do
 
   Every function that changes something writes one `OpenResults.Moderation.Action`
   in the same transaction as the change, so there is no change without its
-  entry and no entry for a change that rolled back. Two entries are written
-  from outside this module's functions, each with its own actor:
+  entry and no entry for a change that rolled back. Three kinds of entry are
+  written from outside this module's functions, each with its own actor:
 
     * `break-glass` - `OpenResults.TournamentKeys`, when the operator token was
       presented where a tournament key belongs;
-    * `retention` - `OpenResults.Retention`, the daily job.
+    * `retention` - `OpenResults.Retention`, the daily job;
+    * `restore-replay` - `OpenResults.ModerationJournal`, at boot, for an
+      action a restored backup had undone and that was applied again.
+
+  ## The moderation journal
+
+  The actions that make the site safer - `delete`, `hide`, `revoke`,
+  `suspend`, `block_address`, closing registration, pausing publishing - also
+  append a line to `OpenResults.ModerationJournal` once they have committed:
+  a file outside the database, which a restore cannot take back.
 
   ## Return shapes
 
@@ -49,6 +58,7 @@ defmodule OpenResults.Moderation do
   alias OpenResults.Installations
   alias OpenResults.Installations.Installation
   alias OpenResults.Moderation.Action
+  alias OpenResults.ModerationJournal
   alias OpenResults.QueryFilters
   alias OpenResults.Registrations.Registration
   alias OpenResults.Repo
@@ -64,6 +74,7 @@ defmodule OpenResults.Moderation do
 
   @break_glass "break-glass"
   @retention "retention"
+  @restore_replay "restore-replay"
 
   # For `counts/0`. Spelled out rather than converted, so no atom is ever made
   # from a stored string.
@@ -94,7 +105,13 @@ defmodule OpenResults.Moderation do
       true ->
         transaction(fn ->
           {:ok, settings} = Settings.put(key, value, email)
-          log!(email, "put_setting", "setting", Atom.to_string(key), %{value: value})
+          action = log!(email, "put_setting", "setting", Atom.to_string(key), %{value: value})
+          {settings, action}
+        end)
+        |> committed(fn {settings, action} ->
+          # Closing registration and pausing publishing only - the journal
+          # never keeps the other direction. See `OpenResults.ModerationJournal`.
+          ModerationJournal.record_setting(key, value, action.inserted_at)
           settings
         end)
     end
@@ -205,12 +222,16 @@ defmodule OpenResults.Moderation do
       transaction(fn ->
         case Tournaments.transition(slug, from_statuses, to) do
           {:ok, tournament} ->
-            log!(email, action, "tournament", slug, %{from: from_statuses, to: to})
-            tournament
+            row = log!(email, action, "tournament", slug, %{from: from_statuses, to: to})
+            {tournament, row}
 
           {:error, reason} ->
             Repo.rollback(reason)
         end
+      end)
+      |> committed(fn {tournament, row} ->
+        if action == "hide", do: ModerationJournal.record_hide(slug, row.inserted_at)
+        tournament
       end)
 
     # Once more after the commit, so the read path holds what was committed
@@ -229,7 +250,11 @@ defmodule OpenResults.Moderation do
 
     transaction(fn ->
       counts = Takedown.purge(slug)
-      log!(email, "delete", "tournament", slug, counts)
+      row = log!(email, "delete", "tournament", slug, counts)
+      {counts, row}
+    end)
+    |> committed(fn {counts, row} ->
+      ModerationJournal.record_delete(slug, "admin", row.inserted_at)
       counts
     end)
     |> tap(fn _ -> Tournaments.forget(slug) end)
@@ -389,12 +414,13 @@ defmodule OpenResults.Moderation do
           {:ok, installation} ->
             hidden = if hide?, do: Tournaments.hide_all_for(installation.id), else: []
 
-            log!(email, "revoke", "installation", installation.id, %{
-              hide_tournaments: hide?,
-              hidden: hidden
-            })
+            row =
+              log!(email, "revoke", "installation", installation.id, %{
+                hide_tournaments: hide?,
+                hidden: hidden
+              })
 
-            {installation, hidden}
+            {installation, hidden, row}
 
           {:error, reason} ->
             Repo.rollback(reason)
@@ -402,7 +428,8 @@ defmodule OpenResults.Moderation do
       end)
 
     case result do
-      {:ok, {installation, hidden}} ->
+      {:ok, {installation, hidden, row}} ->
+        ModerationJournal.record_revoke(installation.id, hide?, row.inserted_at)
         Enum.each(hidden, &Tournaments.forget/1)
         {:ok, Installations.get(installation.id)}
 
@@ -417,12 +444,20 @@ defmodule OpenResults.Moderation do
     transaction(fn ->
       case Installations.transition(to_string(id), from_statuses, to) do
         {:ok, installation} ->
-          log!(email, action, "installation", installation.id, %{from: from_statuses, to: to})
-          installation
+          row =
+            log!(email, action, "installation", installation.id, %{from: from_statuses, to: to})
+
+          {installation, row}
 
         {:error, reason} ->
           Repo.rollback(reason)
       end
+    end)
+    |> committed(fn {installation, row} ->
+      if action == "suspend",
+        do: ModerationJournal.record_suspend(installation.id, row.inserted_at)
+
+      installation
     end)
   end
 
@@ -479,17 +514,22 @@ defmodule OpenResults.Moderation do
     transaction(fn ->
       case AddressBlocks.create(ip_or_cidr, expires_at, reason, email) do
         {:ok, block} ->
-          log!(email, "block_address", "address_block", Integer.to_string(block.id), %{
-            cidr: block.cidr,
-            expires_at: DateTime.to_iso8601(block.expires_at),
-            reason: block.reason
-          })
+          row =
+            log!(email, "block_address", "address_block", Integer.to_string(block.id), %{
+              cidr: block.cidr,
+              expires_at: DateTime.to_iso8601(block.expires_at),
+              reason: block.reason
+            })
 
-          block
+          {block, row}
 
         {:error, changeset} ->
           Repo.rollback(changeset)
       end
+    end)
+    |> committed(fn {block, row} ->
+      ModerationJournal.record_block(block.cidr, block.expires_at, row.inserted_at)
+      block
     end)
   end
 
@@ -743,6 +783,18 @@ defmodule OpenResults.Moderation do
     :ok
   end
 
+  @doc false
+  # For `OpenResults.ModerationJournal`: an action a restore had undone, applied
+  # again at boot. Written inside the replay's own transaction, so there is no
+  # re-applied action without its row - and the row is what the next boot
+  # reads to know it was.
+  @spec log_replay(String.t(), String.t(), String.t(), map()) :: Action.t()
+  def log_replay(action, target_type, target, details),
+    do: log!(@restore_replay, action, target_type, target, details)
+
+  @doc false
+  def restore_replay_actor, do: @restore_replay
+
   defp log!(actor, action, target_type, target, details) do
     Repo.insert!(%Action{
       actor: actor,
@@ -770,6 +822,11 @@ defmodule OpenResults.Moderation do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  # After the commit and only after it: the journal must never hold an action
+  # that rolled back, or a restore would apply one that never happened.
+  defp committed({:ok, value}, fun), do: {:ok, fun.(value)}
+  defp committed(error, _fun), do: error
 
   # Filters arrive from a panel, so they may be a keyword list or a map, with
   # atom or string keys. Only the known keys survive, as atoms - never

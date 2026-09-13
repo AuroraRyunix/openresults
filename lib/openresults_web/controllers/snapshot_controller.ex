@@ -46,6 +46,7 @@ defmodule OpenResultsWeb.SnapshotController do
 
   use OpenResultsWeb, :controller
 
+  alias OpenResults.ModerationJournal
   alias OpenResults.Snapshots
   alias OpenResults.Takedown
   alias OpenResults.TournamentKeys
@@ -120,7 +121,20 @@ defmodule OpenResultsWeb.SnapshotController do
   def delete(conn, %{"slug" => slug}) do
     case TournamentKeys.authorize_delete(slug, tournament_key(conn), break_glass: operator?(conn)) do
       :ok ->
-        json(conn, %{status: "deleted", slug: slug, deleted: Takedown.purge(slug)})
+        deleted = Takedown.purge(slug)
+
+        # The arbiter's withdrawal, written outside the database once it has
+        # committed, so a restored backup cannot put the tournament back
+        # online: that arbiter's machine threw its key away when this
+        # succeeded, and could not withdraw it a second time. See
+        # `OpenResults.ModerationJournal`.
+        ModerationJournal.record_delete(
+          slug,
+          if(operator?(conn), do: "operator", else: "owner"),
+          DateTime.utc_now()
+        )
+
+        json(conn, %{status: "deleted", slug: slug, deleted: deleted})
 
       {:error, reason} ->
         forbid(conn, reason)
