@@ -75,6 +75,8 @@ defmodule OpenResults.Moderation do
   @break_glass "break-glass"
   @retention "retention"
   @restore_replay "restore-replay"
+  @tournament_key "tournament-key"
+  @operator_token "operator-token"
 
   # For `counts/0`. Spelled out rather than converted, so no atom is ever made
   # from a stored string.
@@ -739,6 +741,9 @@ defmodule OpenResults.Moderation do
   @doc """
   The action log, newest first. Filters: `actor`, `action`, `target_type`,
   `target`, `limit` (default 100), `offset`.
+
+  `actor` matches any part of the actor - an `installation:<id>` actor is not
+  something anyone can type whole - and the other three match exactly.
   """
   @spec list_actions(map() | keyword()) :: [Action.t()]
   def list_actions(filters \\ %{}) do
@@ -748,9 +753,16 @@ defmodule OpenResults.Moderation do
       |> Map.put_new(:limit, 100)
 
     Enum.reduce([:actor, :action, :target_type, :target], from(a in Action), fn key, query ->
-      case Map.get(filters, key) do
-        nil -> query
-        value -> where(query, [a], field(a, ^key) == ^to_string(value))
+      case {key, Map.get(filters, key)} do
+        {_key, nil} ->
+          query
+
+        {:actor, value} ->
+          pattern = QueryFilters.like_pattern(to_string(value))
+          where(query, [a], fragment("? LIKE ? ESCAPE '\\'", a.actor, ^pattern))
+
+        {key, value} ->
+          where(query, [a], field(a, ^key) == ^to_string(value))
       end
     end)
     |> order_by([a], desc: a.inserted_at, desc: a.id)
@@ -773,6 +785,70 @@ defmodule OpenResults.Moderation do
       )
 
       :ok
+  end
+
+  @doc false
+  # For `OpenResultsWeb.SnapshotController`: an API delete succeeding for a
+  # caller other than the admin panel and other than break-glass, which logs
+  # itself and must never be logged twice. `counts` is `Takedown.purge/1`'s
+  # map - integers, nothing personal. Never raises, for the same reason as
+  # `log_break_glass/3`: the delete has already happened.
+  @spec log_api_delete(
+          {:installation, String.t()} | :tournament_key | :operator_token,
+          String.t(),
+          map()
+        ) :: :ok
+  def log_api_delete(actor, slug, counts) do
+    log!(api_actor(actor), "delete", "tournament", slug, counts)
+    :ok
+  rescue
+    error ->
+      Logger.error("could not write the API delete action log entry: #{Exception.message(error)}")
+
+      :ok
+  end
+
+  defp api_actor({:installation, id}), do: "installation:#{id}"
+  defp api_actor(:tournament_key), do: @tournament_key
+  defp api_actor(:operator_token), do: @operator_token
+
+  @doc false
+  # For `OpenResults.Retention`: forgets the address range in `block_address`
+  # and `unblock` entries once the block has been over for `days`. A block
+  # ended at its `expires_at`, or - lifted early - at the `unblock` entry's own
+  # time. The rest of the entry stays: that a block happened, when, and why.
+  @spec forget_expired_block_addresses(DateTime.t(), pos_integer()) :: non_neg_integer()
+  def forget_expired_block_addresses(%DateTime{} = now, days) when is_integer(days) do
+    from(a in Action,
+      where:
+        a.target_type == "address_block" and a.action in ["block_address", "unblock"] and
+          fragment("json_extract(?, '$.cidr') IS NOT NULL", a.details)
+    )
+    |> Repo.all()
+    |> Enum.filter(fn action ->
+      case block_ended_at(action) do
+        nil -> false
+        ended -> DateTime.compare(now, DateTime.add(ended, days * 86_400, :second)) != :lt
+      end
+    end)
+    |> Enum.reduce(0, fn action, count ->
+      action
+      |> Ecto.Changeset.change(details: Map.put(action.details, "cidr", nil))
+      |> Repo.update!()
+
+      count + 1
+    end)
+  end
+
+  defp block_ended_at(%Action{action: "unblock", inserted_at: at}), do: at
+
+  defp block_ended_at(%Action{action: "block_address", details: details}) do
+    with at when is_binary(at) <- details["expires_at"],
+         {:ok, ended, _offset} <- DateTime.from_iso8601(at) do
+      ended
+    else
+      _unparseable -> nil
+    end
   end
 
   @doc false

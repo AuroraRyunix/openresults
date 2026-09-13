@@ -51,7 +51,10 @@ defmodule OpenResults.Retention.Scheduler do
     Logger.info(
       "Retention: #{result.addresses_nulled} address(es) forgotten, " <>
         "#{length(result.slugs_released)} unpublished slug(s) released, " <>
-        "#{result.blocks_removed} expired block(s) removed"
+        "#{result.blocks_removed} expired block(s) removed, " <>
+        "#{result.registrations_deleted} registration(s) deleted, " <>
+        "#{result.report_contacts_forgotten} report contact(s) forgotten, " <>
+        "#{result.block_addresses_forgotten} action-log address range(s) forgotten"
     )
   rescue
     error -> Logger.error("Retention FAILED: #{Exception.message(error)}")

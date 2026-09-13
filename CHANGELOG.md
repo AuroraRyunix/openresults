@@ -27,6 +27,31 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **An arbiter's own delete shows in the action log.** Deleting a
+  tournament through `DELETE /api/tournaments/:slug` was journalled but never
+  reached the admin panel's action log, which only recorded the panel's own
+  deletes. It now writes a `delete` row with the purge counts, and the actor
+  says which credential did it: `installation:<id>`, `tournament-key` (the
+  tournament's own key), or `operator-token` (a tournament never claimed).
+  Break-glass is still logged once, as `break-glass`, and not a second time.
+- [Change] **The action log's "Who" filter matches part of the actor.**
+  Typing `installation:` or the start of an email now finds those rows; the
+  other filters still match exactly.
+- [Feature] **Entry queues are deleted once the tournament is over.** Thirty
+  days after a tournament's `end_date` - or, with none, after its last publish,
+  and never while its `start_date` is still ahead - its registrations, email
+  addresses included, are deleted by the daily retention job.
+  `OPENRESULTS_REGISTRATION_RETENTION_DAYS`, default 30.
+- [Feature] **Report contact emails are forgotten after resolution.** Ninety
+  days after a report is resolved its contact email is cleared; an open report
+  keeps it. `OPENRESULTS_REPORT_CONTACT_RETENTION_DAYS`, default 90.
+- [Feature] **The action log forgets blocked ranges.** Thirty days after an
+  address block ended, its `block_address` and `unblock` rows lose the range
+  and keep everything else. `OPENRESULTS_BLOCK_ADDRESS_RETENTION_DAYS`,
+  default 30. All three variables refuse to boot on anything but a whole number
+  of at least 1. `docs/privacy-retention.md` sets out every piece of personal
+  data the server keeps and the longest it can survive, backups included.
+
 - [Fix] **A restore no longer undoes moderation.** The restore drill restored a
   backup after the operator had kept working, and the restored site had
   undone all of it: a revoked installation minted a slug again, closed

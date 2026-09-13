@@ -306,4 +306,79 @@ defmodule OpenResultsWeb.SnapshotControllerTest do
       assert %{"error" => "not_found", "slug" => "no-such-open-2026"} = json_response(conn, 404)
     end
   end
+
+  describe "DELETE /api/tournaments/:slug in the action log" do
+    import OpenResults.PublicPublishingFixtures,
+      only: [installation!: 0, mint!: 1, payload: 1, takedown: 3, random_key: 0]
+
+    alias OpenResults.PublicPublishingFixtures, as: Fixtures
+
+    alias OpenResults.Moderation
+    alias OpenResults.Moderation.Action
+
+    @describetag :capture_log
+
+    defp logged(slug), do: Moderation.list_actions(target_type: "tournament", target: slug)
+
+    test "an installation deleting its own tournament is logged as that installation" do
+      {installation, key} = installation!()
+      slug = mint!(installation)
+      tournament_key = random_key()
+      assert json_response(Fixtures.publish(payload(slug), key, tournament_key), 200)
+
+      assert %{"deleted" => deleted} = json_response(takedown(slug, key, tournament_key), 200)
+
+      actor = "installation:#{installation.id}"
+
+      assert [%Action{actor: ^actor, action: "delete", details: ^deleted}] = logged(slug)
+    end
+
+    test "a delete authorised by the tournament key is logged as tournament-key" do
+      slug = "keyed-#{System.unique_integer([:positive])}"
+      tournament_key = random_key()
+      assert json_response(Fixtures.publish(payload(slug), @token, tournament_key), 200)
+
+      assert json_response(takedown(slug, @token, tournament_key), 200)
+
+      assert [%Action{actor: "tournament-key", action: "delete", target_type: "tournament"}] =
+               logged(slug)
+    end
+
+    test "a delete of a never-claimed tournament is logged as operator-token, and journalled as before" do
+      journal =
+        System.tmp_dir!()
+        |> Path.join("or-journal-#{System.unique_integer([:positive])}.jsonl")
+        |> Path.expand()
+
+      previous = Application.get_env(:openresults, :moderation_journal)
+      Application.put_env(:openresults, :moderation_journal, journal)
+
+      on_exit(fn ->
+        Application.put_env(:openresults, :moderation_journal, previous)
+        File.rm(journal)
+      end)
+
+      slug = "unclaimed-#{System.unique_integer([:positive])}"
+      assert json_response(Fixtures.publish(payload(slug), @token, nil), 200)
+
+      assert json_response(takedown(slug, @token, nil), 200)
+
+      assert [%Action{actor: "operator-token", action: "delete"}] = logged(slug)
+
+      assert [%{"action" => "delete", "target" => ^slug, "by" => "operator"}] =
+               journal
+               |> File.read!()
+               |> String.split("\n", trim: true)
+               |> Enum.map(&Jason.decode!/1)
+    end
+
+    test "break-glass is logged once, by TournamentKeys, and not again as a delete" do
+      slug = "glass-#{System.unique_integer([:positive])}"
+      assert json_response(Fixtures.publish(payload(slug), @token, random_key()), 200)
+
+      assert json_response(takedown(slug, @token, @token), 200)
+
+      assert [%Action{actor: "break-glass", action: "break_glass_delete"}] = logged(slug)
+    end
+  end
 end

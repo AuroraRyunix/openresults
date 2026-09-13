@@ -75,6 +75,25 @@ if keep = System.get_env("BACKUP_RETENTION") do
   end
 end
 
+# How long `OpenResults.Retention` keeps personal data that has served its
+# purpose - see docs/privacy-retention.md. DAYS, a whole number of at least one,
+# or the app does not start, like BACKUP_RETENTION above: 0 would delete an
+# entry queue the moment its tournament ended.
+for {variable, key} <- [
+      {"OPENRESULTS_REGISTRATION_RETENTION_DAYS", :registration_retention_days},
+      {"OPENRESULTS_REPORT_CONTACT_RETENTION_DAYS", :report_contact_retention_days},
+      {"OPENRESULTS_BLOCK_ADDRESS_RETENTION_DAYS", :block_address_retention_days}
+    ],
+    value = System.get_env(variable) do
+  case Integer.parse(value) do
+    {days, ""} when days >= 1 ->
+      config :openresults, key, days
+
+    _ ->
+      raise "#{variable} is a number of days, a whole number of at least 1, got: #{inspect(value)}"
+  end
+end
+
 # Who may put these pages in an iframe - a CSP `frame-ancestors` source list.
 # Default `*`: this site has no login and no session, so a framing page gains
 # nothing it could not get by fetching the same URL itself, and a club showing

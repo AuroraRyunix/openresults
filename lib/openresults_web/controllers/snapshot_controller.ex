@@ -46,6 +46,7 @@ defmodule OpenResultsWeb.SnapshotController do
 
   use OpenResultsWeb, :controller
 
+  alias OpenResults.Moderation
   alias OpenResults.ModerationJournal
   alias OpenResults.Snapshots
   alias OpenResults.Takedown
@@ -120,7 +121,7 @@ defmodule OpenResultsWeb.SnapshotController do
   """
   def delete(conn, %{"slug" => slug}) do
     case TournamentKeys.authorize_delete(slug, tournament_key(conn), break_glass: operator?(conn)) do
-      :ok ->
+      {:ok, form} ->
         deleted = Takedown.purge(slug)
 
         # The arbiter's withdrawal, written outside the database once it has
@@ -134,10 +135,24 @@ defmodule OpenResultsWeb.SnapshotController do
           DateTime.utc_now()
         )
 
+        log_api_delete(conn, form, slug, deleted)
+
         json(conn, %{status: "deleted", slug: slug, deleted: deleted})
 
       {:error, reason} ->
         forbid(conn, reason)
+    end
+  end
+
+  # The action log's record of who deleted. An installation credential names
+  # the installation whatever authorised the key check; break-glass has
+  # already been logged by `OpenResults.TournamentKeys` and must not be twice.
+  defp log_api_delete(conn, form, slug, deleted) do
+    case {installation(conn), form} do
+      {%{id: id}, _form} -> Moderation.log_api_delete({:installation, id}, slug, deleted)
+      {nil, :break_glass} -> :ok
+      {nil, :tournament_key} -> Moderation.log_api_delete(:tournament_key, slug, deleted)
+      {nil, :no_key} -> Moderation.log_api_delete(:operator_token, slug, deleted)
     end
   end
 

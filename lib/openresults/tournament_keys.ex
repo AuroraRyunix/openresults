@@ -130,6 +130,13 @@ defmodule OpenResults.TournamentKeys do
   @type error :: :key_required | :key_mismatch
   @type outcome :: :ok | {:error, error()}
 
+  @typedoc """
+  What authorised a delete: the tournament's own key, nothing beyond the
+  caller's credential (the slug was never claimed), or break-glass - which
+  this module has already logged, so a caller must never log it again.
+  """
+  @type form :: :tournament_key | :no_key | :break_glass
+
   @doc """
   May this request publish to `slug`?
 
@@ -144,7 +151,7 @@ defmodule OpenResults.TournamentKeys do
   """
   @spec authorize_publish(String.t(), String.t() | nil, keyword()) :: outcome()
   def authorize_publish(slug, presented, opts \\ []),
-    do: authorize(slug, presented, :publish, opts)
+    do: slug |> authorize(presented, :publish, opts) |> plain()
 
   @doc """
   May this request delete `slug`?
@@ -159,8 +166,16 @@ defmodule OpenResults.TournamentKeys do
   published before keys existed, holding the player names and email addresses
   this whole feature is about - could never be taken down at all, which is the
   hole rather than the fix.
+
+  Unlike its two siblings it says HOW the delete was authorised, as
+  `{:ok, form}`: `:tournament_key` when the real per-tournament key matched,
+  `:no_key` when the slug was never claimed and nothing but the caller's own
+  credential authorised it, and `:break_glass` when the operator token stood
+  in for the key - already written to the moderation action log here, so the
+  caller must not log it a second time.
   """
-  @spec authorize_delete(String.t(), String.t() | nil, keyword()) :: outcome()
+  @spec authorize_delete(String.t(), String.t() | nil, keyword()) ::
+          {:ok, form()} | {:error, error()}
   def authorize_delete(slug, presented, opts \\ []),
     do: authorize(slug, presented, :delete, opts)
 
@@ -178,7 +193,8 @@ defmodule OpenResults.TournamentKeys do
   would strand the queue rather than protect it.
   """
   @spec authorize_read(String.t(), String.t() | nil, keyword()) :: outcome()
-  def authorize_read(slug, presented, opts \\ []), do: authorize(slug, presented, :read, opts)
+  def authorize_read(slug, presented, opts \\ []),
+    do: slug |> authorize(presented, :read, opts) |> plain()
 
   @doc """
   Has `slug` been claimed?
@@ -232,6 +248,10 @@ defmodule OpenResults.TournamentKeys do
 
   def normalize(_absent_or_not_a_string), do: nil
 
+  # Publish and read keep their bare `:ok`; only delete reports the form.
+  defp plain({:ok, _form}), do: :ok
+  defp plain(error), do: error
+
   defp authorize(slug, presented, action, opts) do
     glass? = Keyword.get(opts, :break_glass, true)
 
@@ -239,7 +259,7 @@ defmodule OpenResults.TournamentKeys do
       # Unclaimed and nothing presented: a legacy slug, or a client too old to
       # know about keys. Publishes as it always did, and stays unclaimed.
       {nil, nil} ->
-        :ok
+        {:ok, :no_key}
 
       {nil, key} ->
         unclaimed(slug, key, action, glass?)
@@ -260,7 +280,7 @@ defmodule OpenResults.TournamentKeys do
       # server-wide token must never end up stored as a tournament key.
       master_token?(key) and glass? ->
         break_glass(slug, action, "slug is not claimed, so nothing was claimed for it")
-        :ok
+        {:ok, :break_glass}
 
       # The same secret from a request that may not use it as one. Refused
       # rather than claimed with: storing it would promote the master secret
@@ -273,7 +293,7 @@ defmodule OpenResults.TournamentKeys do
       # a tournament this machine has never published, which is the opposite
       # of what a read should do.
       action in [:delete, :read] ->
-        :ok
+        {:ok, :no_key}
 
       true ->
         claim(slug, key, glass?)
@@ -301,7 +321,7 @@ defmodule OpenResults.TournamentKeys do
       # Only reachable if the row was deleted between the insert and this
       # read - a takedown landing mid-publish. Nothing is claimed and the
       # publish stands, which is the same outcome as an unclaimed slug.
-      nil -> :ok
+      nil -> {:ok, :no_key}
       claim -> compare(slug, claim, key, :publish, glass?)
     end
   end
@@ -311,11 +331,11 @@ defmodule OpenResults.TournamentKeys do
       # The real key first, so an ordinary publish never trips the break-glass
       # log even in the pathological case where the two secrets are equal.
       Plug.Crypto.secure_compare(stored, hash(key)) ->
-        :ok
+        {:ok, :tournament_key}
 
       glass? and master_token?(key) ->
         break_glass(slug, action, "the tournament key was overridden")
-        :ok
+        {:ok, :break_glass}
 
       true ->
         {:error, :key_mismatch}

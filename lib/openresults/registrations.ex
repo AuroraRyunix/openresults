@@ -29,7 +29,9 @@ defmodule OpenResults.Registrations do
   server has no notion of an entry being handled - that is a fact about the
   arbiter's machine and is kept there, which is why `list_for_tournament/1`
   returns everything every time - so nothing in this table is ever anything
-  but waiting, and `delete_all_for/1` under a takedown is the only way out.
+  but waiting, and there are two ways out: `delete_all_for/1` under a
+  takedown, and `delete_expired/2` once the tournament is over - see
+  `OpenResults.Retention`.
   """
 
   import Ecto.Query, warn: false
@@ -37,6 +39,7 @@ defmodule OpenResults.Registrations do
   alias OpenResults.Envelope
   alias OpenResults.Registrations.Registration
   alias OpenResults.Repo
+  alias OpenResults.Snapshots.Snapshot
 
   @schema_id "openresults/registration"
   @supported_versions [1]
@@ -135,4 +138,67 @@ defmodule OpenResults.Registrations do
 
     count
   end
+
+  @doc """
+  Deletes the registrations of every tournament that has been over for `days`,
+  returning how many rows went.
+
+  Over is judged from the tournament's latest snapshot: its `end_date` when it
+  has a usable one, and otherwise the last time it published - but never for
+  a tournament whose `start_date` is still in the future, which has plainly
+  not happened yet. A tournament that has never published has nothing to
+  judge by and keeps its queue.
+
+  Only ever called from `OpenResults.Retention`.
+  """
+  @spec delete_expired(DateTime.t(), pos_integer()) :: non_neg_integer()
+  def delete_expired(%DateTime{} = now, days) when is_integer(days) do
+    today = DateTime.to_date(now)
+
+    latest =
+      from s in Snapshot,
+        group_by: s.tournament_slug,
+        select: %{slug: s.tournament_slug, id: max(s.id)}
+
+    queued = from r in Registration, distinct: true, select: %{slug: r.tournament_slug}
+
+    from(q in subquery(queued),
+      join: l in subquery(latest),
+      on: l.slug == q.slug,
+      join: s in Snapshot,
+      on: s.id == l.id,
+      select: {
+        q.slug,
+        fragment("json_extract(?, '$.tournament.end_date')", s.payload),
+        fragment("json_extract(?, '$.tournament.start_date')", s.payload),
+        s.received_at
+      }
+    )
+    |> Repo.all()
+    |> Enum.filter(fn {_slug, end_date, start_date, published_at} ->
+      expired?(now, today, days, iso_date(end_date), iso_date(start_date), published_at)
+    end)
+    |> Enum.reduce(0, fn {slug, _end, _start, _published}, count ->
+      count + delete_all_for(slug)
+    end)
+  end
+
+  defp expired?(_now, today, days, %Date{} = end_date, _start_date, _published_at),
+    do: Date.compare(Date.add(end_date, days), today) != :gt
+
+  defp expired?(now, today, days, nil, start_date, published_at) do
+    not_started? = match?(%Date{}, start_date) and Date.compare(start_date, today) == :gt
+
+    not not_started? and
+      DateTime.compare(DateTime.add(published_at, days * 86_400, :second), now) != :gt
+  end
+
+  defp iso_date(value) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> date
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp iso_date(_absent), do: nil
 end

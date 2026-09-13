@@ -115,4 +115,20 @@ defmodule OpenResults.Reports do
 
     count
   end
+
+  @doc """
+  Nulls the contact email of every report RESOLVED before `cutoff`, returning
+  how many changed. An open report keeps its contact however old it is: the
+  operator may still need to answer it.
+  """
+  @spec null_contact_emails_before(DateTime.t()) :: non_neg_integer()
+  def null_contact_emails_before(%DateTime{} = cutoff) do
+    {count, _} =
+      from(r in Report,
+        where: not is_nil(r.contact_email) and r.status == "resolved" and r.resolved_at < ^cutoff
+      )
+      |> Repo.update_all(set: [contact_email: nil])
+
+    count
+  end
 end

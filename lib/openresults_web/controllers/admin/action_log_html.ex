@@ -18,7 +18,7 @@ defmodule OpenResultsWeb.Admin.ActionLogHTML do
           type="search"
           name="actor"
           value={@filters["actor"]}
-          placeholder="an email, break-glass or retention"
+          placeholder="an email, break-glass, retention, installation:, tournament-key or operator-token"
         />
       </label>
       <label>

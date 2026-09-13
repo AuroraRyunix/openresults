@@ -512,11 +512,108 @@ defmodule OpenResults.ModerationTest do
       {:ok, _} = Snapshots.ingest(payload(slug), key: random_key())
 
       ExUnit.CaptureLog.capture_log(fn ->
-        assert :ok = TournamentKeys.authorize_delete(slug, operator_token())
+        assert {:ok, :break_glass} = TournamentKeys.authorize_delete(slug, operator_token())
       end)
 
       assert [%Action{actor: "break-glass", action: "break_glass_delete", target: ^slug}] =
                actions()
+    end
+  end
+
+  describe "log_api_delete/3" do
+    test "writes one delete row per actor form, with the counts as details" do
+      counts = %{snapshots: 2, registrations: 1}
+
+      assert :ok = Moderation.log_api_delete({:installation, "abc-123"}, "t-one", counts)
+      assert :ok = Moderation.log_api_delete(:tournament_key, "t-two", counts)
+      assert :ok = Moderation.log_api_delete(:operator_token, "t-three", counts)
+
+      for {actor, slug} <- [
+            {"installation:abc-123", "t-one"},
+            {"tournament-key", "t-two"},
+            {"operator-token", "t-three"}
+          ] do
+        assert [
+                 %Action{
+                   actor: ^actor,
+                   action: "delete",
+                   target_type: "tournament",
+                   target: ^slug,
+                   details: %{"snapshots" => 2, "registrations" => 1}
+                 }
+               ] = Moderation.list_actions(target: slug)
+      end
+    end
+
+    test "the actor filter matches exactly and by part" do
+      :ok = Moderation.log_api_delete({:installation, "0f3a-uuid-77"}, "t-part", %{})
+      {_installation, slug} = published_by_installation()
+      {:ok, _} = Moderation.approve(slug, @actor)
+
+      assert [%Action{action: "approve"}] = Moderation.list_actions(actor: @actor.email)
+      assert [%Action{action: "approve"}] = Moderation.list_actions(actor: "moderator@")
+      assert [%Action{target: "t-part"}] = Moderation.list_actions(actor: "installation:")
+      assert [%Action{target: "t-part"}] = Moderation.list_actions(actor: "uuid-77")
+      assert Moderation.list_actions(actor: "installation%") == []
+    end
+  end
+
+  describe "forget_expired_block_addresses/2" do
+    @now ~U[2026-09-12 03:00:00.000000Z]
+
+    defp block_row(action, details, inserted_at) do
+      Repo.insert!(%Action{
+        actor: "a@b.c",
+        action: action,
+        target_type: "address_block",
+        target: "1",
+        details: details,
+        inserted_at: inserted_at
+      })
+    end
+
+    test "forgets the range once the block has been over for the window, keeping the rest" do
+      ended_long_ago = DateTime.add(@now, -31 * 86_400) |> DateTime.to_iso8601()
+      ended_exactly = DateTime.add(@now, -30 * 86_400) |> DateTime.to_iso8601()
+      ended_recently = DateTime.add(@now, -29 * 86_400) |> DateTime.to_iso8601()
+
+      old =
+        block_row(
+          "block_address",
+          %{"cidr" => "192.0.2.0/24", "expires_at" => ended_long_ago, "reason" => "flood"},
+          ~U[2026-07-01 00:00:00.000000Z]
+        )
+
+      edge =
+        block_row(
+          "block_address",
+          %{"cidr" => "192.0.2.1/32", "expires_at" => ended_exactly},
+          ~U[2026-07-01 00:00:00.000000Z]
+        )
+
+      young =
+        block_row(
+          "block_address",
+          %{"cidr" => "192.0.2.2/32", "expires_at" => ended_recently},
+          ~U[2026-07-01 00:00:00.000000Z]
+        )
+
+      lifted_old =
+        block_row("unblock", %{"cidr" => "198.51.100.0/24"}, DateTime.add(@now, -40 * 86_400))
+
+      lifted_new =
+        block_row("unblock", %{"cidr" => "198.51.100.1/32"}, DateTime.add(@now, -3 * 86_400))
+
+      assert Moderation.forget_expired_block_addresses(@now, 30) == 3
+      assert Moderation.forget_expired_block_addresses(@now, 30) == 0
+
+      assert %{details: %{"cidr" => nil, "reason" => "flood", "expires_at" => ^ended_long_ago}} =
+               Repo.get!(Action, old.id)
+
+      assert %{details: %{"cidr" => nil}} = Repo.get!(Action, edge.id)
+      assert %{details: %{"cidr" => "192.0.2.2/32"}} = Repo.get!(Action, young.id)
+      assert %{details: %{"cidr" => nil}} = Repo.get!(Action, lifted_old.id)
+      assert %{details: %{"cidr" => "198.51.100.1/32"}} = Repo.get!(Action, lifted_new.id)
     end
   end
 end
