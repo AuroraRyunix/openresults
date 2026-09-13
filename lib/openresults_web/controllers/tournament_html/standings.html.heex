@@ -46,7 +46,17 @@
     <.live_marker round={round} />
   </p>
 
-  <.starting_rank_table :if={starting_rank?} payload={@payload} slug={@slug} />
+  <%= if Tournament.team_event?(@payload) do %>
+    <.team_standings_table payload={@payload} slug={@slug} />
 
-  <.standings_table :if={not starting_rank?} payload={@payload} slug={@slug} filters={@filters} />
+    <.team_crosstable_table
+      :if={Tournament.team_crosstable?(@payload)}
+      payload={@payload}
+      slug={@slug}
+    />
+  <% else %>
+    <.starting_rank_table :if={starting_rank?} payload={@payload} slug={@slug} />
+
+    <.standings_table :if={not starting_rank?} payload={@payload} slug={@slug} filters={@filters} />
+  <% end %>
 </section>

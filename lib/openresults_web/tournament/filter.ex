@@ -98,12 +98,40 @@ defmodule OpenResultsWeb.Tournament.Filter do
         category_match?(payload, filters, player) and
         value_match?(filters.fed, player["federation"]) and
         value_match?(filters.club, player["club"]) and
-        name_match?(filters.q, player["name"])
+        name_match?(filters.q, player["name"]) and
+        team_match?(payload, filters, player)
     else
       # No filter active at all: everyone matches, including a row this
       # app cannot resolve to a player - the unfiltered page has always
       # rendered such a row, and "no filter is active" must not change that.
       true
+    end
+  end
+
+  defp team_match?(_payload, %FilterParams{team: nil}, _player), do: true
+
+  defp team_match?(payload, %FilterParams{team: wanted}, player) do
+    case Tournament.player_team_no(payload, player["no"]) do
+      nil -> false
+      no -> Integer.to_string(no) == wanted
+    end
+  end
+
+  @doc """
+  The teams a filter bar's "Team" control offers, as `{no, label}` - `[]`
+  when the tournament is not a team event, the same "a control that would
+  filter nothing is not offered" rule `player_values/2` follows for
+  club/federation.
+  """
+  @spec team_options(map()) :: [{integer(), String.t()}]
+  def team_options(payload) do
+    if Tournament.team_event?(payload) do
+      payload
+      |> Tournament.teams()
+      |> Enum.sort_by(&Map.get(&1, "no"))
+      |> Enum.map(&{Map.get(&1, "no"), Tournament.team_label(&1)})
+    else
+      []
     end
   end
 

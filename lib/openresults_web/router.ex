@@ -102,6 +102,8 @@ defmodule OpenResultsWeb.Router do
     get "/t/:slug/crosstable", TournamentController, :crosstable
     get "/t/:slug/round/:n", TournamentController, :round
     get "/t/:slug/player/:no", TournamentController, :player
+    get "/t/:slug/team/:no", TournamentController, :team
+    get "/t/:slug/board-prizes", TournamentController, :board_prizes
   end
 
   scope "/", OpenResultsWeb do

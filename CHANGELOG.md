@@ -27,6 +27,23 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Team tournaments have public pages.** A team event's tournament
+  page now shows the team standings - rank, match points, game points and
+  the configured team tie-breaks, each with the same expandable "working" a
+  player's own tie-break cell offers - instead of an individual table, and,
+  for a team round robin, a team-vs-team cross-table. A round page lists that
+  round's matches ("Team A 2½-1½ Team B"), each expandable to its board
+  lines, and carries the same withheld-results and live behaviour an
+  individual round already has. Each team gets its own page: roster in board
+  order, and its match history. A new board prizes page lists `board_stats`,
+  one table per board. The filter bar's Team control narrows a round's board
+  lines to one team; category, federation and name keep working alongside
+  it. A team Swiss, which still pairs its players individually, gets the
+  team standings table and roster but no matches, board prizes or
+  cross-table, since none of that data exists yet. Every field this reads is
+  additive - see `docs/snapshot-schema.md`'s new "Team tournaments" section -
+  and an individual tournament's pages are unchanged.
+
 ## [0.15.0] - 2026-09-13
 
 - [Feature] **A round's results can be held back while its pairings are public,

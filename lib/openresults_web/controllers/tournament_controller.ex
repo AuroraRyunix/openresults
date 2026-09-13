@@ -163,6 +163,69 @@ defmodule OpenResultsWeb.TournamentController do
     end
   end
 
+  @doc """
+  `GET /t/:slug/team/:no` - one team's roster, in board order, and its match
+  history.
+
+  Behind the same `"standings"` switch a player's own card is behind (see
+  `player/2` below): a team's roster and match record is exactly the kind of
+  standings-derived thing that switch already withholds.
+  """
+  def team(conn, %{"slug" => slug, "no" => no}) do
+    with_payload(conn, slug, fn conn, payload ->
+      if Tournament.show?(payload, "standings") do
+        render_team(conn, payload, slug, no, integer(no))
+      else
+        withheld(conn, payload, slug, :standings)
+      end
+    end)
+  end
+
+  defp render_team(conn, payload, slug, no, number) do
+    case number && Tournament.team(payload, number) do
+      nil ->
+        not_found(
+          conn,
+          gettext("%{tournament} has no team %{number}.",
+            tournament: Tournament.name(payload),
+            number: no
+          ),
+          back: ~p"/t/#{slug}"
+        )
+
+      team ->
+        render(conn, :team,
+          page_title: "#{Tournament.team_label(team)} - #{Tournament.name(payload)}",
+          page_description: Meta.team(payload, team),
+          payload: payload,
+          slug: slug,
+          team: team,
+          current: {:team, number}
+        )
+    end
+  end
+
+  @doc """
+  `GET /t/:slug/board-prizes` - `board_stats`, one table per board.
+
+  Behind the `"standings"` switch, same reasoning as `team/2` above.
+  """
+  def board_prizes(conn, %{"slug" => slug}) do
+    with_payload(conn, slug, fn conn, payload ->
+      if Tournament.show?(payload, "standings") do
+        render(conn, :board_prizes,
+          page_title: "#{gettext("Board prizes")} - #{Tournament.name(payload)}",
+          page_description: Meta.board_prizes(payload),
+          payload: payload,
+          slug: slug,
+          current: :board_prizes
+        )
+      else
+        withheld(conn, payload, slug, :standings)
+      end
+    end)
+  end
+
   # Anything else - unset, "0", a stray value - is the ordinary page. Being
   # picky here rather than truthy-checking any presence at all means a URL
   # copied with `?display=` left blank, or a future `?display=list`, does not

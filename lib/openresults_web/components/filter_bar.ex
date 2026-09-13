@@ -54,6 +54,7 @@ defmodule OpenResultsWeb.Components.FilterBar do
   attr :categories, :list, default: []
   attr :federations, :list, default: []
   attr :clubs, :list, default: []
+  attr :teams, :list, default: []
   attr :sort?, :boolean, default: true
   attr :empty?, :boolean, default: false
 
@@ -62,7 +63,8 @@ defmodule OpenResultsWeb.Components.FilterBar do
       assigns
       |> assign(
         :any_control?,
-        assigns.categories != [] or assigns.federations != [] or assigns.clubs != []
+        assigns.categories != [] or assigns.federations != [] or assigns.clubs != [] or
+          assigns.teams != []
       )
 
     ~H"""
@@ -105,6 +107,20 @@ defmodule OpenResultsWeb.Components.FilterBar do
               <option value="">{gettext("All clubs")}</option>
               <option :for={club <- @clubs} value={club} selected={@filters.club == club}>
                 {club}
+              </option>
+            </select>
+          </label>
+
+          <label :if={@teams != []} class="filter-field">
+            <span>{gettext("Team")}</span>
+            <select name="team">
+              <option value="">{gettext("All teams")}</option>
+              <option
+                :for={{no, label} <- @teams}
+                value={no}
+                selected={@filters.team == to_string(no)}
+              >
+                {label}
               </option>
             </select>
           </label>

@@ -344,6 +344,135 @@ carry different columns (value, Keizer points, score), so the renderer keys
 off this. The alternative - a generic column list - was considered and
 rejected as harder to read for the two extra cases it buys.
 
+## Team tournaments
+
+Added this version. **Absent means an individual tournament** - every field
+below is additive, and a payload with none of them is read exactly as it was
+before they existed.
+
+```json
+{
+  "tournament": { "team_event": true },
+
+  "teams": [
+    {
+      "no": 1,
+      "name": "Antwerp Knights",
+      "short_name": null,
+      "captain": "Jan Peeters",
+      "players": [1, 2, 3]
+    }
+  ],
+
+  "rounds": [
+    {
+      "number": 1,
+      "matches": [
+        {
+          "number": 1,
+          "team_a": 1,
+          "team_b": 4,
+          "bye": false,
+          "board1_white_team": 1,
+          "boards": [1, 2],
+          "game_points": { "a": 2.5, "b": 1.5 },
+          "match_points": { "a": 2.0, "b": 0.0 }
+        }
+      ]
+    }
+  ],
+
+  "team_standings": {
+    "after_round": 3,
+    "tiebreaks": [{ "code": "BB", "label": "Board points weighted (Berlin)" }],
+    "rows": [
+      { "rank": 1, "team": 1, "mp": 6.0, "gp": 12.5, "tiebreaks": [21.0], "working": {} }
+    ]
+  },
+
+  "board_stats": [
+    {
+      "player": 1,
+      "team": 1,
+      "board": 1,
+      "games": 3,
+      "points": 2.5,
+      "percentage": 83.3,
+      "performance": 2340
+    }
+  ]
+}
+```
+
+**`tournament.team_event`** - `true` for a team round robin or a team Swiss.
+Absent means an individual tournament, exactly as before this field existed.
+
+**`teams[]`** - every team OpenPairings has frozen a pairing number for
+(`teams[].no`, the team's own TPN, the same idea as `players[].no` one level
+up - the only handle anything else in the document uses to refer to a team).
+Before a team round robin's first round is paired, no team has one yet; the
+snapshot still carries a provisional `no` in seeding order so a page has
+something to link to, the same accommodation `players[].no` gets before round
+1 (see `PairingsEngine.Snapshot`'s moduledoc).
+
+**`teams[].captain`** - a name the arbiter typed on the Teams page, not a
+player record - so the personal-data allowlist that keeps `players[]` to name,
+rating, federation, club, title and category does not apply to it. It travels
+like `tournament.arbiter` and `tournament.deputy` do: prose an arbiter chose
+to make public.
+
+**`teams[].players`** - the roster in board order, as `players[].no` values.
+Only players who have ever sat at a board are numbered and therefore listed -
+a reserve who never played (a roster longer than the match size) has no
+pairing number yet and is not on this list, exactly as an unpaired individual
+player is absent from `players[]` before round 1.
+
+**`rounds[].matches`** - one entry per match scheduled that round, present
+only when `tournament.team_event` is `true`. A team round robin's bye (an
+odd-sized field) is `{ "team_a": <no>, "team_b": null, "bye": true }` with no
+points and no boards - it scores nothing, the same as a bye scores nothing in
+`PairingsEngine.TeamStandings`.
+
+**`matches[].board1_white_team`** - which team has White on board 1 of the
+match (and, by the FIDE convention this app follows, on every odd board -
+see `PairingsEngine.TeamRoundRobin`'s moduledoc). Named explicitly rather than
+left for a reader to infer from `team_a`, so a page can print "Team A (White)"
+without knowing that convention itself.
+
+**`matches[].boards`** - the real board numbers (`boards[].board`, not the
+printed `label`) that belong to this match, in the round's own numbering. A
+board the arbiter hid is left out of this list for the same reason a hidden
+board is absent from `boards[]`, though it still counts in `game_points` -
+hidden is a display flag on `boards[]`, not on the arithmetic.
+
+**`matches[].game_points`/`match_points`** - **withheld exactly like a
+board's own result**: `null` on both while the round's results are not public
+(`rounds[].results_public`), even though the two teams are always named - a
+match is on the pairing sheet before it is a result, the same reason
+`boards[].white`/`black` still travel with a `null` result. `match_points` is
+additionally `null` until every board in the match has a result - a
+half-reported match has game points and no match points yet, exactly as
+`PairingsEngine.TeamStandings` computes it. Never recomputed here: both
+numbers are OpenPairings' own arithmetic.
+
+**`team_standings`** - the same shape as `standings`, one level up, for
+teams: `after_round`, `tiebreaks` (declared once, `rows[].tiebreaks`
+positional against it, exactly like the individual table) and `rows[].working`
+in the same per-round-parts shape as `standings.rows[].working` - only
+`team` replaces `player` as the row's identity, and there is no `category`,
+`points` (game score already has a name here, `gp`) or Keizer-shaped fields, a
+team event never being Keizer. Gated by the same `standings_through` setting
+as the individual table (`PairingsEngine.Tournaments.effective_standings_through/1`),
+so nothing here can show a round the individual standings would still
+withhold.
+
+**`board_stats[]`** - one row per player who ever sat at a board, for a board
+prizes page. `board` is the board they played most often (the lower one on a
+tie - `PairingsEngine.TeamStandings.board_stats/2`'s own rule), which is what
+a board prize is normally awarded against rather than every board a reserve
+ever filled in for. Gated the same way `team_standings` is: empty until
+standings have been published through at least one round.
+
 ## What is deliberately NOT in here
 
 **Anything a spectator has no business seeing.** No email addresses, no

@@ -112,6 +112,17 @@ defmodule OpenResultsWeb.TournamentHTML do
         >
           {gettext("Cross-table")}
         </a>
+        <a
+          :if={
+            @show.standings and Tournament.team_event?(@payload) and
+              Tournament.board_stats(@payload) != []
+          }
+          href={~p"/t/#{@slug}/board-prizes"}
+          class={["chip", @current == :board_prizes && "current"]}
+          aria-current={@current == :board_prizes && "page"}
+        >
+          {gettext("Board prizes")}
+        </a>
         <%= for {n, published?} <- @slots, @show.pairings do %>
           <a
             :if={published?}
@@ -433,6 +444,181 @@ defmodule OpenResultsWeb.TournamentHTML do
         "These are Keizer points, not FIDE tiebreaks - the whole ladder is recalculated from results, byes and absences every time."
       )}
     </p>
+    """
+  end
+
+  @doc """
+  The team standings table for a team event: rank, team, match points, game
+  points and the configured team tie-breaks with the same expandable
+  "working" a player's tie-break cell offers - see `Tournament.team_working/2`.
+  Each team name links to its own page (`team.html.heex`).
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+
+  def team_standings_table(assigns) do
+    payload = assigns.payload
+
+    assigns =
+      assigns
+      |> assign(:rows, Tournament.team_standings_rows(payload))
+      |> assign(:tiebreaks, Tournament.team_tiebreaks(payload))
+      |> assign(:pending?, Tournament.team_standings_pending?(payload))
+      |> assign(:teams, Tournament.teams_by_no(payload))
+
+    ~H"""
+    <p :if={@pending?} class="empty">
+      {gettext("No team standings have been published for this tournament yet.")}
+    </p>
+
+    <div :if={not @pending?} class="scroller">
+      <table class="standings">
+        <caption class="visually-hidden">
+          {gettext("Team standings after round %{round} of %{tournament}.",
+            round: Tournament.team_after_round(@payload),
+            tournament: Tournament.name(@payload)
+          )}
+        </caption>
+        <thead>
+          <tr>
+            <th class="num" scope="col">{gettext("#")}</th>
+            <th scope="col">{gettext("Team")}</th>
+            <th class="num" scope="col">{gettext("MP")}</th>
+            <th class="num" scope="col">{gettext("GP")}</th>
+            <th :for={tiebreak <- @tiebreaks} class="num" scope="col">
+              {Tournament.tiebreak_label(tiebreak)}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={row <- @rows}>
+            <td class="num rank">{row["rank"]}</td>
+            <th scope="row" class="row-head">
+              <a href={~p"/t/#{@slug}/team/#{row["team"]}"}>
+                {Tournament.team_label(@teams[row["team"]])}
+              </a>
+            </th>
+            <td class="num strong">{number(row["mp"])}</td>
+            <td class="num">{number(row["gp"])}</td>
+            <% working = Tournament.working_for_row(row) %>
+            <td :for={{tiebreak, at} <- Enum.with_index(@tiebreaks)} class="num tb-cell">
+              <.team_tiebreak_cell
+                slug={@slug}
+                teams={@teams}
+                code={tiebreak["code"]}
+                key={"#{row["team"]}-#{at}"}
+                value={Tournament.tiebreak_value(row, at)}
+                working={working}
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
+  attr :slug, :string, required: true
+  attr :teams, :map, required: true
+  attr :code, :string, required: true
+  attr :key, :string, required: true
+  attr :value, :any, required: true
+  attr :working, :map, required: true
+
+  def team_tiebreak_cell(assigns) do
+    open? = not is_nil(assigns.value) and Map.has_key?(assigns.working, assigns.code)
+
+    assigns =
+      assigns
+      |> assign(:open?, open?)
+      |> assign(:parts, if(open?, do: assigns.working[assigns.code]["parts"], else: []))
+
+    ~H"""
+    <details :if={@open?} class="tb-detail" data-detail={@key}>
+      <summary>
+        {number(@value)}
+        <span class="visually-hidden">{gettext("show how this was reached")}</span>
+      </summary>
+      <div class="scroller">
+        <table class="working-table tb-working">
+          <caption class="visually-hidden">{gettext("How this tie-break was reached")}</caption>
+          <thead class="tb-working-head">
+            <tr>
+              <th scope="col"><span class="visually-hidden">{gettext("Rd")}</span></th>
+              <th scope="col"><span class="visually-hidden">{gettext("From")}</span></th>
+              <th scope="col"><span class="visually-hidden">{gettext("Value")}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={part <- @parts}>
+              <th scope="row" class="num row-head">{part["round"]}</th>
+              <td>
+                <%= if part["opponent"] && Map.has_key?(@teams, part["opponent"]) do %>
+                  <a href={~p"/t/#{@slug}/team/#{part["opponent"]}"}>
+                    {Tournament.team_label(@teams[part["opponent"]])}
+                  </a>
+                <% else %>
+                  <span class="quiet">{gettext("unplayed round")}</span>
+                <% end %>
+              </td>
+              <td class="num">{number(part["value"])}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <span :if={not @open?}>{number(@value)}</span>
+    """
+  end
+
+  @doc """
+  The team-vs-team cross-table for a team round robin: a row and a column
+  per team, and in each cell the match's game points, from the row team's
+  own side. See `Tournament.team_crosstable/1`.
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+
+  def team_crosstable_table(assigns) do
+    rows = Tournament.team_crosstable(assigns.payload)
+    assigns = assign(assigns, :rows, rows)
+
+    ~H"""
+    <h3>{gettext("Team cross-table")}</h3>
+
+    <div :if={@rows != []} class="scroller">
+      <table class="crosstable">
+        <caption class="visually-hidden">{gettext("Team cross-table")}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{gettext("Team")}</th>
+            <th :for={opp <- @rows} class="num" scope="col">{opp.no}</th>
+            <th class="num" scope="col">{gettext("MP")}</th>
+            <th class="num" scope="col">{gettext("GP")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={row <- @rows}>
+            <th scope="row" class="row-head">
+              <a href={~p"/t/#{@slug}/team/#{row.no}"}>{Tournament.team_label(row.team)}</a>
+            </th>
+            <td :for={opp <- @rows} class="num">
+              <%= if opp.no == row.no do %>
+                <span class="quiet">-</span>
+              <% else %>
+                <%= for %{match: m} <- Map.get(row.cells, opp.no, []) do %>
+                  <% {gp, _mp} = Tournament.match_points_for(m, row.no) %>
+                  <span :if={gp}>{number(gp)}</span>
+                  <span :if={is_nil(gp)} class="quiet">{gettext("?")}</span>
+                <% end %>
+              <% end %>
+            </td>
+            <td class="num strong">{number(row.mp)}</td>
+            <td class="num">{number(row.gp)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     """
   end
 
@@ -953,6 +1139,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         :bar_federations,
         (show.federation && Filter.player_values(assigns.payload, "federation")) || []
       )
+      |> assign(:bar_teams, Filter.team_options(assigns.payload))
       # The points each player carried INTO this round, which is what a
       # pairing list means by score and what explains why these two are on
       # this board. Their points after it are on the standings.
@@ -973,6 +1160,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       categories={@bar_categories}
       federations={@bar_federations}
       clubs={@bar_clubs}
+      teams={@bar_teams}
       sort?={false}
     />
 
@@ -1045,6 +1233,163 @@ defmodule OpenResultsWeb.TournamentHTML do
         </tbody>
       </table>
     </div>
+    """
+  end
+
+  @doc """
+  One round's matches, "Team A 2½ - 1½ Team B", each expandable to its board
+  lines - board, players, colours, result. Renders nothing when the round
+  has no `matches` (an individual tournament, or a team Swiss's round, which
+  has none - see `Tournament.matches/1`).
+
+  Withheld exactly like `pairings_table/1`'s own boards: the two teams
+  always show, and the score is blank while the round's results are not
+  public (`Tournament.results_public?/1`) or the match itself is not yet
+  decided.
+  """
+  attr :payload, :map, required: true
+  attr :slug, :string, required: true
+  attr :round, :map, required: true
+  attr :players, :map, required: true
+
+  def matches_table(assigns) do
+    payload = assigns.payload
+    matches = Tournament.matches(assigns.round)
+    teams = Tournament.teams_by_no(payload)
+    results? = Tournament.results_public?(assigns.round)
+
+    assigns =
+      assigns
+      |> assign(:matches, matches)
+      |> assign(:teams, teams)
+      |> assign(:results?, results?)
+      |> assign(:show, display_rules(payload))
+
+    ~H"""
+    <div :if={@matches != []} class="scroller">
+      <table class="matches">
+        <caption class="visually-hidden">
+          {gettext("Matches, %{round}", round: Tournament.round_heading(@payload, @round["number"]))}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{gettext("Match")}</th>
+            <th scope="col">{gettext("Team A")}</th>
+            <th :if={@results?} class="num" scope="col">{gettext("Score")}</th>
+            <th scope="col">{gettext("Team B")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= for match <- @matches do %>
+            <tr>
+              <th scope="row" class="num row-head">{match["number"]}</th>
+              <%= if match["bye"] do %>
+                <td colspan={if @results?, do: "3", else: "2"}>
+                  <.team_link slug={@slug} teams={@teams} no={match["team_a"]} />
+                  {gettext("has the bye")}
+                </td>
+              <% else %>
+                <td class={match_white?(match, :a) && "pairing-match"}>
+                  <.team_link slug={@slug} teams={@teams} no={match["team_a"]} />
+                </td>
+                <td :if={@results?} class="num">
+                  <.match_score match={match} />
+                </td>
+                <td class={match_white?(match, :b) && "pairing-match"}>
+                  <.team_link slug={@slug} teams={@teams} no={match["team_b"]} />
+                </td>
+              <% end %>
+            </tr>
+            <tr :if={not match["bye"]}>
+              <td colspan="4" class="match-boards">
+                <details>
+                  <summary>{gettext("Boards")}</summary>
+                  <table class="pairings nested">
+                    <caption class="visually-hidden">
+                      {gettext("Boards of match %{number}", number: match["number"])}
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th class="num" scope="col">{gettext("Bd")}</th>
+                        <th scope="col">{gettext("White")}</th>
+                        <th :if={@results?} class="num" scope="col">{gettext("Result")}</th>
+                        <th scope="col">{gettext("Black")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr :for={board <- match_boards(@round, match)}>
+                        <th scope="row" class="num row-head">{Tournament.board_label(board)}</th>
+                        <td>
+                          <.player_link
+                            slug={@slug}
+                            no={board["white"]}
+                            player={@players[board["white"]]}
+                            show={@show}
+                            cards?={@show.player_cards}
+                            detail
+                          />
+                        </td>
+                        <td :if={@results?} class="num"><.result token={board["result"]} /></td>
+                        <td>
+                          <.player_link
+                            slug={@slug}
+                            no={board["black"]}
+                            player={@players[board["black"]]}
+                            show={@show}
+                            cards?={@show.player_cards}
+                            detail
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </details>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
+  defp match_white?(match, :a), do: match["board1_white_team"] == match["team_a"]
+  defp match_white?(match, :b), do: match["board1_white_team"] == match["team_b"]
+
+  defp match_boards(round, match) do
+    numbers = MapSet.new(match["boards"] || [])
+    round |> Tournament.boards() |> Enum.filter(&(&1["board"] in numbers))
+  end
+
+  attr :match, :map, required: true
+
+  def match_score(assigns) do
+    ~H"""
+    <%= case {@match["game_points"], @match["match_points"]} do %>
+      <% {nil, _} -> %>
+        <span class="quiet">{gettext("not yet published")}</span>
+      <% {%{"a" => a, "b" => b}, mp} -> %>
+        {number(a)} - {number(b)}
+        <span :if={mp} class="quiet">
+          ({number(mp["a"])}-{number(mp["b"])} {gettext("MP")})
+        </span>
+      <% _other -> %>
+        <span class="quiet">-</span>
+    <% end %>
+    """
+  end
+
+  attr :slug, :string, required: true
+  attr :teams, :map, required: true
+  attr :no, :any, required: true
+
+  def team_link(assigns) do
+    ~H"""
+    <%= if @no && Map.has_key?(@teams, @no) do %>
+      <a href={~p"/t/#{@slug}/team/#{@no}"}>{Tournament.team_label(@teams[@no])}</a>
+    <% else %>
+      <span class="quiet">{gettext("?")}</span>
+    <% end %>
     """
   end
 

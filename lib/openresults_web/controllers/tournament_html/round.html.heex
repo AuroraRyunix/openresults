@@ -28,6 +28,14 @@
       payload={@payload}
     />
 
+    <.matches_table
+      :if={Tournament.team_event?(@payload)}
+      payload={@payload}
+      slug={@slug}
+      round={@round}
+      players={@players}
+    />
+
     <.pairings_table
       slug={@slug}
       round={@round}

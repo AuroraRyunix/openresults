@@ -1209,6 +1209,211 @@ defmodule OpenResultsWeb.Tournament do
   defp running_score({:known, total}), do: total
   defp running_score(:unknown), do: nil
 
+  ## ---------- team tournaments ----------
+
+  @doc """
+  Whether this is a team event - `tournament.team_event`. Absent means an
+  individual tournament, exactly like every other flag here.
+  """
+  def team_event?(payload), do: Map.get(info(payload), "team_event") == true
+
+  @doc "Every team in the payload."
+  def teams(payload), do: payload |> list("teams") |> Enum.filter(&is_map/1)
+
+  @doc "The teams indexed by `no`, the team's own pairing number."
+  def teams_by_no(payload), do: Map.new(teams(payload), &{Map.get(&1, "no"), &1})
+
+  @doc "One team, or `nil`."
+  def team(payload, no), do: Enum.find(teams(payload), &(Map.get(&1, "no") == no))
+
+  @doc "The label to print for a team: its short name when set, its name otherwise."
+  def team_label(%{} = team) do
+    string(team, "short_name") || string(team, "name") || ""
+  end
+
+  def team_label(_not_a_team), do: ""
+
+  @doc """
+  A team's roster, in board order, as player objects - `teams[].players`
+  (a list of `no`) resolved against `players_by_no/1`. A `no` the payload
+  cannot resolve is left out rather than rendered as a blank row.
+  """
+  def team_roster(payload, %{} = team) do
+    index = players_by_no(payload)
+
+    team
+    |> Map.get("players", [])
+    |> List.wrap()
+    |> Enum.map(&Map.get(index, &1))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  def team_roster(_payload, _not_a_team), do: []
+
+  @doc """
+  The team `no` plays for, or `nil` - built from every team's roster, for the
+  filter bar's "Team" control on board lines.
+  """
+  def player_team_no(payload, no) when not is_nil(no) do
+    Enum.find_value(teams(payload), fn team ->
+      if no in Map.get(team, "players", []), do: Map.get(team, "no")
+    end)
+  end
+
+  def player_team_no(_payload, _no), do: nil
+
+  @doc "A round's matches - `rounds[].matches`, present only for a team event."
+  def matches(round), do: round |> list("matches") |> Enum.filter(&is_map/1)
+
+  @doc """
+  Every match `team_no` played, across every published round, oldest first -
+  `%{round:, match:}`. What a team's page lists as its match history.
+  """
+  def team_matches(payload, team_no) do
+    for round <- rounds(payload),
+        match <- matches(round),
+        Map.get(match, "team_a") == team_no or Map.get(match, "team_b") == team_no,
+        do: %{round: number_of(round), match: match}
+  end
+
+  @doc "Which side of `match` is `team_no` - `:a`, `:b`, or `nil`."
+  def match_side(match, team_no) do
+    cond do
+      Map.get(match, "team_a") == team_no -> :a
+      Map.get(match, "team_b") == team_no -> :b
+      true -> nil
+    end
+  end
+
+  @doc "`team_no`'s opponent in `match`, or `nil` for a bye or an unrelated match."
+  def match_opponent(match, team_no) do
+    case match_side(match, team_no) do
+      :a -> Map.get(match, "team_b")
+      :b -> Map.get(match, "team_a")
+      nil -> nil
+    end
+  end
+
+  @doc """
+  `team_no`'s own game points and match points in `match`, as `{gp, mp}` -
+  either half `nil` while withheld or not yet decided (see
+  `matches[].game_points`/`match_points` in `docs/snapshot-schema.md`).
+  `{nil, nil}` for a bye or a match this team is not in.
+  """
+  def match_points_for(match, team_no) do
+    case match_side(match, team_no) do
+      :a -> {get_in(match, ["game_points", "a"]), get_in(match, ["match_points", "a"])}
+      :b -> {get_in(match, ["game_points", "b"]), get_in(match, ["match_points", "b"])}
+      nil -> {nil, nil}
+    end
+  end
+
+  @doc "Which team has White on board 1 of `match` (see `matches[].board1_white_team`)."
+  def match_white_team(match), do: Map.get(match, "board1_white_team")
+
+  @doc "The `team_standings` object, or an empty one."
+  def team_standings(payload), do: object(payload, "team_standings")
+
+  @doc "Team standings rows, in the arbiter's own order - never re-sorted here."
+  def team_standings_rows(payload),
+    do: team_standings(payload) |> list("rows") |> Enum.filter(&is_map/1)
+
+  @doc "One team's standings row, or `nil`."
+  def team_standings_row(payload, no) do
+    Enum.find(team_standings_rows(payload), &(Map.get(&1, "team") == no))
+  end
+
+  @doc "Which round the team standings reflect - same reading as `after_round/1`."
+  def team_after_round(payload) do
+    case Map.get(team_standings(payload), "after_round") do
+      round when is_integer(round) and round > 0 -> round
+      _zero_or_absent -> nil
+    end
+  end
+
+  @doc "The declared team tie-breaks, in the arbiter's chosen order."
+  def team_tiebreaks(payload),
+    do: team_standings(payload) |> list("tiebreaks") |> Enum.filter(&is_map/1)
+
+  @doc "Same as `working/2`, for `team_standings.rows[].working`."
+  def team_working(payload, no) do
+    case team_standings_row(payload, no) do
+      nil -> %{}
+      row -> working_for_row(row)
+    end
+  end
+
+  @doc """
+  Whether a team page has anything of its own to show yet - same reading as
+  `starting_rank?/1`: no rows, or no round to call them "after".
+  """
+  def team_standings_pending?(payload) do
+    team_standings_rows(payload) == [] or is_nil(team_after_round(payload))
+  end
+
+  @doc "Every board-prize row - `board_stats[]`, present only for a team event."
+  def board_stats(payload), do: payload |> list("board_stats") |> Enum.filter(&is_map/1)
+
+  @doc """
+  `board_stats/1`, grouped by board number and sorted by it - what the board
+  prizes page renders one table per.
+  """
+  def board_stats_by_board(payload) do
+    board_stats(payload)
+    |> Enum.group_by(&Map.get(&1, "board"))
+    |> Enum.sort_by(fn {board, _rows} -> board end)
+  end
+
+  @doc """
+  Whether the tournament offers a team-vs-team cross-table: a team event
+  played as a round robin, where `matches` exists to grid. Phase 1 of a team
+  Swiss still pairs its players individually (`docs/team-tournaments.md` on
+  the OpenPairings side) - there is no scheduled match between two teams to
+  put in a cell, only individual boards, which the ordinary cross-table
+  already shows.
+  """
+  def team_crosstable?(payload), do: team_event?(payload) and system(payload) == "roundrobin"
+
+  @doc """
+  The team-vs-team grid for a team round robin: a row per team, a column per
+  OTHER team, and in each cell the match (or matches - a double round robin
+  meets twice) between them.
+
+  Each row is `%{no:, team:, rank:, mp:, gp:, cells: %{opponent_no => [match]}}`.
+  `cells` is a map rather than a positional list, unlike `crosstable/1`'s -
+  there is no fixed round to be positional against here, and a double round
+  robin's reversed second meeting is a second entry in the same cell rather
+  than a second column.
+  """
+  def team_crosstable(payload) do
+    placings = Map.new(team_standings_rows(payload), &{Map.get(&1, "team"), &1})
+
+    all_matches =
+      for round <- rounds(payload),
+          match <- matches(round),
+          do: %{round: number_of(round), match: match}
+
+    for team <- Enum.sort_by(teams(payload), &Map.get(&1, "no")),
+        no = Map.get(team, "no"),
+        not is_nil(no) do
+      placing = Map.get(placings, no, %{})
+
+      cells =
+        all_matches
+        |> Enum.filter(&(match_opponent(&1.match, no) != nil))
+        |> Enum.group_by(&match_opponent(&1.match, no))
+
+      %{
+        no: no,
+        team: team,
+        rank: Map.get(placing, "rank"),
+        mp: Map.get(placing, "mp"),
+        gp: Map.get(placing, "gp"),
+        cells: cells
+      }
+    end
+  end
+
   defp number_of(round), do: Map.get(round, "number")
 
   defp object(payload, key) when is_map(payload) do

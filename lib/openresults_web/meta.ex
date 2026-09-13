@@ -124,6 +124,33 @@ defmodule OpenResultsWeb.Meta do
     end
   end
 
+  @doc "One team's page: its roster and, when placed, its rank and match points."
+  def team(payload, team) do
+    label = Tournament.team_label(team)
+
+    case Tournament.team_standings_row(payload, Map.get(team, "no")) do
+      nil ->
+        gettext("%{team} in %{tournament}.", team: label, tournament: Tournament.name(payload))
+
+      row ->
+        gettext("%{team} - %{mp} match points, place %{rank} of %{total}, %{tournament}.",
+          team: label,
+          mp: TournamentHTML.number(row["mp"]),
+          rank: row["rank"],
+          total: length(Tournament.team_standings_rows(payload)),
+          tournament: Tournament.name(payload)
+        )
+    end
+  end
+
+  @doc "The board prizes page."
+  def board_prizes(payload) do
+    gettext("Board prizes for %{tournament}, each board's players and their results.",
+      tournament: Tournament.name(payload)
+    )
+    |> with_where(payload)
+  end
+
   @doc "A page the arbiter has switched off. Says the tournament exists, and no more."
   def withheld(payload) do
     gettext("%{tournament} on OpenResults.", tournament: Tournament.name(payload))

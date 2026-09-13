@@ -1,0 +1,51 @@
+<.masthead payload={@payload} slug={@slug} current={@current} />
+
+<% groups = Tournament.board_stats_by_board(@payload) %>
+<% teams = Tournament.teams_by_no(@payload) %>
+
+<section>
+  <h2>{gettext("Board prizes")}</h2>
+
+  <p :if={groups == []} class="empty">
+    {gettext("No board statistics have been published for this tournament yet.")}
+  </p>
+
+  <div :for={{board, rows} <- groups} class="scroller">
+    <h3>{gettext("Board %{board}", board: board)}</h3>
+
+    <table class="standings">
+      <caption class="visually-hidden">
+        {gettext("Board %{board} statistics", board: board)}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">{gettext("Player")}</th>
+          <th scope="col">{gettext("Team")}</th>
+          <th class="num" scope="col">{gettext("Games")}</th>
+          <th class="num" scope="col">{gettext("Points")}</th>
+          <th class="num" scope="col">{gettext("%")}</th>
+          <th class="num" scope="col">{gettext("Perf")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={row <- Enum.sort_by(rows, &(-(&1["points"] || 0.0)))}>
+          <th scope="row" class="row-head">
+            <.player_link
+              slug={@slug}
+              no={row["player"]}
+              player={Tournament.players_by_no(@payload)[row["player"]]}
+              show={display_rules(@payload)}
+              cards?={Tournament.show?(@payload, "player_cards")}
+              detail
+            />
+          </th>
+          <td><.team_link slug={@slug} teams={teams} no={row["team"]} /></td>
+          <td class="num">{row["games"]}</td>
+          <td class="num strong">{number(row["points"])}</td>
+          <td class="num">{dash(number(row["percentage"]))}</td>
+          <td class="num">{dash(row["performance"])}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

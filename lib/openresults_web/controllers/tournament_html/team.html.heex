@@ -1,0 +1,100 @@
+<.masthead payload={@payload} slug={@slug} current={@current} />
+
+<% row = Tournament.team_standings_row(@payload, @team["no"]) %>
+<% roster = Tournament.team_roster(@payload, @team) %>
+<% history = Tournament.team_matches(@payload, @team["no"]) %>
+<% teams = Tournament.teams_by_no(@payload) %>
+
+<section>
+  <h2>
+    {Tournament.team_label(@team)}
+    <span :if={row} class="quiet">
+      {gettext("rank %{rank}, %{mp} MP, %{gp} GP",
+        rank: row["rank"],
+        mp: number(row["mp"]),
+        gp: number(row["gp"])
+      )}
+    </span>
+  </h2>
+
+  <p :if={@team["captain"]}>{gettext("Captain: %{name}", name: @team["captain"])}</p>
+
+  <h3>{gettext("Roster")}</h3>
+
+  <p :if={roster == []} class="empty">{gettext("No players are on this team's roster yet.")}</p>
+
+  <div :if={roster != []} class="scroller">
+    <table class="standings">
+      <caption class="visually-hidden">
+        {gettext("Roster of %{team}", team: Tournament.team_label(@team))}
+      </caption>
+      <thead>
+        <tr>
+          <th class="num" scope="col">{gettext("Bd")}</th>
+          <th scope="col">{gettext("Player")}</th>
+          <th :if={Tournament.show?(@payload, "rating")} class="num" scope="col">
+            {gettext("Rating")}
+          </th>
+          <th class="num" scope="col">{gettext("Points")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{player, board} <- Enum.with_index(roster, 1)}>
+          <th scope="row" class="num row-head">{board}</th>
+          <td>
+            <.player_link
+              slug={@slug}
+              no={player["no"]}
+              player={player}
+              show={display_rules(@payload)}
+              cards?={Tournament.show?(@payload, "player_cards")}
+              detail
+            />
+          </td>
+          <td :if={Tournament.show?(@payload, "rating")} class="num">{player["rating"]}</td>
+          <td class="num">
+            {number(get_in(Tournament.standings_row(@payload, player["no"]), ["points"]))}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>{gettext("Matches")}</h3>
+
+  <p :if={history == []} class="empty">{gettext("No matches have been published yet.")}</p>
+
+  <div :if={history != []} class="scroller">
+    <table class="standings">
+      <caption class="visually-hidden">
+        {gettext("Match history of %{team}", team: Tournament.team_label(@team))}
+      </caption>
+      <thead>
+        <tr>
+          <th class="num" scope="col">{gettext("Rd")}</th>
+          <th scope="col">{gettext("Opponent")}</th>
+          <th class="num" scope="col">{gettext("Score")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={%{round: round, match: match} <- history}>
+          <th scope="row" class="num row-head">
+            <a href={~p"/t/#{@slug}/round/#{round}"}>{Tournament.round_label(@payload, round)}</a>
+          </th>
+          <td>
+            <%= if match["bye"] do %>
+              <span class="quiet">{gettext("bye")}</span>
+            <% else %>
+              <.team_link
+                slug={@slug}
+                teams={teams}
+                no={Tournament.match_opponent(match, @team["no"])}
+              />
+            <% end %>
+          </td>
+          <td class="num"><.match_score match={match} /></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

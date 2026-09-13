@@ -3,9 +3,11 @@ defmodule OpenResultsWeb.FilterParams do
   The filter/sort bar's own query string, parsed once and read everywhere
   else as a plain struct.
 
-  `?category=U1800&fed=BEL&club=...&q=...&sort=rating` is the whole
-  contract: five keys, every one of them optional, every one of them a
-  plain string a reader can type or a link can carry. Nothing here decides
+  `?category=U1800&fed=BEL&club=...&q=...&sort=rating&team=3` is the whole
+  contract: six keys, every one of them optional, every one of them a
+  plain string a reader can type or a link can carry. `team` is a team's
+  `no` (see `docs/snapshot-schema.md`), carried as a string like every other
+  key here - only `OpenResultsWeb.Tournament.Filter` compares it against one. Nothing here decides
   what a value MEANS against a particular tournament - that is
   `OpenResultsWeb.Tournament.Filter`'s job, once it has a payload to check
   the value against. This module only decides whether a value is safe to
@@ -30,14 +32,15 @@ defmodule OpenResultsWeb.FilterParams do
   """
 
   @enforce_keys []
-  defstruct category: nil, fed: nil, club: nil, q: nil, sort: "rank"
+  defstruct category: nil, fed: nil, club: nil, q: nil, sort: "rank", team: nil
 
   @type t :: %__MODULE__{
           category: String.t() | nil,
           fed: String.t() | nil,
           club: String.t() | nil,
           q: String.t() | nil,
-          sort: String.t()
+          sort: String.t(),
+          team: String.t() | nil
         }
 
   # Well past any real category name, club name or search term - long enough
@@ -69,7 +72,8 @@ defmodule OpenResultsWeb.FilterParams do
       fed: bounded(params["fed"]),
       club: bounded(params["club"]),
       q: bounded(params["q"]),
-      sort: sort(params["sort"])
+      sort: sort(params["sort"]),
+      team: bounded(params["team"])
     }
   end
 
@@ -89,8 +93,8 @@ defmodule OpenResultsWeb.FilterParams do
 
   @doc "Whether any filter (not the sort) is set - what decides the cache bypass and the empty-state message."
   @spec active?(t()) :: boolean()
-  def active?(%__MODULE__{category: c, fed: f, club: cl, q: q}),
-    do: not is_nil(c) or not is_nil(f) or not is_nil(cl) or not is_nil(q)
+  def active?(%__MODULE__{category: c, fed: f, club: cl, q: q, team: t}),
+    do: not is_nil(c) or not is_nil(f) or not is_nil(cl) or not is_nil(q) or not is_nil(t)
 
   @doc """
   Whether `params` (raw, as `conn.query_string` would carry them) carries
@@ -104,7 +108,7 @@ defmodule OpenResultsWeb.FilterParams do
   """
   @spec any_present?(map()) :: boolean()
   def any_present?(params) when is_map(params) do
-    Enum.any?(~w(category fed club q sort), fn key ->
+    Enum.any?(~w(category fed club q sort team), fn key ->
       case Map.get(params, key) do
         value when is_binary(value) -> String.trim(value) != ""
         _absent_or_not_a_string -> false
@@ -127,7 +131,8 @@ defmodule OpenResultsWeb.FilterParams do
       "fed" => filters.fed,
       "club" => filters.club,
       "q" => filters.q,
-      "sort" => if(filters.sort != "rank", do: filters.sort)
+      "sort" => if(filters.sort != "rank", do: filters.sort),
+      "team" => filters.team
     }
     |> Enum.filter(fn {_key, value} -> not is_nil(value) end)
     |> Map.new()

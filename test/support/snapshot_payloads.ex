@@ -31,6 +31,33 @@ defmodule OpenResults.SnapshotPayloads do
   def keizer, do: load!("snapshot_keizer.json")
 
   @doc """
+  A team round robin, four teams, round 1 played with its results public and
+  standings published through it - `teams`, `rounds[].matches`,
+  `team_standings` and `board_stats` all carry real numbers.
+  """
+  def team_round_robin, do: load!("snapshot_team_roundrobin.json")
+
+  @doc """
+  A team Swiss, shaped the way phase 1 actually publishes one: `team_event`
+  and `teams` are there, rosters and all, but there is no scheduled match -
+  phase 1 still pairs its players individually
+  (`docs/team-tournaments.md` on the OpenPairings side) - so every round's
+  `matches` is `[]` and `team_standings`/`board_stats` have nothing to show.
+
+  Built from `team_round_robin/0` rather than a fixture of its own: this is
+  exactly what that payload would look like had OpenPairings never created a
+  single `Match` row, which is the real difference between the two pairing
+  systems on the wire.
+  """
+  def team_swiss do
+    team_round_robin()
+    |> put_in(["tournament", "system"], "swiss")
+    |> update_in(["rounds"], fn rounds -> Enum.map(rounds, &Map.put(&1, "matches", [])) end)
+    |> put_in(["team_standings", "rows"], [])
+    |> put_in(["board_stats"], [])
+  end
+
+  @doc """
   A registration submitted from the public form.
   """
   def registration do

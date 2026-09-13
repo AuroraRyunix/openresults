@@ -46,8 +46,13 @@ defmodule OpenResultsWeb.AccessibilityTest do
       |> put_in(["tournament", "registration_open"], false)
       |> publish(unique_slug("closed"))
 
+    team_rr = publish(SnapshotPayloads.team_round_robin(), unique_slug("team-rr"))
+    team_swiss = publish(SnapshotPayloads.team_swiss(), unique_slug("team-swiss"))
+
     %{"fide_id" => fide_id} =
       Enum.find(SnapshotPayloads.swiss()["players"], & &1["fide_id"])
+
+    team_no = SnapshotPayloads.team_round_robin()["teams"] |> hd() |> Map.get("no")
 
     {:ok,
      world: %{
@@ -55,6 +60,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
        keizer: keizer,
        before_round_one: before_round_one,
        closed: closed,
+       team_rr: team_rr,
+       team_swiss: team_swiss,
+       team_no: team_no,
        fide_id: fide_id
      }}
   end
@@ -72,7 +80,13 @@ defmodule OpenResultsWeb.AccessibilityTest do
         ["/", "/?lang=nl", "/?lang=fr"]
 
       "/t/:slug" ->
-        for slug <- [world.swiss, world.keizer, world.before_round_one],
+        for slug <- [
+              world.swiss,
+              world.keizer,
+              world.before_round_one,
+              world.team_rr,
+              world.team_swiss
+            ],
             lang <- ["en", "nl", "fr"],
             do: "/t/#{slug}?lang=#{lang}"
 
@@ -89,7 +103,10 @@ defmodule OpenResultsWeb.AccessibilityTest do
           "/t/#{world.swiss}/round/5",
           "/t/#{world.swiss}/round/5?display=1",
           "/t/#{world.keizer}/round/1",
-          "/t/#{world.swiss}/round/4"
+          "/t/#{world.swiss}/round/4",
+          "/t/#{world.team_rr}/round/1",
+          "/t/#{world.team_rr}/round/1?team=#{world.team_no}",
+          "/t/#{world.team_swiss}/round/1"
         ]
 
       "/t/:slug/player/:no" ->
@@ -98,6 +115,15 @@ defmodule OpenResultsWeb.AccessibilityTest do
           "/t/#{world.keizer}/player/1",
           "/t/#{world.before_round_one}/player/1"
         ]
+
+      "/t/:slug/team/:no" ->
+        [
+          "/t/#{world.team_rr}/team/#{world.team_no}",
+          "/t/#{world.team_rr}/team/999"
+        ]
+
+      "/t/:slug/board-prizes" ->
+        ["/t/#{world.team_rr}/board-prizes", "/t/#{world.team_swiss}/board-prizes"]
 
       "/players/:fide_id" ->
         ["/players/#{world.fide_id}", "/players/999999999"]
