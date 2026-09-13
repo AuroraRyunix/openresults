@@ -27,6 +27,12 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **The admin panel showed every email address as "[email protected]"
+  behind Cloudflare.** Cloudflare's Email Address Obfuscation rewrites addresses
+  in HTML and decodes them with a script, and the panel allows no scripts, so
+  "Signed in as", the action log and report contacts all stayed mangled. The
+  panel's pages are now wrapped in Cloudflare's `email_off` markers; public
+  pages are unchanged.
 - [Feature] **An arbiter's own delete shows in the action log.** Deleting a
   tournament through `DELETE /api/tournaments/:slug` was journalled but never
   reached the admin panel's action log, which only recorded the panel's own

@@ -353,6 +353,20 @@ defmodule OpenResultsWeb.AdminPanelTest do
              ]
     end
 
+    test "keeps every email address out of Cloudflare's email obfuscation, which needs a script the panel forbids" do
+      html = admin_conn() |> get(~p"/admin") |> html_response(200)
+
+      # Cloudflare skips everything between these two HTML comments. Without
+      # them "Signed in as" read "[email protected]" in production, because
+      # the decoder is a script and the admin CSP is script-src 'none'.
+      [_before, inside] = String.split(html, "<!--email_off-->", parts: 2)
+      [wrapped, _after] = String.split(inside, "<!--/email_off-->", parts: 2)
+
+      assert wrapped =~ "Signed in as"
+      assert wrapped =~ "arbiter@example.org"
+      refute html |> String.replace(wrapped, "") =~ "arbiter@example.org"
+    end
+
     test "is visibly not a public page, and carries none of the public page's scripts or pickers" do
       html = admin_conn() |> get(~p"/admin") |> html_response(200)
 

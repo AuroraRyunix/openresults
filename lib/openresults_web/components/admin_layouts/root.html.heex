@@ -14,6 +14,14 @@
           everything in the panel is a link or a plain form post. --%>
   </head>
   <body class="admin">
+    <%!-- Cloudflare's Email Address Obfuscation rewrites every address in an
+    HTML response into "[email protected]" and relies on a script of its own to
+    decode it. This panel allows no scripts at all (script-src 'none'), so the
+    decoder never runs and every address - "Signed in as", the action log,
+    report contacts - would stay mangled. email_off is Cloudflare's documented
+    opt-out. They must reach the browser, so they are HTML comments, not HEEx
+    ones. --%>
+    <!--email_off-->
     <a class="skip-link" href="#admin-main">Skip to content</a>
     <header class="admin-bar">
       <a class="admin-brand" href={~p"/admin"}>
@@ -63,5 +71,6 @@
         {@inner_content}
       </main>
     </div>
+    <!--/email_off-->
   </body>
 </html>
