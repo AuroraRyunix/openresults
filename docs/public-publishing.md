@@ -436,9 +436,9 @@ tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
 - Refusals, each with nothing moved and nothing logged: `:same_installation`;
   `:not_found` for an unknown `from` or `to`; `:installation_revoked` for a
   revoked `to`, as `transfer/3`; **`:installation_suspended` for a suspended
-  `to`**, which `transfer/3` does not refuse - moving every tournament of an
-  installation to a key that cannot publish would stop all of them updating,
-  which no restore wants, so the operator unsuspends first; and
+  `to`**, also as `transfer/3` - moving tournaments to a key that cannot
+  publish would stop them updating, which no restore wants, so the operator
+  unsuspends first; and
   `:no_tournaments` when `from` owns none. Any `from` status is accepted: the
   old laptop's installation may already be suspended or revoked.
 - All or nothing: one transaction, so a failure on any one tournament undoes

@@ -239,7 +239,9 @@ defmodule OpenResults.Moderation do
   Rebinds a tournament to another installation and clears its stored
   tournament key, so that installation's next keyed publish claims it - what
   break-glass is used for today when an arbiter's laptop dies. Status is
-  unchanged. Refused for a revoked target.
+  unchanged. Refused for a revoked target, and for a suspended one for the
+  reason `transfer_all/3` gives: a tournament moved to a key that cannot
+  publish stops updating.
   """
   @spec transfer(String.t(), String.t(), actor()) :: {:ok, Tournament.t()} | {:error, atom()}
   def transfer(slug, installation_id, actor) do
@@ -249,8 +251,8 @@ defmodule OpenResults.Moderation do
       nil ->
         {:error, :not_found}
 
-      %Installation{status: "revoked"} ->
-        {:error, :installation_revoked}
+      %Installation{status: status} = installation when status in ["revoked", "suspended"] ->
+        can_receive(installation)
 
       %Installation{id: target} ->
         transaction(fn ->
@@ -290,11 +292,10 @@ defmodule OpenResults.Moderation do
     * `:same_installation` - `from` and `to` are one installation;
     * `:not_found` - either installation does not exist;
     * `:installation_revoked` - `to` is revoked, as `transfer/3` refuses;
-    * `:installation_suspended` - `to` is suspended. Unlike `transfer/3`,
-      which moves one tournament to wherever it is told: moving a whole
-      installation's tournaments to a key that cannot publish would stop
-      every one of them updating, which is never what a restore wants.
-      Unsuspend it first;
+    * `:installation_suspended` - `to` is suspended: moving tournaments to
+      a key that cannot publish would stop every one of them updating, which
+      is never what a restore wants. Unsuspend it first. `transfer/3`
+      refuses the same;
     * `:no_tournaments` - `from` owns none, so there is nothing to move and
       nothing worth a log row.
 

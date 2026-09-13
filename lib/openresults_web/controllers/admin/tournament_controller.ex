@@ -244,6 +244,15 @@ defmodule OpenResultsWeb.Admin.TournamentController do
                 target,
                 "#{target} is revoked, and a revoked installation cannot receive a tournament."
               )
+
+            {:error, :installation_suspended} ->
+              render_transfer(
+                conn,
+                tournament,
+                target,
+                "#{target} is suspended, so its key cannot publish: the tournament would " <>
+                  "stop updating there. Unsuspend it first."
+              )
           end
       end
     end)

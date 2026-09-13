@@ -306,6 +306,11 @@ defmodule OpenResults.ModerationTest do
       assert Moderation.transfer(slug, "in_nobody", @actor) == {:error, :not_found}
       assert Moderation.transfer(slug, revoked.id, @actor) == {:error, :installation_revoked}
 
+      {suspended, _} = installation!()
+      {:ok, _} = Moderation.suspend(suspended.id, @actor)
+      count = length(actions())
+      assert Moderation.transfer(slug, suspended.id, @actor) == {:error, :installation_suspended}
+
       assert Moderation.transfer("no-such-slug", revoked.id, @actor) ==
                {:error, :installation_revoked}
 

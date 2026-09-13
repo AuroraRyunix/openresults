@@ -143,15 +143,17 @@ defmodule OpenResultsWeb.AdminActionsTest do
       assert flash_after(conn) =~ "next publish claims it"
     end
 
-    test "transfer refuses an unknown, a revoked or a missing installation id on the form", %{
-      world: world
-    } do
+    test "transfer refuses an unknown, a revoked, a suspended or a missing installation id on the form",
+         %{
+           world: world
+         } do
       before = action_count()
       path = "/admin/tournaments/#{world.pending}/transfer"
 
       for {id, message} <- [
             {"in_nobody", "No installation has the id in_nobody."},
             {world.revoked.id, "is revoked"},
+            {world.suspended.id, "is suspended, so its key cannot publish"},
             {"", "Enter the id of the installation"},
             {"   ", "Enter the id of the installation"}
           ] do
