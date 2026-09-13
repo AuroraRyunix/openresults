@@ -88,7 +88,7 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
         :if={@tournament.status == "pending"}
         href={~p"/admin/tournaments/#{@tournament.slug}/approve"}
       >
-        Approve
+        Show on player pages
       </a>
       <a
         :if={@tournament.status in ["pending", "listed"]}

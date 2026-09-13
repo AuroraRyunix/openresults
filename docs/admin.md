@@ -296,7 +296,12 @@ written to the action log with your address.
   the switches are stored but change nothing.
 - **Tournaments.** Filter by status, open reports or a search. A tournament's
   page shows its owner, first and last publish, snapshot sizes, its reports
-  and what has been done to it. Approve (pending to listed), hide, unhide,
+  and what has been done to it. A pending tournament is already public - at its
+  address, on the front page and in its search - and only missing from
+  players' cross-tournament history pages, so the panel shows it as "pending:
+  not on player pages yet". **Show on player pages** (approve: pending to
+  listed) is what puts it there; check the results are not invented against
+  real FIDE ids first. Hide, unhide,
   transfer to another installation by its `in_...` id (this clears the
   tournament key, so that installation's next publish claims it), or delete
   (every stored version and the entry list with its email addresses; it
@@ -305,6 +310,15 @@ written to the action log with your address.
   unsuspend, or revoke (final; you choose whether to hide its tournaments
   too). Addresses show as "forgotten after 30 days" once retention has
   cleared them.
+- **Trusted installations.** On an installation's page, **Trust** is for a
+  machine you know, such as a federation's laptop: tournaments it creates
+  from then on start listed, on player pages at once. The confirmation has an
+  unticked checkbox to put its pending tournaments on player pages too.
+  **Stop trusting** makes its next tournaments pending again; revoking ends
+  trust as well; suspending does not, but a suspended key publishes nothing.
+  **Own limits…** gives any installation, trusted or not, its own tournament
+  limit, snapshot size cap, publishes per minute or version cap. Leave a field
+  empty for the server's value.
 - **A laptop restored from backup** comes back as a new installation, because
   no OpenPairings backup carries the installation key. On the old
   installation's page, **Move all tournaments to another installation…** takes
@@ -322,6 +336,24 @@ written to the action log with your address.
   can be many people.
 - **Action log.** Everything above, plus break-glass uses of the operator
   token and retention runs, filterable by who, what and target.
+- **Settings.** The operator name, the terms link and the public-publishing
+  limits, each showing the value in force and whether it comes from the
+  panel, the environment (`.env`) or the built-in default. **Change** checks
+  the value against the same rules the server applies to `.env` at boot and
+  shows a confirmation; a saved value wins over `.env` from the next request,
+  with no deploy. **Reset to default** removes the panel's value, so `.env`
+  (or the default) applies again. Below them, the variables the panel never
+  changes - the public-publishing gate, the three admin variables, the ingest
+  token, backup settings, database and host - listed by name with whether each
+  is set; secret values are never shown. Change those in `.env` and deploy.
+- **Public notice** (on the settings page). A short message on every public
+  page, such as "Maintenance tonight 22:00-22:30": English required, Dutch and
+  French optional (visitors whose language has no text get the English),
+  plain text up to 300 characters, information or warning, and an optional
+  expiry in UTC after which it disappears by itself. **Preview** shows it in
+  each language before you confirm. It is not shown on the projector view.
+  Clearing it is one confirmation. Every page's cached copy and ETag change
+  with it, so visitors see the change on their next load.
 
 ## When it does not work
 

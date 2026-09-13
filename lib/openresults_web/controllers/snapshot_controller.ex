@@ -205,9 +205,7 @@ defmodule OpenResultsWeb.SnapshotController do
       snapshot ->
         # The payload as stored, byte for byte in meaning. A response that
         # reshaped it would be a second, undocumented contract.
-        conn
-        |> noindex_if_pending(slug)
-        |> json(snapshot.payload)
+        json(conn, snapshot.payload)
     end
   end
 
@@ -219,13 +217,6 @@ defmodule OpenResultsWeb.SnapshotController do
       detail: "no tournament has published under this slug",
       slug: slug
     })
-  end
-
-  # Reachable is not the same as indexable - see `OpenResults.Tournaments`.
-  defp noindex_if_pending(conn, slug) do
-    if Tournaments.status(slug) == :pending,
-      do: put_resp_header(conn, "x-robots-tag", "noindex"),
-      else: conn
   end
 
   @doc """

@@ -26,6 +26,9 @@ defmodule OpenResultsWeb.Router do
     # before the scope's own plugs - ahead of `Revalidate`, which cannot
     # build an ETag or find a cached page without knowing the language.
     plug OpenResultsWeb.Plugs.Locale
+    # The operator's notice, decided once, in this language - before
+    # `Revalidate`, which keys the ETag and the page cache on its version.
+    plug OpenResultsWeb.Plugs.PublicNotice
     plug :put_secure_browser_headers
     # Runs AFTER, because it rewrites the header the line above just set.
     # See `OpenResultsWeb.Framing` for why every page here is safe to embed
@@ -84,9 +87,9 @@ defmodule OpenResultsWeb.Router do
   # is exactly wrong there.
   #
   # `Visibility` runs before `Revalidate` on every route that has a slug, in
-  # both scopes: a hidden tournament must not get a 304 or a cached page, and a
-  # pending one must carry `noindex` on every response, cached or not. See
-  # `OpenResults.Tournaments` for what each status shows to whom.
+  # both scopes: a hidden tournament must not get a 304 or a cached page, and
+  # the ETag is keyed on the status. See `OpenResults.Tournaments` for what
+  # each status shows to whom.
   scope "/", OpenResultsWeb do
     pipe_through [:browser, OpenResultsWeb.Plugs.Visibility, OpenResultsWeb.Plugs.Revalidate]
 
@@ -283,6 +286,13 @@ defmodule OpenResultsWeb.Router do
     post "/installations/:id/revoke", InstallationController, :revoke
     get "/installations/:id/move-tournaments", InstallationController, :confirm_move
     post "/installations/:id/move-tournaments", InstallationController, :move
+    get "/installations/:id/trust", InstallationController, :confirm_trust
+    post "/installations/:id/trust", InstallationController, :trust
+    get "/installations/:id/untrust", InstallationController, :confirm_untrust
+    post "/installations/:id/untrust", InstallationController, :untrust
+    # GET the form; GET with `check=1` the confirmation; POST the change.
+    get "/installations/:id/limits", InstallationController, :confirm_limits
+    post "/installations/:id/limits", InstallationController, :limits
 
     get "/reports", ReportController, :index
     get "/reports/:id", ReportController, :show
@@ -297,6 +307,19 @@ defmodule OpenResultsWeb.Router do
     post "/address-blocks/:id/unblock", AddressBlockController, :unblock
 
     get "/action-log", ActionLogController, :index
+
+    # Server settings and the public notice. A setting's and the notice's
+    # confirmation is a GET carrying the value (nothing here is personal), so
+    # every POST is a confirmed action like the rest.
+    get "/settings", SettingsController, :index
+    get "/settings/notice", SettingsController, :confirm_notice
+    post "/settings/notice", SettingsController, :notice
+    get "/settings/notice/clear", SettingsController, :confirm_clear_notice
+    post "/settings/notice/clear", SettingsController, :clear_notice
+    get "/settings/:key", SettingsController, :confirm_setting
+    post "/settings/:key", SettingsController, :setting
+    get "/settings/:key/reset", SettingsController, :confirm_reset
+    post "/settings/:key/reset", SettingsController, :reset
 
     # Test-only: a harmless confirmation page and the POST behind it, so the
     # confirmation pattern and the CSRF check are proven through this exact

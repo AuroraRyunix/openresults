@@ -27,6 +27,42 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Change] **A pending tournament is public straight away, except on player
+  pages.** A tournament published with an installation key is now on the front
+  page and in its search from its first publish, and its pages no longer carry
+  `noindex`. What it still waits for is the cross-tournament player pages, so a
+  fake tournament cannot put invented results on real players' histories. In
+  the admin panel, approving is now **Show on player pages**, and a pending
+  tournament reads "pending: not on player pages yet".
+- [Feature] **Server settings in the admin panel.** The operator name, the terms
+  link and the public-publishing limits (versions kept, the free-disk floor, the
+  registration budgets, publishes per minute, tournaments per installation, the
+  snapshot size cap) can be changed on a new **Settings** page, with no deploy.
+  A value saved there wins over `.env`; each setting shows whether its value
+  comes from the panel, the environment or the default, and **Reset to
+  default** removes the panel's value. `GET /api/server` reports the panel's
+  operator name and terms link. The public-publishing gate, the admin
+  variables, tokens, passphrases, backups, database and host stay in `.env`
+  only, listed read-only without their values.
+- [Change] **The limits are checked for range at boot.** The five registration
+  and installation limits in `.env` now stop the boot when out of range, as the
+  panel refuses them (publishes per minute at least 1, snapshot cap 1 to
+  8,000,000 bytes, the others at least 0), `OPENRESULTS_TERMS_URL` must be an
+  `https://` address, and `OPENRESULTS_OPERATOR_NAME` one line of at most 100
+  characters.
+- [Feature] **Trusted installations.** An installation can be marked trusted
+  from its page in the admin panel; tournaments it creates start listed, on
+  player pages at once, and trusting can also list the ones it has pending.
+  Revoking ends trust. Any installation can also be given its own tournament
+  limit, snapshot size cap, publishes per minute and version cap, with an empty
+  field meaning the server's value.
+- [Feature] **A public notice.** The operator can put a short message on every
+  public page ("Maintenance tonight 22:00-22:30") from the settings page: in
+  English, with optional Dutch and French, as information or a warning, with
+  an optional expiry after which it disappears by itself. It is not shown on
+  the projector view. Setting, changing, clearing or expiring it changes every
+  page's ETag and cached copy, so nobody keeps being served the old page.
+
 - [Fix] **The admin panel showed every email address as "[email protected]"
   behind Cloudflare.** Cloudflare's Email Address Obfuscation rewrites addresses
   in HTML and decodes them with a script, and the panel allows no scripts, so

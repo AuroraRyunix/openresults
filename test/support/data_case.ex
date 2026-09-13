@@ -71,6 +71,9 @@ defmodule OpenResults.DataCase do
     # here, because a status cached by one test's rolled-back row would make a
     # tournament in the next test hidden for no reason anybody could find.
     OpenResults.Tournaments.StatusCache.clear()
+    # Server settings and the public notice: a value one test saved in the
+    # panel is rolled back with its row, and must not outlive it here.
+    OpenResults.ServerSettings.clear_cache()
   end
 
   @doc """

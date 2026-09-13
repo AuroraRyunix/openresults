@@ -120,9 +120,11 @@ defmodule OpenResultsWeb.Plugs.Revalidate.Page do
   Drops every stored page of ONE tournament, in every language - the same
   sweep a publish triggers in `put/5`, for the one change that alters a page
   without changing its snapshot id: moderation changing a tournament's
-  visibility (`OpenResults.Tournaments`). A pending page carries `noindex`
-  and a listed one does not, so the old body must not be served under the
-  new status.
+  visibility (`OpenResults.Tournaments`). A hidden tournament's pages must go
+  at once, and whatever else a status may change on a page must not be served
+  under the new status. (A public notice also changes pages without a
+  publish; that one is in the ETag, and so in this cache's key, instead - see
+  `OpenResultsWeb.Plugs.Revalidate`.)
   """
   def forget(slug) do
     case :ets.whereis(@table) do

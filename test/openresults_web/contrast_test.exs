@@ -32,6 +32,10 @@ defmodule OpenResultsWeb.ContrastTest do
     # Text on a filled accent or ink: the send button, the admin badge, the
     # security tag, the cross-table's black chip, the admin bar.
     {"button and badge text", "bg", "accent", 4.5},
+    # The operator's public notice: information is ink on the panel, a warning
+    # the ground's colour on a filled accent.
+    {"an information notice", "ink", "panel", 4.5},
+    {"a warning notice", "bg", "accent", 4.5},
     {"inverted text", "bg", "ink", 4.5},
     # Non-text: 3:1 (WCAG 1.4.11).
     {"the focus ring", "accent", "bg", 3.0},

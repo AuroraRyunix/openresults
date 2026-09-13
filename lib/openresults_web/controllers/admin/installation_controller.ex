@@ -30,7 +30,8 @@ defmodule OpenResultsWeb.Admin.InstallationController do
   alias OpenResults.Moderation
   alias OpenResultsWeb.Admin.{Confirmation, Params}
 
-  plug Confirmation when action in [:suspend, :unsuspend, :revoke, :move]
+  plug Confirmation
+       when action in [:suspend, :unsuspend, :revoke, :move, :trust, :untrust, :limits]
 
   @statuses ~w(active suspended revoked)
 
@@ -61,6 +62,7 @@ defmodule OpenResultsWeb.Admin.InstallationController do
         installation: installation,
         tournaments: Moderation.list_tournaments(%{installation_id: installation.id}),
         storage: Moderation.installation_storage(installation.id),
+        limits: OpenResults.PublicPublishing.installation_limits(installation),
         actions:
           Moderation.list_actions(%{
             target_type: "installation",
@@ -212,6 +214,197 @@ defmodule OpenResultsWeb.Admin.InstallationController do
 
   defp revoked_message(id, "false", _installation),
     do: "Revoked #{id}. Its tournaments were left as they are."
+
+  # --- trust -------------------------------------------------------------------
+
+  def confirm_trust(conn, %{"id" => id}) do
+    with_installation(conn, id, fn installation ->
+      cond do
+        installation.status == "revoked" ->
+          refuse(conn, installation, "A revoked installation cannot be trusted")
+
+        installation.trusted ->
+          already(conn, installation, "is already trusted")
+
+        true ->
+          render(conn, :trust,
+            page_title: "Trust #{installation.id}",
+            installation: installation,
+            pending: pending_tournaments(installation)
+          )
+      end
+    end)
+  end
+
+  def trust(conn, %{"id" => id} = params) do
+    list? = params["list_pending"] == "true"
+
+    case Moderation.trust(id, conn.assigns.admin, list_pending: list?) do
+      {:ok, installation} ->
+        listed = if list?, do: " Its pending tournaments are on player pages now.", else: ""
+
+        conn
+        |> put_flash(
+          :info,
+          "Trusted #{installation.id}: its new tournaments start listed.#{listed}"
+        )
+        |> redirect(to: ~p"/admin/installations/#{installation.id}")
+
+      {:error, :invalid_status} ->
+        with_installation(conn, id, fn installation ->
+          conn
+          |> put_flash(
+            :error,
+            "Nothing changed: #{installation.id} is #{installation.status}" <>
+              if(installation.trusted, do: " and already trusted.", else: ".")
+          )
+          |> redirect(to: ~p"/admin/installations/#{installation.id}")
+        end)
+
+      {:error, :not_found} ->
+        gone(conn, id)
+    end
+  end
+
+  def confirm_untrust(conn, %{"id" => id}) do
+    with_installation(conn, id, fn installation ->
+      if installation.trusted do
+        Confirmation.render_page(conn,
+          title: "Stop trusting #{installation.id}?",
+          action: ~p"/admin/installations/#{installation.id}/untrust",
+          button: "Stop trusting",
+          cancel: ~p"/admin/installations/#{installation.id}",
+          danger: false,
+          consequences: [
+            summary(installation),
+            "Tournaments it creates from now on start pending again: public at once, but not on " <>
+              "players' history pages until you show them there.",
+            "Its tournaments that are already listed stay listed. Its own limits are unchanged."
+          ]
+        )
+      else
+        already(conn, installation, "is not trusted")
+      end
+    end)
+  end
+
+  def untrust(conn, %{"id" => id}) do
+    case Moderation.untrust(id, conn.assigns.admin) do
+      {:ok, installation} ->
+        conn
+        |> put_flash(:info, "#{installation.id} is no longer trusted.")
+        |> redirect(to: ~p"/admin/installations/#{installation.id}")
+
+      {:error, :invalid_status} ->
+        with_installation(conn, id, &already(conn, &1, "is not trusted"))
+
+      {:error, :not_found} ->
+        gone(conn, id)
+    end
+  end
+
+  defp already(conn, installation, words) do
+    conn
+    |> put_flash(:error, "Nothing changed: #{installation.id} #{words}.")
+    |> redirect(to: ~p"/admin/installations/#{installation.id}")
+  end
+
+  defp pending_tournaments(installation),
+    do: Enum.filter(installation.tournaments, &(&1.status == "pending"))
+
+  # --- own limits --------------------------------------------------------------
+
+  def confirm_limits(conn, %{"id" => id} = params) do
+    with_installation(conn, id, fn installation ->
+      values = limit_values(params["limits"], installation)
+
+      if params["check"] do
+        changeset = Moderation.change_installation_limits(installation, values)
+
+        if changeset.valid? do
+          render(conn, :limits_confirm,
+            page_title: "Limits for #{installation.id}",
+            installation: installation,
+            before_limits: OpenResults.PublicPublishing.installation_limits(installation),
+            after_limits:
+              OpenResults.PublicPublishing.installation_limits(
+                Ecto.Changeset.apply_changes(changeset)
+              ),
+            hidden: Map.new(values, fn {k, v} -> {"limits[#{k}]", v || ""} end)
+          )
+        else
+          render_limits(conn, installation, values, limit_errors(changeset))
+        end
+      else
+        render_limits(conn, installation, values, %{})
+      end
+    end)
+  end
+
+  def limits(conn, %{"id" => id} = params) do
+    with_installation(conn, id, fn installation ->
+      values = limit_values(params["limits"], nil)
+
+      case Moderation.put_installation_limits(installation.id, values, conn.assigns.admin) do
+        {:ok, updated} ->
+          conn
+          |> put_flash(:info, "Saved #{updated.id}'s limits.")
+          |> redirect(to: ~p"/admin/installations/#{updated.id}")
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          render_limits(conn, installation, values, limit_errors(changeset))
+
+        {:error, :not_found} ->
+          gone(conn, id)
+      end
+    end)
+  end
+
+  defp render_limits(conn, installation, values, errors) do
+    conn
+    |> put_status(if errors == %{}, do: :ok, else: :unprocessable_entity)
+    |> render(:limits,
+      page_title: "Limits for #{installation.id}",
+      installation: installation,
+      limits: OpenResults.PublicPublishing.installation_limits(installation),
+      values: values,
+      errors: errors
+    )
+  end
+
+  # The four fields as text, blank as nil. With no form sent yet, the
+  # installation's own values fill it.
+  defp limit_values(fields, installation) when is_map(fields) or is_nil(fields) do
+    Map.new(OpenResults.Installations.Installation.limits(), fn field ->
+      name = Atom.to_string(field)
+
+      value =
+        case fields do
+          %{^name => text} when is_binary(text) -> Params.text(text)
+          nil when installation != nil -> own_text(Map.get(installation, field))
+          _ -> nil
+        end
+
+      {name, value}
+    end)
+  end
+
+  defp limit_values(_not_a_map, installation), do: limit_values(%{}, installation)
+
+  defp own_text(nil), do: nil
+  defp own_text(n), do: Integer.to_string(n)
+
+  defp limit_errors(changeset) do
+    Map.new(changeset.errors, fn {field, {message, _}} ->
+      {field, "#{limit_label(field)} #{message}, or empty for the server's value."}
+    end)
+  end
+
+  @doc false
+  def limit_label(:max_tournaments), do: "Pending and listed tournaments"
+  def limit_label(:max_snapshot_bytes), do: "Largest snapshot (bytes)"
+  def limit_label(:publishes_per_minute), do: "Publishes per minute"
+  def limit_label(:max_versions), do: "Versions kept per tournament"
 
   # --- move every tournament ---------------------------------------------------
 

@@ -60,6 +60,12 @@ defmodule OpenResults.Application do
       # same reason as the caches above. See
       # `OpenResults.Tournaments.StatusCache`.
       OpenResults.Tournaments.StatusCache,
+      # The server settings saved in the admin panel, and the public notice,
+      # in ETS: limits are read on every publish, and the notice on every
+      # page. Before the endpoint, like the caches above, and before
+      # `DiskSpace`, which reads the free-disk floor from it. See
+      # `OpenResults.ServerSettings`.
+      OpenResults.ServerSettings,
       # Free space on the database's volume, measured on a timer so the
       # `storage_low` check is an ETS read. Before the endpoint, like the
       # caches above. See `OpenResults.DiskSpace`.

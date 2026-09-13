@@ -59,11 +59,13 @@ defmodule OpenResults.Moderation do
   alias OpenResults.Installations.Installation
   alias OpenResults.Moderation.Action
   alias OpenResults.ModerationJournal
+  alias OpenResults.PublicNotice
   alias OpenResults.QueryFilters
   alias OpenResults.Registrations.Registration
   alias OpenResults.Repo
   alias OpenResults.Reports
   alias OpenResults.Reports.Report
+  alias OpenResults.ServerSettings
   alias OpenResults.Settings
   alias OpenResults.Snapshots.Snapshot
   alias OpenResults.Takedown
@@ -412,6 +414,9 @@ defmodule OpenResults.Moderation do
 
     result =
       transaction(fn ->
+        was_trusted = trusted?(to_string(id))
+
+        # `transition/3` clears trust with the status - see `trust/3`.
         case Installations.transition(to_string(id), ["active", "suspended"], "revoked") do
           {:ok, installation} ->
             hidden = if hide?, do: Tournaments.hide_all_for(installation.id), else: []
@@ -419,7 +424,8 @@ defmodule OpenResults.Moderation do
             row =
               log!(email, "revoke", "installation", installation.id, %{
                 hide_tournaments: hide?,
-                hidden: hidden
+                hidden: hidden,
+                was_trusted: was_trusted
               })
 
             {installation, hidden, row}
@@ -438,6 +444,281 @@ defmodule OpenResults.Moderation do
       error ->
         error
     end
+  end
+
+  defp trusted?(id) do
+    from(i in Installation, where: i.id == ^id, select: i.trusted) |> Repo.one() == true
+  end
+
+  @doc """
+  Trusts an installation: tournaments it mints from now on start `listed`
+  instead of `pending`, so they are on the cross-tournament player pages at
+  once. `list_pending: true` also lists every tournament of its that is
+  pending now, each with its own `approve` row; without it they stay pending.
+
+  `{:ok, installation}`, or `{:error, :not_found}`, or
+  `{:error, :invalid_status}` when it is already trusted or is revoked.
+  Suspending leaves trust as it is (a suspended key publishes nothing
+  anyway); revoking clears it.
+  """
+  @spec trust(String.t(), actor(), keyword()) :: {:ok, Installation.t()} | {:error, atom()}
+  def trust(id, actor, opts) do
+    email = actor!(actor)
+    list? = Keyword.get(opts, :list_pending, false) == true
+
+    result =
+      transaction(fn ->
+        case Installations.set_trusted(to_string(id), true) do
+          {:ok, installation} ->
+            listed = if list?, do: Tournaments.list_pending_for(installation.id), else: []
+
+            for slug <- listed do
+              log!(email, "approve", "tournament", slug, %{
+                from: ["pending"],
+                to: "listed",
+                via: "trust"
+              })
+            end
+
+            log!(email, "trust", "installation", installation.id, %{
+              list_pending: list?,
+              listed: listed
+            })
+
+            {installation, listed}
+
+          {:error, reason} ->
+            Repo.rollback(reason)
+        end
+      end)
+
+    case result do
+      {:ok, {installation, listed}} ->
+        Enum.each(listed, &Tournaments.forget/1)
+        {:ok, Installations.get(installation.id)}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Ends an installation's trust: its next tournaments start `pending` again.
+  The ones it already has keep their status. `{:error, :invalid_status}` when
+  it is not trusted.
+  """
+  @spec untrust(String.t(), actor()) :: {:ok, Installation.t()} | {:error, atom()}
+  def untrust(id, actor) do
+    email = actor!(actor)
+
+    transaction(fn ->
+      case Installations.set_trusted(to_string(id), false) do
+        {:ok, installation} ->
+          log!(email, "untrust", "installation", installation.id, %{})
+          installation
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  An installation's own limits, validated as `put_installation_limits/3`
+  would and not stored. Blank is the server's value.
+  """
+  @spec change_installation_limits(Installation.t(), map()) :: Ecto.Changeset.t()
+  def change_installation_limits(%Installation{} = installation, attrs),
+    do: Installations.limits_changeset(installation, attrs)
+
+  @doc """
+  Sets an installation's own limits - `max_tournaments`,
+  `max_snapshot_bytes`, `publishes_per_minute`, `max_versions` (string keys,
+  as the form sends them) - each a whole number in the range of the server
+  setting it overrides, or blank for the server's value. Every field is
+  written, so a field left out goes back to the server's value.
+
+  `{:ok, installation}`, `{:error, :not_found}`, or `{:error, changeset}`
+  naming the fields out of range, with nothing stored.
+  """
+  @spec put_installation_limits(String.t(), map(), actor()) ::
+          {:ok, Installation.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def put_installation_limits(id, attrs, actor) when is_map(attrs) do
+    email = actor!(actor)
+
+    case Repo.get(Installation, to_string(id)) do
+      nil ->
+        {:error, :not_found}
+
+      installation ->
+        changeset = Installations.limits_changeset(installation, attrs)
+
+        if changeset.valid? do
+          before = Map.take(installation, Installation.limits())
+
+          transaction(fn ->
+            updated = Installations.update_limits!(changeset)
+
+            log!(email, "set_installation_limits", "installation", installation.id, %{
+              from: stringify(before),
+              to: stringify(Map.take(updated, Installation.limits()))
+            })
+
+            updated
+          end)
+          |> committed(fn updated -> Installations.get(updated.id) end)
+        else
+          {:error, changeset}
+        end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Server settings and the public notice
+
+  @doc """
+  Every server setting the panel can change, described:
+  `%{key, value, source: :panel | :environment | :default, panel, environment,
+  default, variable}` - see `OpenResults.ServerSettings.describe/1`.
+  """
+  @spec server_settings() :: [map()]
+  def server_settings, do: ServerSettings.all()
+
+  @doc """
+  Saves a server setting in the panel, where it wins over the environment.
+  `raw` is checked exactly as the boot checks the environment variable
+  (`OpenResults.ServerSettings.validate/2`).
+
+  `{:ok, described}`, `{:error, :unknown_setting}`, or
+  `{:error, {:invalid_value, sentence}}` with nothing stored.
+  """
+  @spec put_server_setting(atom() | String.t(), term(), actor()) ::
+          {:ok, map()} | {:error, :unknown_setting | {:invalid_value, String.t()}}
+  def put_server_setting(key, raw, actor) do
+    email = actor!(actor)
+
+    with {:ok, key} <- setting_key(key),
+         {:ok, value} <- valid_setting(key, raw) do
+      before = ServerSettings.describe(key)
+
+      transaction(fn ->
+        ServerSettings.put(key, ServerSettings.encode(value), email)
+
+        log!(email, "put_server_setting", "setting", Atom.to_string(key), %{
+          from: before.value,
+          from_source: Atom.to_string(before.source),
+          to: value
+        })
+      end)
+      |> committed(fn _row ->
+        ServerSettings.refresh()
+        ServerSettings.describe(key)
+      end)
+    end
+  end
+
+  @doc """
+  Removes the panel's value, so the environment's - or the default - is in
+  force again. `{:ok, described}`, `{:error, :unknown_setting}`, or
+  `{:error, :not_set}` when the panel holds no value for it.
+  """
+  @spec reset_server_setting(atom() | String.t(), actor()) ::
+          {:ok, map()} | {:error, :unknown_setting | :not_set}
+  def reset_server_setting(key, actor) do
+    email = actor!(actor)
+
+    with {:ok, key} <- setting_key(key) do
+      before = ServerSettings.describe(key)
+
+      transaction(fn ->
+        if ServerSettings.delete(key) == 0, do: Repo.rollback(:not_set)
+        after_reset = ServerSettings.fallback(key)
+
+        log!(email, "reset_server_setting", "setting", Atom.to_string(key), %{
+          from: before.panel,
+          to: after_reset.value,
+          to_source: Atom.to_string(after_reset.source)
+        })
+      end)
+      |> tap(fn _ -> ServerSettings.refresh() end)
+      |> committed(fn _row -> ServerSettings.describe(key) end)
+    end
+  end
+
+  defp setting_key(key) do
+    case ServerSettings.key(key) do
+      {:ok, key} -> {:ok, key}
+      :error -> {:error, :unknown_setting}
+    end
+  end
+
+  defp valid_setting(key, raw) do
+    case ServerSettings.validate(key, raw) do
+      {:ok, value} -> {:ok, value}
+      {:error, sentence} -> {:error, {:invalid_value, sentence}}
+    end
+  end
+
+  @doc "The stored public notice, expired or not, or `nil` - see `OpenResults.PublicNotice`."
+  @spec public_notice() :: PublicNotice.t() | nil
+  def public_notice, do: PublicNotice.stored()
+
+  @doc "A notice checked as `set_public_notice/2` would check it, stored nowhere."
+  @spec change_public_notice(map()) :: Ecto.Changeset.t()
+  def change_public_notice(attrs), do: PublicNotice.changeset(attrs)
+
+  @doc """
+  Sets the public notice, replacing any. `attrs` has string keys `en`
+  (required), `nl`, `fr`, `level` (`info` | `warning`) and `expires_at` (an
+  ISO 8601 instant in the future, or blank). `{:ok, notice}` or
+  `{:error, changeset}` with nothing stored.
+  """
+  @spec set_public_notice(map(), actor()) ::
+          {:ok, PublicNotice.t()} | {:error, Ecto.Changeset.t()}
+  def set_public_notice(attrs, actor) when is_map(attrs) do
+    email = actor!(actor)
+    now = DateTime.utc_now()
+    changeset = PublicNotice.changeset(attrs, now)
+
+    if changeset.valid? do
+      before = PublicNotice.stored()
+      document = PublicNotice.to_document(changeset, email, now)
+
+      transaction(fn ->
+        ServerSettings.put(ServerSettings.notice_key(), Jason.encode!(document), email)
+
+        log!(email, "set_notice", "setting", ServerSettings.notice_key(), %{
+          from: PublicNotice.log_details(before),
+          to: PublicNotice.log_details(PublicNotice.from_document(document))
+        })
+      end)
+      |> committed(fn _row ->
+        ServerSettings.refresh()
+        PublicNotice.stored()
+      end)
+    else
+      {:error, changeset}
+    end
+  end
+
+  @doc """
+  Clears the public notice. `{:ok, previous}`, or `{:error, :not_set}` when
+  there is none - an expired notice still counts as set until it is cleared.
+  """
+  @spec clear_public_notice(actor()) :: {:ok, PublicNotice.t()} | {:error, :not_set}
+  def clear_public_notice(actor) do
+    email = actor!(actor)
+    before = PublicNotice.stored()
+
+    transaction(fn ->
+      if ServerSettings.delete(ServerSettings.notice_key()) == 0, do: Repo.rollback(:not_set)
+
+      log!(email, "clear_notice", "setting", ServerSettings.notice_key(), %{
+        from: PublicNotice.log_details(before)
+      })
+    end)
+    |> tap(fn _ -> ServerSettings.refresh() end)
+    |> committed(fn _row -> before end)
   end
 
   defp set_installation_status(id, from_statuses, to, action, actor) do

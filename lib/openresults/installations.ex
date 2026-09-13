@@ -192,8 +192,15 @@ defmodule OpenResults.Installations do
   def transition(id, from_statuses, to) when is_binary(id) do
     now = DateTime.utc_now()
 
+    # Revoking ends trust with the key, whichever path revokes - the panel,
+    # or the moderation journal's replay after a restore.
+    changes =
+      if to == "revoked",
+        do: [status: to, trusted: false, updated_at: now],
+        else: [status: to, updated_at: now]
+
     case from(i in Installation, where: i.id == ^id and i.status in ^from_statuses)
-         |> Repo.update_all(set: [status: to, updated_at: now]) do
+         |> Repo.update_all(set: changes) do
       {1, _} ->
         {:ok, get(id)}
 
@@ -203,6 +210,80 @@ defmodule OpenResults.Installations do
   end
 
   def transition(_not_an_id, _from, _to), do: {:error, :not_found}
+
+  @doc """
+  Sets or clears `trusted`. `{:error, :invalid_status}` when it is already
+  so, or - to trust - when the installation is revoked.
+  """
+  @spec set_trusted(String.t(), boolean()) ::
+          {:ok, Installation.t()} | {:error, :not_found | :invalid_status}
+  def set_trusted(id, trusted) when is_binary(id) and is_boolean(trusted) do
+    statuses = if trusted, do: ["active", "suspended"], else: Installation.statuses()
+
+    case from(i in Installation,
+           where: i.id == ^id and i.status in ^statuses and i.trusted != ^trusted
+         )
+         |> Repo.update_all(set: [trusted: trusted, updated_at: DateTime.utc_now()]) do
+      {1, _} ->
+        {:ok, get(id)}
+
+      {0, _} ->
+        if Repo.get(Installation, id), do: {:error, :invalid_status}, else: {:error, :not_found}
+    end
+  end
+
+  def set_trusted(_not_an_id, _trusted), do: {:error, :not_found}
+
+  @doc """
+  Checks an installation's own limits as the panel's form sends them -
+  string keys `max_tournaments`, `max_snapshot_bytes`, `publishes_per_minute`,
+  `max_versions`, each a whole number or blank for "the server's value" -
+  with the ranges of the server-wide settings they override
+  (`OpenResults.ServerSettings.validate/2`). Stores nothing.
+  """
+  @spec limits_changeset(Installation.t(), map()) :: Ecto.Changeset.t()
+  def limits_changeset(%Installation{} = installation, attrs) when is_map(attrs) do
+    Enum.reduce(Installation.limits(), Ecto.Changeset.change(installation), fn field, cs ->
+      name = Atom.to_string(field)
+      raw = Map.get(attrs, name, Map.get(attrs, field))
+
+      case raw do
+        blank when blank in [nil, ""] ->
+          Ecto.Changeset.put_change(cs, field, nil)
+
+        raw ->
+          raw = if is_binary(raw), do: String.trim(raw), else: raw
+
+          if raw == "" do
+            Ecto.Changeset.put_change(cs, field, nil)
+          else
+            global = OpenResults.PublicPublishing.global_for(field)
+
+            case OpenResults.ServerSettings.validate(global, raw) do
+              {:ok, value} ->
+                Ecto.Changeset.put_change(cs, field, value)
+
+              {:error, _sentence} ->
+                spec = OpenResults.ServerSettings.spec(global)
+                Ecto.Changeset.add_error(cs, field, range_message(spec), validation: :range)
+            end
+          end
+      end
+    end)
+    |> Map.put(:action, :validate)
+  end
+
+  defp range_message(%{min: min, max: nil}), do: "is a whole number of at least #{min}"
+  defp range_message(%{min: min, max: max}), do: "is a whole number from #{min} to #{max}"
+
+  @doc false
+  # Stores a valid limits changeset. For `OpenResults.Moderation`.
+  def update_limits!(%Ecto.Changeset{valid?: true} = changeset) do
+    changeset
+    |> Map.put(:action, nil)
+    |> Ecto.Changeset.put_change(:updated_at, DateTime.utc_now())
+    |> Repo.update!()
+  end
 
   @doc """
   How many installations registered from, or were last seen from, an address

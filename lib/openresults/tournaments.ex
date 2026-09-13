@@ -14,16 +14,19 @@ defmodule OpenResults.Tournaments do
   | | pending | listed | hidden |
   |---|---|---|---|
   | reachable at its URL | yes | yes | no - the same 404 as an unknown slug |
-  | `noindex` | yes | no | - |
-  | homepage and player pages | no | yes | no |
+  | homepage and its search | yes | yes | no |
+  | cross-tournament player pages | **no** | yes | no |
   | entry and report forms | yes | yes | no |
 
-  **Pending is still reachable.** An arbiter's event must never wait for an
-  approval on a Saturday morning. What pending withholds is the *audience*:
-  search engines, the front page, and - the row the design rests on - the
-  cross-tournament player pages, because otherwise anyone could publish a fake
-  tournament full of real FIDE ids and have invented results appear on real
-  players' histories.
+  **Pending is public, except on player pages** (the admin upgrade,
+  2026-09-13). Publishing and discovery are open by default: an arbiter's
+  event must never wait for an approval on a Saturday morning, and it is on
+  the front page, in its search and open to search engines straight away.
+  The one thing pending withholds is the cross-tournament player pages,
+  because otherwise anyone could publish a fake tournament full of real FIDE
+  ids and have invented results appear on real players' histories. Approving
+  a tournament is what puts it there. A trusted installation's tournaments
+  start listed.
 
   **Hidden is indistinguishable from absent.** Every public surface asks
   `public_latest/1` or `status/1`, and a hidden tournament answers exactly what
@@ -169,7 +172,8 @@ defmodule OpenResults.Tournaments do
   def authorize_owner(_not_a_slug, %Installation{}, _action), do: {:error, :not_owner}
 
   @doc """
-  Mints a slug for `installation`: `pending`, no snapshot.
+  Mints a slug for `installation`: `pending` - or `listed` when the
+  installation is trusted - with no snapshot.
 
   `{:error, {:tournament_limit, limit}}` once the installation holds `limit`
   tournaments that are `pending` or `listed`. Counted and inserted in one
@@ -177,8 +181,11 @@ defmodule OpenResults.Tournaments do
   """
   @spec mint(Installation.t(), keyword()) ::
           {:ok, Tournament.t()} | {:error, {:tournament_limit, non_neg_integer()}}
-  def mint(%Installation{id: id}, opts \\ []) do
-    limit = Keyword.get_lazy(opts, :limit, &PublicPublishing.installation_max_tournaments/0)
+  def mint(%Installation{id: id} = installation, opts \\ []) do
+    limit =
+      Keyword.get_lazy(opts, :limit, fn ->
+        PublicPublishing.installation_max_tournaments(installation)
+      end)
 
     # `insert_all` does not cast, and a usec column refuses a DateTime of any
     # other precision - which is what a test's `~U[...]` literal is.
@@ -193,13 +200,19 @@ defmodule OpenResults.Tournaments do
 
         slug = unused_slug()
 
+        # A trusted installation's tournaments start listed - see
+        # `OpenResults.Moderation.trust/3`. Read from the row inside this
+        # transaction, not from the struct the caller holds, so trust given or
+        # taken a moment ago is what applies.
+        status = if trusted?(id), do: "listed", else: "pending"
+
         {1, [tournament]} =
           Repo.insert_all(
             Tournament,
             [
               %{
                 slug: slug,
-                status: "pending",
+                status: status,
                 installation_id: id,
                 minted_at: now,
                 inserted_at: now,
@@ -214,9 +227,37 @@ defmodule OpenResults.Tournaments do
       mode: :immediate
     )
     |> tap(fn
-      {:ok, %Tournament{slug: slug}} -> StatusCache.put(slug, :pending)
+      {:ok, %Tournament{slug: slug, status: stored}} -> StatusCache.put(slug, to_status(stored))
       _refused -> :ok
     end)
+  end
+
+  defp trusted?(installation_id) do
+    from(i in Installation, where: i.id == ^installation_id, select: i.trusted)
+    |> Repo.one() == true
+  end
+
+  @doc """
+  Lists every `pending` tournament an installation holds and returns their
+  slugs, oldest first - what trusting it with "list its pending tournaments
+  too" does. Each changes as `transition/3` changes one: cache updated,
+  rendered pages dropped.
+  """
+  @spec list_pending_for(String.t()) :: [String.t()]
+  def list_pending_for(installation_id) do
+    slugs =
+      from(t in Tournament,
+        where: t.installation_id == ^installation_id and t.status == "pending",
+        order_by: [asc: t.inserted_at, asc: t.slug],
+        select: t.slug
+      )
+      |> Repo.all()
+
+    from(t in Tournament, where: t.slug in ^slugs and t.status == "pending")
+    |> Repo.update_all(set: [status: "listed", updated_at: DateTime.utc_now()])
+
+    Enum.each(slugs, &changed/1)
+    slugs
   end
 
   @doc "How many `pending` or `listed` tournaments an installation holds."

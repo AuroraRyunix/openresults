@@ -68,7 +68,8 @@ defmodule OpenResultsWeb.Admin.DashboardHTML do
           <ul>
             <li :for={status <- ~w(pending listed hidden)a}>
               <a href={~p"/admin/tournaments?#{[status: status]}"}>
-                <strong>{@counts.tournaments[status]}</strong> {status}
+                <strong>{@counts.tournaments[status]}</strong>
+                {if status == :pending, do: "pending: not on player pages yet", else: status}
               </a>
             </li>
           </ul>

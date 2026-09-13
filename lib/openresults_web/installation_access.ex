@@ -75,7 +75,7 @@ defmodule OpenResultsWeb.InstallationAccess do
          :ok <- address_block(address, action),
          :ok <- pause(action),
          :ok <- storage(action),
-         :ok <- size(conn, action),
+         :ok <- size(conn, installation, action),
          :ok <- ownership(conn, installation, action) do
       assign(conn, :credential, {:installation, installation})
     else
@@ -99,9 +99,9 @@ defmodule OpenResultsWeb.InstallationAccess do
   # A status this code has never heard of is not permission.
   defp status(%Installation{}, _action), do: {:error, :installation_revoked}
 
-  defp budget(%Installation{id: id}, action) when action in @writes do
+  defp budget(%Installation{id: id} = installation, action) when action in @writes do
     case RateLimit.take({:installation_writes, id},
-           limit: PublicPublishing.installation_publishes_per_minute(),
+           limit: PublicPublishing.installation_publishes_per_minute(installation),
            window_ms: :timer.minutes(1)
          ) do
       :ok ->
@@ -144,8 +144,8 @@ defmodule OpenResultsWeb.InstallationAccess do
   # while `Plug.Parsers` read them - not a `content-length` a client can
   # understate, and not a re-encoding of the parsed map, which would measure
   # this server's JSON rather than the client's.
-  defp size(conn, :publish) do
-    limit = PublicPublishing.installation_max_snapshot_bytes()
+  defp size(conn, installation, :publish) do
+    limit = PublicPublishing.installation_max_snapshot_bytes(installation)
 
     received =
       conn.private[:openresults_body_bytes] || content_length(conn)
@@ -155,7 +155,7 @@ defmodule OpenResultsWeb.InstallationAccess do
       else: :ok
   end
 
-  defp size(_conn, _action), do: :ok
+  defp size(_conn, _installation, _action), do: :ok
 
   defp content_length(conn) do
     with [value] <- get_req_header(conn, "content-length"),

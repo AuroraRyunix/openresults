@@ -39,11 +39,15 @@ defmodule OpenResultsWeb.TournamentController do
     # quietly skip every unlisted tournament and give no reason.
     #
     # Two filters, with two different owners: `listed?` is the ARBITER'S
-    # choice, carried in the payload, and `listed_only` is MODERATION'S - a
-    # pending tournament has not been approved for an audience yet, and a
-    # hidden one is not there at all. See `OpenResults.Tournaments`.
+    # choice, carried in the payload, and `visible_only` is MODERATION'S - a
+    # hidden tournament is not there at all. A pending one is: since the admin
+    # upgrade (2026-09-13) pending keeps a tournament off the cross-tournament
+    # player pages and nowhere else. See `OpenResults.Tournaments`.
+    #
+    # Rendered on every request, never cached, so a tournament appears here
+    # the moment it publishes and stays through approval with no invalidation.
     listed =
-      Enum.filter(Snapshots.list_current(listed_only: true), &Tournament.listed?(&1.payload))
+      Enum.filter(Snapshots.list_current(visible_only: true), &Tournament.listed?(&1.payload))
 
     grouped = Enum.group_by(listed, &Tournament.status(&1.payload))
 

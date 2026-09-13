@@ -25,6 +25,17 @@ defmodule OpenResults.Installations.Installation do
     field :last_seen_at, :utc_datetime_usec
     field :last_seen_from, :string
 
+    # A trusted installation's new tournaments start `listed` rather than
+    # `pending`. Cleared by a revoke. See `OpenResults.Moderation.trust/3`.
+    field :trusted, :boolean, default: false
+
+    # Its own limits; `nil` is the server's. See
+    # `OpenResults.PublicPublishing.installation_limits/1`.
+    field :max_tournaments, :integer
+    field :max_snapshot_bytes, :integer
+    field :publishes_per_minute, :integer
+    field :max_versions, :integer
+
     # Filled by `OpenResults.Installations.list/1`; never stored.
     field :tournament_count, :integer, virtual: true
 
@@ -32,6 +43,11 @@ defmodule OpenResults.Installations.Installation do
 
     timestamps(type: :utc_datetime_usec)
   end
+
+  @limits [:max_tournaments, :max_snapshot_bytes, :publishes_per_minute, :max_versions]
+
+  @doc "The four limits an installation may carry its own value for."
+  def limits, do: @limits
 
   @doc "The three statuses, as stored."
   def statuses, do: @statuses

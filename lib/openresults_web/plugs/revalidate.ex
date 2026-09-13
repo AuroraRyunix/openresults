@@ -250,11 +250,23 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   # parts of the cache key, and a tag one can read at a glance is worth
   # keeping for the afternoon somebody is reading a header dump.
   #
-  # And the VISIBILITY, inside the MAC. Approving a pending tournament changes
-  # its page (the `noindex` goes) without changing its snapshot id, so without
-  # this a crawler holding the pending page would be answered 304 for ever and
-  # never learn it may index it. `Page.forget/1` drops the stored bodies on the
-  # same change; this is the half that reaches the reader's own cache.
+  # And the VISIBILITY, inside the MAC. A status change can change a page
+  # without changing its snapshot id (it did while pending carried `noindex`,
+  # until 2026-09-13), so a reader holding the page from before the change must
+  # not be answered 304. `Page.forget/1` drops the stored bodies on the same
+  # change; this is the half that reaches the reader's own cache.
+  #
+  # And the PUBLIC NOTICE's version, inside the MAC (the admin upgrade,
+  # 2026-09-13). The operator's notice is on every page and belongs to no
+  # snapshot, so setting, changing, clearing or expiring it changes every
+  # page at once. Its version in the tag means a browser holding a page from
+  # under another notice gets a 200, and - the tag being part of `Page`'s key -
+  # no body rendered under another notice is ever served. `nil` when no notice
+  # shows, which is how an expired notice stops matching with no admin action:
+  # `OpenResultsWeb.Plugs.PublicNotice` compares the expiry with the clock on
+  # every request. The bodies stored under an old notice's tags are not swept;
+  # they are unreachable, bounded by `Page`'s per-tournament cap, and go at
+  # the tournament's next publish.
   defp etag_for(conn, id, locale, visibility),
     do: ~s("#{id}-#{locale}-#{digest(conn, visibility)}")
 
@@ -263,11 +275,13 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   # that by construction. 16 bytes of a SHA-256 MAC: 128 bits is beyond any
   # collision search, and the rest would only make a header longer.
   defp digest(conn, visibility) do
+    notice = OpenResultsWeb.Plugs.PublicNotice.version(conn)
+
     :hmac
     |> :crypto.mac(
       :sha256,
       secret(),
-      :erlang.term_to_binary({conn.request_path, conn.query_string, visibility})
+      :erlang.term_to_binary({conn.request_path, conn.query_string, visibility, notice})
     )
     |> binary_part(0, 16)
     |> Base.url_encode64(padding: false)

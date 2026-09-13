@@ -57,6 +57,31 @@ defmodule OpenResultsWeb.Layouts do
     end
   end
 
+  @doc """
+  The operator's notice - see `OpenResults.PublicNotice`. `notice` is what
+  `OpenResultsWeb.Plugs.PublicNotice` assigned: `%{text, lang, level}`.
+
+  A `role="note"` with a name, deliberately not a live region: it is on the
+  page when the page loads and says the same thing on every page, so
+  announcing it on each would be noise. Plain text, escaped like any other
+  assign. The admin panel renders this same component as its preview.
+  """
+  attr :notice, :map, required: true
+  attr :id, :string, default: "public-notice"
+
+  def public_notice(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={["public-notice", "public-notice-#{@notice.level}"]}
+      role="note"
+      aria-label={gettext("Notice")}
+    >
+      <p lang={@notice.lang}>{@notice.text}</p>
+    </div>
+    """
+  end
+
   @doc "The locale this page rendered in, for `<html lang>` and `og:locale`."
   def locale(assigns) do
     case assigns[:locale] do

@@ -75,9 +75,15 @@ defmodule OpenResultsWeb.Admin.Components do
 
   def status(assigns) do
     ~H"""
-    <span class={["admin-status", "admin-status-#{@value}"]}>{@value}</span>
+    <span class={["admin-status", "admin-status-#{@value}"]}>{status_label(@value)}</span>
     """
   end
+
+  # `pending` is the stored word, and since 2026-09-13 it holds a tournament
+  # back from one place only - the cross-tournament player pages - so the
+  # panel says that rather than a word that sounds like "not public yet".
+  defp status_label("pending"), do: "pending: not on player pages yet"
+  defp status_label(value), do: value
 
   # ---------------------------------------------------------------------------
   # Paging

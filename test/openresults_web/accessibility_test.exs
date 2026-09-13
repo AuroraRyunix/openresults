@@ -298,6 +298,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
       "/admin/switches/:key" ->
         ["/admin/switches/registration_open", "/admin/switches/public_publishing_paused"]
 
+      "/admin/settings/:key" <> rest ->
+        for key <- OpenResults.ServerSettings.keys(), do: "/admin/settings/#{key}" <> rest
+
       path ->
         [path]
     end

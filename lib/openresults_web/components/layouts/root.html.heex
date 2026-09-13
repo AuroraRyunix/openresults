@@ -208,6 +208,14 @@
             and the landmark never go anywhere when the region is swapped;
             `tabindex="-1"` so following the skip link moves focus as well as
             the scroll position. --%>
+      <%!-- The operator's notice, above the content and outside the region the
+            refresher replaces. Not on the projector view: a hall's screen is
+            not where "maintenance tonight" belongs. Its version is in this
+            page's ETag - see `OpenResultsWeb.Plugs.Revalidate`. --%>
+      <.public_notice
+        :if={assigns[:public_notice] && !assigns[:display?]}
+        notice={@public_notice}
+      />
       <main id="main" tabindex="-1">
         <div id="live-region" data-live>{@inner_content}</div>
       </main>

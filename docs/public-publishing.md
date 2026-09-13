@@ -43,6 +43,39 @@ without a restart:
 | `registration_open` | `false` | new installations may get keys |
 | `public_publishing_paused` | `false` | installation keys may not publish or mint; deleting is still allowed; operator token unaffected |
 
+**Server settings** **(settled in the admin upgrade, 2026-09-13)**, also
+stored in the database and changed from the admin panel without a restart:
+`operator_name`, `terms_url`, `installation_max_versions`,
+`min_free_disk_percent`, `registrations_per_address`, `registrations_per_day`,
+`installation_publishes_per_minute`, `installation_max_tournaments`,
+`installation_max_snapshot_bytes` - every row of "Defaults" below except the
+gate and the three admin variables.
+
+- **Precedence:** a value saved in the panel; otherwise the environment
+  variable (or a config file); otherwise the default in "Defaults". The panel
+  shows which of the three is in force for each, and "Reset to default"
+  removes the panel's value.
+- **Validation is the boot's**, one set of ranges for both
+  (`OpenResults.ServerSettings.validate/2`; `config/runtime.exs` refuses the
+  same values at boot): `installation_max_versions` a whole number of at least
+  1; `min_free_disk_percent` 0 to 100; `registrations_per_address`,
+  `registrations_per_day` and `installation_max_tournaments` at least 0;
+  `installation_publishes_per_minute` at least 1;
+  `installation_max_snapshot_bytes` 1 to 8,000,000 (the parser's limit);
+  `operator_name` one line of at most 100 characters; `terms_url` an
+  `https://` address. Before this upgrade the five registration and
+  installation limits were only checked for being numbers; a value now out of
+  range stops the boot, like the storage bounds' two.
+- **Cached in ETS**, read with no query on any request path, and refreshed
+  when the panel changes one. A value is in force from the next request.
+- **Never in the panel:** `OPENRESULTS_PUBLIC_PUBLISHING`, the three admin
+  variables, the ingest token, the backup passphrase and `BACKUP_RETENTION`,
+  and every database, host and secret setting. They are security boundaries,
+  or a mistake with them in the panel could lock the operator out of it. The
+  settings page lists them read-only: their names and whether each is set,
+  never a secret's value.
+- Every change writes the action log with the old and the new value.
+
 ## Error bodies
 
 Every error response, old routes and new, is:
@@ -128,7 +161,9 @@ receive it.
 ```
 
 - `operator` from `OPENRESULTS_OPERATOR_NAME`, `terms_url` from
-  `OPENRESULTS_TERMS_URL`; both `null` when unset.
+  `OPENRESULTS_TERMS_URL`; both `null` when unset. **(settled in the admin
+  upgrade, 2026-09-13)** A value saved in the admin panel wins over the
+  variable - see "Server settings" above.
 - `public_registration`: `open` | `closed` | `unavailable`.
 - `public_publishing`: `active` | `paused` | `unavailable`.
 - `Cache-Control: no-store`; never goes through the page cache.
@@ -185,9 +220,13 @@ Mints a slug bound to this installation. Request body `{}`.
   can be chosen, and no existing tournament - operator-owned, pre-key legacy,
   or another installation's - can be claimed.
 - Starts `pending`, with no snapshot. A minted slug that has not received a
-  publish within 30 days is released.
+  publish within 30 days is released. **(settled in the admin upgrade,
+  2026-09-13)** Minted by a **trusted** installation it starts `listed`
+  instead - see "Trusted installations".
 - Counts towards `tournament_limit` (default 50 tournaments that are `pending`
-  or `listed`).
+  or `listed`; **(settled in the admin upgrade, 2026-09-13)** the
+  installation's own limit when it has one, and `limit` in the refusal is
+  the one applied).
 - **(settled in the build)** A mint spends the same per-installation budget as
   a publish (30 a minute between them), and is refused while the
   installation is suspended or revoked, while publishing is paused, and from
@@ -217,6 +256,11 @@ Mints a slug bound to this installation. Request body `{}`.
   request body, measured as read off the wire - see "Snapshot size cap" below
   for the derivation. The operator token keeps today's parser limit
   (8,000,000 bytes).
+- **(settled in the admin upgrade, 2026-09-13)** The budget, the size cap, the
+  version cap and the tournament limit are each the installation's own value
+  when the operator gave it one, and the server's otherwise - see "Trusted
+  installations". `limit_bytes`, `limit` and `retry_after` report the value
+  that was applied.
 - Delete is always allowed for the owner, even when suspended, revoked or
   paused: withdrawing your own tournament is never the harmful action.
 - **(settled in the build)** Delete is also allowed from a blocked address,
@@ -296,7 +340,10 @@ does when the disk fills anyway, whatever filled it.
 **The version cap.** A tournament owned by an installation keeps its newest
 **20** stored versions (`OPENRESULTS_INSTALLATION_MAX_VERSIONS`; the hosted
 server runs with 100). An operator-published tournament - no owning
-installation - keeps every version, as before.
+installation - keeps every version, as before. **(settled in the admin
+upgrade, 2026-09-13)** The cap can be saved in the admin panel, and an
+installation can have its own; the one applied is its owner's at the publish
+that prunes.
 
 - Pruned after every accepted installation-key publish, in the same immediate
   transaction as the ownership check, the key check and the insert: every
@@ -382,24 +429,37 @@ and all kept versions) on the tournament's page.
 
 - Every existing tournament, and every tournament published with the operator
   token: `listed`. The migration backfills that.
-- Installation-key tournaments start `pending`.
+- Installation-key tournaments start `pending` - **except those minted by a
+  trusted installation, which start `listed`** **(settled in the admin
+  upgrade, 2026-09-13)**; see "Trusted installations".
 
 | | pending | listed | hidden |
 |---|---|---|---|
 | reachable at its URL | **yes** | yes | no - 404, same as an unknown slug |
-| `noindex` (meta tag and `X-Robots-Tag`) | yes | no | - |
-| homepage and any listing | no | yes | no |
-| cross-tournament player pages and player search | **no** | yes | no |
+| `noindex` (meta tag and `X-Robots-Tag`) | **no** | no | - |
+| homepage and any listing, its search included | **yes** | yes | no |
+| cross-tournament player pages and player lookup | **no** | yes | no |
 | entry form | yes | yes | no |
 | owner can publish and delete | yes | yes | delete only |
 
+**(settled in the admin upgrade, 2026-09-13)** Pending changed meaning:
+publishing and discovery are open by default, and only player history pages
+wait for moderation. Until then pending also carried `noindex` and was kept
+off the homepage; both are gone, because the operator does not want search
+engines or the front page to wait for an approval either. Approving a
+tournament (`approve/2`, pending to listed) now means "put it on the player
+pages", and the panel words it that way ("Show on player pages"; the status
+reads "pending: not on player pages yet"). The status is still called
+`pending` in the data, the API and the code.
+
 Two rows carry the design:
 
-- **Pending is still reachable.** An arbiter's event must never wait for an
-  approval on a Saturday morning. What pending withholds is the *audience*.
+- **Pending is public.** An arbiter's event must never wait for an approval
+  on a Saturday morning: it is reachable, on the homepage and in its search
+  from its first publish.
 - **Pending stays out of player pages.** Otherwise anyone could publish a fake
   tournament full of real FIDE IDs and have invented results appear on real
-  players' history pages.
+  players' history pages. This is the one thing pending withholds.
 
 A status change drops that tournament's cached pages in every locale, the same
 way a publish does.
@@ -415,6 +475,12 @@ way a publish does.
   status, the same body (slug aside) and the same caching and robots headers.
 - The ETag of a pending page differs from the listed page's, so a browser or
   crawler holding the pending copy is not answered 304 after approval.
+  **(settled in the admin upgrade, 2026-09-13)** Kept although a pending and
+  a listed page now render alike: it costs one 200 per reader per approval,
+  and a page that ever differs by status again is covered already. The
+  homepage is rendered on every request and never cached or revalidated, so
+  a tournament is on it from its first publish and through approval with
+  nothing to invalidate.
 - The report form's own pages carry `noindex` whatever the tournament's
   status: a form is not a search result.
 - A publish with the operator token to a slug with no status yet makes it
@@ -450,6 +516,64 @@ entry form.
 - Blunt by nature: a club's wifi or a mobile carrier shares one address among
   many people, so the panel shows how many installations were seen from an
   address before the block is confirmed.
+
+## Trusted installations
+
+**(settled in the admin upgrade, 2026-09-13)** For a machine the operator
+knows - a federation's or a club's laptop - which should not wait for
+moderation.
+
+- `trusted` is a flag on the installation, set and cleared from its page in
+  the admin panel (`trust/3`, `untrust/2`), each through a confirmation page
+  and the action log. Trusting offers, as an explicit checkbox that is not
+  ticked by default, to also list the tournaments of it that are pending now;
+  unticked they stay pending.
+- A tournament **minted** by a trusted installation starts `listed`, so it is
+  on the player pages from its first publish. Trust is read from the
+  installation's row inside the mint's own transaction. Tournaments that
+  already exist keep their status when trust is given (unless the checkbox
+  lists them) or taken away.
+- A revoke clears trust, in the same statement as the status - including a
+  revoke the moderation journal applies again after a restore. Suspension
+  leaves the flag, and a suspended installation still cannot publish or mint.
+  A revoked installation cannot be trusted.
+- **Per-installation limits**, optional, blank meaning the server's value:
+  `max_tournaments`, `max_snapshot_bytes`, `publishes_per_minute`,
+  `max_versions`. Each is validated with the range of the server setting it
+  overrides (`installation_max_tournaments` and so on, see "Server
+  settings"). They are independent of trust: an untrusted installation can
+  have its own limits too.
+- Nothing here changes what an installation key may do otherwise: ownership,
+  tournament keys, blocks, the pause and `storage_low` all apply as before.
+
+## Public notice
+
+**(settled in the admin upgrade, 2026-09-13)** A short operator message on
+every public page ("Maintenance tonight 22:00-22:30").
+
+- Text in English (required), Dutch and French (optional; a page in a
+  language without its own text shows the English, marked `lang="en"`).
+  Plain text, one line (whitespace runs become one space), at most 300
+  characters each, `<` and `>` refused; it is escaped when rendered and never
+  linked. A level, `info` or `warning`, and an optional expiry instant in the
+  future, after which it stops showing with no admin action. Clearing it is
+  one action. Stored in `server_settings` under `public_notice`, cached with
+  the server settings.
+- Rendered in the root layout above `<main>` and outside the region the
+  page refresher replaces, as a `role="note"` with the accessible name
+  "Notice" (translated), not a live region; styled from the theme tokens, so
+  it follows every theme. Not rendered on the projector view (`?display=1`)
+  or in the admin panel, whose settings page shows a preview per language.
+- **Cache and ETag.** The notice showing on a request is decided once, by a
+  plug ahead of `Revalidate`, from the cache and the clock. Its version - a
+  random revision drawn when it was set, or nothing when no notice shows,
+  expired included - is inside the ETag's MAC, and the ETag is part of the
+  page cache's key. So setting, changing, clearing or expiring the notice
+  gives every page a new ETag: a browser holding a page from under another
+  notice is answered 200, not 304, and no body rendered under another notice
+  is served from the cache. Bodies cached under an old version are not
+  swept; they are unreachable, bounded by the per-tournament cap and gone at
+  the tournament's next publish.
 
 ## Moderation API
 
@@ -545,6 +669,58 @@ tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
   a `first_published_at` that is its oldest KEPT version, not its first
   publish; the tournament's page says so.
 
+**(settled in the admin upgrade, 2026-09-13)** Trust, per-installation limits,
+server settings and the public notice:
+
+```elixir
+trust(id, actor, list_pending: boolean) :: {:ok, Installation.t()}
+  | {:error, :not_found | :invalid_status}
+  # :invalid_status when already trusted, or revoked. With list_pending:
+  # true every pending tournament of it becomes listed, each with an
+  # `approve` row (details `via: "trust"`), then one `trust` row with
+  # details `list_pending` and `listed` (the slugs, oldest first)
+untrust(id, actor) :: {:ok, Installation.t()}
+  | {:error, :not_found | :invalid_status}   # :invalid_status when not trusted
+change_installation_limits(installation, attrs) :: Ecto.Changeset.t()
+  # validates like put_installation_limits/3, stores nothing
+put_installation_limits(id, attrs, actor) :: {:ok, Installation.t()}
+  | {:error, :not_found} | {:error, Ecto.Changeset.t()}
+  # attrs: string keys max_tournaments, max_snapshot_bytes,
+  # publishes_per_minute, max_versions - each a whole number or blank; a key
+  # left out is blank. One `set_installation_limits` row, details `from` and
+  # `to` (all four, null for the server's)
+
+server_settings() :: [described]
+described :: %{key: atom, value: term, source: :panel | :environment | :default,
+               panel: term | nil, environment: term | nil, default: term,
+               variable: String.t()}
+put_server_setting(key, raw, actor) :: {:ok, described}
+  | {:error, :unknown_setting | {:invalid_value, String.t()}}
+  # key an atom or its name; raw the form's text. The sentence says what is
+  # wrong. One `put_server_setting` row, target_type `setting`, target the
+  # key, details `from`, `from_source`, `to`
+reset_server_setting(key, actor) :: {:ok, described}
+  | {:error, :unknown_setting | :not_set}
+  # `reset_server_setting` row, details `from` (the panel's value), `to`,
+  # `to_source`
+
+public_notice() :: notice | nil          # stored, expired or not
+notice :: %{en: String.t(), nl: String.t() | nil, fr: String.t() | nil,
+            level: "info" | "warning", expires_at: DateTime.t() | nil,
+            set_at: DateTime.t(), revision: String.t(), set_by: String.t()}
+change_public_notice(attrs) :: Ecto.Changeset.t()
+set_public_notice(attrs, actor) :: {:ok, notice} | {:error, Ecto.Changeset.t()}
+  # attrs: string keys en, nl, fr, level, expires_at (ISO 8601 or blank).
+  # `set_notice` row, target_type `setting`, target `public_notice`, details
+  # `from` and `to` (the texts, level and expiry; null for none)
+clear_public_notice(actor) :: {:ok, notice} | {:error, :not_set}
+  # `clear_notice` row, details `from`
+```
+
+- `revoke/3`'s row gains `was_trusted`.
+- None of these is journalled: none of them makes the site safer in the
+  sense the journal keeps.
+
 **(settled in the build)** `transfer_all/3`, as built:
 
 - Returns `{:ok, %{from: id, to: id, slugs: [slug]}}`, the slugs in the order
@@ -620,7 +796,9 @@ tournament_stats(slug) :: %{snapshots: n, snapshot_bytes: n,
   `transfer_all` **(settled in the build)**, `suspend`, `unsuspend`, `revoke`,
   `resolve_report`, `block_address`,
   `unblock`, `break_glass_publish`, `break_glass_delete`, `break_glass_read`,
-  `retention`), `target_type` (`setting`, `tournament`, `installation`,
+  `retention`; **(settled in the admin upgrade, 2026-09-13)** `trust`,
+  `untrust`, `set_installation_limits`, `put_server_setting`,
+  `reset_server_setting`, `set_notice`, `clear_notice`), `target_type` (`setting`, `tournament`, `installation`,
   `report`, `address_block`), `target`, `details` (a map with string keys),
   `inserted_at`.
 
@@ -696,7 +874,10 @@ minutes after boot, then every 24 hours.
   (`config :openresults, :admin_dev_bypass, email: "..."`), is ignored in any
   other environment, and a prod boot with it enabled refuses to start.
 - Pages: dashboard (both switches, counts, recent actions), tournaments,
-  installations, reports, address blocks, action log.
+  installations, reports, address blocks, action log; **(settled in the admin
+  upgrade, 2026-09-13)** settings (the server settings with where each value
+  comes from, the public notice with a preview, and the environment-only
+  variables read-only).
 - **(settled in the storage bounds, 2026-09-13)** The dashboard's storage
   section keeps the stored snapshot bytes and the database file, and adds the
   free space on the database's volume beside the floor, when it was measured,
@@ -716,6 +897,8 @@ minutes after boot, then every 24 hours.
   | reports | `/reports?status=open\|resolved&page=`, `/reports/:id`, `/reports/:id/resolve` |
   | address blocks | `/address-blocks`; `/address-blocks/new` (GET the form, POST checks it and shows the confirmation); `POST /address-blocks` creates; `/address-blocks/:id/unblock` |
   | action log | `/action-log?actor=&action=&target_type=&target=&page=` |
+  | installations, trust **(settled in the admin upgrade, 2026-09-13)** | `/installations/:id/trust` (the confirmation carries the `list_pending` checkbox), `/installations/:id/untrust`, `/installations/:id/limits` (GET the form; GET with `check=1&limits[...]` the confirmation; POST the change) |
+  | settings **(settled in the admin upgrade, 2026-09-13)** | `/settings`; `/settings/:key` (GET the form; GET with `?value=` the confirmation; POST the change); `/settings/:key/reset`; `/settings/notice` (GET the form; GET with `notice[...]` the preview and confirmation; POST sets it); `/settings/notice/clear` |
 
   - A switch's confirmation posts the value it offered (`value=true`), never
     "toggle", so two admins confirming the same flip agree on the result.
@@ -812,6 +995,9 @@ own server, keep today's behaviour exactly.
 ## Defaults
 
 Defaults live in config; each may be overridden from the environment.
+**(settled in the admin upgrade, 2026-09-13)** Every row but the gate and the
+three admin variables may also be saved in the admin panel, which wins over
+the environment - see "Server settings".
 
 | Setting | Default | Variable |
 |---|---|---|

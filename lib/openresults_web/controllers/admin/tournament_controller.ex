@@ -102,28 +102,29 @@ defmodule OpenResultsWeb.Admin.TournamentController do
   defp allowed?(:unhide, status), do: status == "hidden"
 
   defp not_allowed(:approve, t),
-    do: "Only a pending tournament can be approved, and #{label(t)} is #{t.status}."
+    do: "Only a pending tournament can be shown on player pages, and #{label(t)} is #{t.status}."
 
   defp not_allowed(:hide, t), do: "#{label(t)} is already hidden."
 
   defp not_allowed(:unhide, t),
     do: "Only a hidden tournament can be unhidden, and #{label(t)} is #{t.status}."
 
-  defp done(:approve, t), do: "Approved: #{label(t)} is listed."
+  defp done(:approve, t), do: "Approved: #{label(t)} is listed, and on player pages."
   defp done(:hide, t), do: "Hidden: #{label(t)} now answers \"not found\" to the public."
   defp done(:unhide, t), do: "Unhidden: #{label(t)} is listed again."
 
   defp status_page(:approve, t) do
     [
-      title: "Approve #{label(t)}?",
+      title: "Show #{label(t)} on player pages?",
       action: ~p"/admin/tournaments/#{t.slug}/approve",
-      button: "Approve and list",
+      button: "Show on player pages",
       cancel: ~p"/admin/tournaments/#{t.slug}",
       danger: false,
       consequences: [
         summary(t),
-        "It becomes listed: it appears on the front page and in search, search engines may " <>
-          "index it, and its results appear on players' cross-tournament history pages."
+        "It is already public: at its address, on the front page and in its search. Approving " <>
+          "it lists it, and its results appear on players' cross-tournament history pages - " <>
+          "check they are not invented results against real FIDE ids first."
       ]
     ]
   end

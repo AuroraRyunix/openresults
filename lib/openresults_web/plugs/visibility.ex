@@ -11,13 +11,11 @@ defmodule OpenResultsWeb.Plugs.Visibility do
 
   `OpenResultsWeb.Plugs.Revalidate` reads it: it must not answer a 304 or
   serve a cached page for a hidden tournament, and it keys its ETag on the
-  status so a browser holding the pending page (with `noindex`) is not told it
-  is still current once the tournament is listed.
+  status, so whatever a status change alters on a page is never answered 304.
 
-  For a PENDING tournament this also sets `X-Robots-Tag: noindex` and assigns
-  `:noindex` for the layout's `<meta name="robots">`. Both, because a crawler
-  that fetched the page and one that only looked at the headers must reach the
-  same conclusion.
+  A PENDING tournament's pages carry nothing extra: no `noindex` since the
+  admin upgrade of 2026-09-13, when pending came to withhold only the
+  cross-tournament player pages (see `OpenResults.Tournaments`).
 
   A hidden tournament is not refused here. The 404 a hidden slug gets has to
   be the SAME 404 an unknown slug gets on that particular page - the standings
@@ -59,13 +57,6 @@ defmodule OpenResultsWeb.Plugs.Visibility do
       nil -> :none
       _id -> Tournaments.status(slug)
     end
-  end
-
-  defp mark(conn, :pending) do
-    conn
-    |> assign(:tournament_visibility, :pending)
-    |> assign(:noindex, true)
-    |> put_resp_header("x-robots-tag", "noindex")
   end
 
   defp mark(conn, visibility), do: assign(conn, :tournament_visibility, visibility)

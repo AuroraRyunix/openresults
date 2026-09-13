@@ -5,8 +5,7 @@ defmodule OpenResultsWeb.VisibilityTest do
   | | pending | listed | hidden |
   |---|---|---|---|
   | reachable at its URL | yes | yes | no - 404, same as an unknown slug |
-  | `noindex` (meta tag and `X-Robots-Tag`) | yes | no | - |
-  | homepage and any listing | no | yes | no |
+  | homepage and any listing | yes | yes | no |
   | cross-tournament player pages | no | yes | no |
   | entry form | yes | yes | no |
 
@@ -169,46 +168,75 @@ defmodule OpenResultsWeb.VisibilityTest do
   end
 
   describe "a pending tournament" do
-    test "is reachable on every page, and every response carries noindex", %{pending: pending} do
+    # The admin upgrade, 2026-09-13: pending withholds the cross-tournament
+    # player pages and nothing else.
+    test "is reachable on every page, and no response carries noindex", %{pending: pending} do
       for page <- @pages -- [{:get, "/t/SLUG/fide?q=mu"}] do
         conn = request(page, pending)
 
         assert conn.status == 200,
                "#{inspect(page)} answered #{conn.status} for a pending tournament"
 
-        assert get_resp_header(conn, "x-robots-tag") == ["noindex"], "#{inspect(page)}"
-
-        if html?(conn) do
-          assert robots_meta(conn) == ["noindex"], "#{inspect(page)} has no robots meta"
+        unless page == {:get, "/t/SLUG/report"} do
+          assert get_resp_header(conn, "x-robots-tag") == [], "#{inspect(page)}"
+          if html?(conn), do: assert(robots_meta(conn) == [], "#{inspect(page)} has noindex")
         end
       end
     end
 
-    test "the cached page and the 304 carry noindex too", %{pending: pending} do
+    test "the cached page and the 304 carry no noindex either", %{pending: pending} do
       first = get(build_conn(), "/t/#{pending}")
       [etag] = get_resp_header(first, "etag")
 
       cached = get(build_conn(), "/t/#{pending}")
       assert cached.status == 200
-      assert get_resp_header(cached, "x-robots-tag") == ["noindex"]
-      assert robots_meta(cached) == ["noindex"]
+      assert get_resp_header(cached, "x-robots-tag") == []
+      assert robots_meta(cached) == []
 
       revalidated = build_conn() |> put_req_header("if-none-match", etag) |> get("/t/#{pending}")
       assert revalidated.status == 304
-      assert get_resp_header(revalidated, "x-robots-tag") == ["noindex"]
+      assert get_resp_header(revalidated, "x-robots-tag") == []
     end
 
-    test "is absent from the front page and from player pages", %{
+    test "is on the front page straight away, and in its search", %{
       pending: pending,
       listed: listed
     } do
       index = html_response(get(build_conn(), "/"), 200)
-      refute index =~ pending
+      assert index =~ pending
       assert index =~ listed
 
+      # The front page is rendered on every request, never cached or
+      # revalidated, so nothing has to remember to refresh it.
+      conn = get(build_conn(), "/")
+      assert get_resp_header(conn, "etag") == []
+    end
+
+    test "a tournament appears on the front page the moment it first publishes" do
+      {installation, key} = installation!()
+      slug = mint!(installation)
+
+      refute html_response(get(build_conn(), "/"), 200) =~ slug
+
+      slug |> payload() |> publish(key, random_key()) |> json_response(200)
+
+      assert html_response(get(build_conn(), "/"), 200) =~ slug
+    end
+
+    test "is absent from player pages", %{pending: pending, listed: listed} do
       history = html_response(get(build_conn(), "/players/#{@fide_id}"), 200)
       refute history =~ pending
       assert history =~ listed
+
+      # Every player in the fixture, not only the first: no aggregate across
+      # tournaments may show a pending tournament's results.
+      for %{"fide_id" => fide_id} <- payload(pending)["players"], is_integer(fide_id) do
+        refute html_response(get(build_conn(), "/players/#{fide_id}"), 200) =~ pending,
+               "player #{fide_id}'s history shows a pending tournament"
+      end
+
+      assert OpenResultsWeb.PlayerHistory.for_fide_id(@fide_id) |> Enum.map(& &1.slug) ==
+               [listed]
     end
 
     test "takes entries and reports", %{pending: pending} do
@@ -223,15 +251,13 @@ defmodule OpenResultsWeb.VisibilityTest do
       assert [_report] = Reports.list(slug: pending)
     end
 
-    test "approving it drops its cached pages in every language and changes the ETag", %{
-      pending: pending
-    } do
+    test "approving it puts it on player pages, keeps it on the front page, and changes the ETag",
+         %{pending: pending} do
       pages =
         for lang <- ~w(en nl fr) do
           conn = get(build_conn(), "/t/#{pending}?lang=#{lang}")
-          assert robots_meta(conn) == ["noindex"]
           # Twice, so the second is served from the page cache.
-          assert robots_meta(get(build_conn(), "/t/#{pending}?lang=#{lang}")) == ["noindex"]
+          assert get(build_conn(), "/t/#{pending}?lang=#{lang}").status == 200
           {lang, conn |> get_resp_header("etag") |> hd()}
         end
 
@@ -244,10 +270,6 @@ defmodule OpenResultsWeb.VisibilityTest do
           |> get("/t/#{pending}?lang=#{lang}")
 
         assert conn.status == 200, "#{lang}: a validator from the pending page still answered 304"
-
-        assert robots_meta(conn) == [],
-               "#{lang}: the cached pending page was served after approval"
-
         assert get_resp_header(conn, "x-robots-tag") == []
         refute get_resp_header(conn, "etag") == [etag]
       end

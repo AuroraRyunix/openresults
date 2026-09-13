@@ -111,25 +111,64 @@ if public_publishing = System.get_env("OPENRESULTS_PUBLIC_PUBLISHING") do
   config :openresults, :public_publishing, public_publishing == "enabled"
 end
 
+# The operator's name, the terms link and the limits below can also be saved
+# in the admin panel, where a saved value wins over these - see
+# `OpenResults.ServerSettings`. The panel checks its input with the SAME rules
+# as the checks here, and `test/openresults/server_settings_test.exs` holds the
+# two together: change a range in one place and change it in the other.
+#
+# Blank is unset for both texts, as it always was.
 if operator_name = System.get_env("OPENRESULTS_OPERATOR_NAME") do
+  name = String.trim(operator_name)
+
+  if String.length(name) > 100 or Regex.match?(~r/[\x00-\x1F\x7F]/u, name) do
+    raise "OPENRESULTS_OPERATOR_NAME is one line of plain text of at most 100 characters, " <>
+            "got: #{inspect(operator_name)}"
+  end
+
   config :openresults, :operator_name, operator_name
 end
 
 if terms_url = System.get_env("OPENRESULTS_TERMS_URL") do
+  url = String.trim(terms_url)
+
+  valid? =
+    url == "" or
+      (match?(
+         {:ok, %URI{scheme: "https", host: host}} when is_binary(host) and host != "",
+         URI.new(url)
+       ) and byte_size(url) <= 2000 and not String.match?(url, ~r/\s/))
+
+  unless valid? do
+    raise "OPENRESULTS_TERMS_URL is a full https:// address, got: #{inspect(terms_url)}"
+  end
+
   config :openresults, :terms_url, terms_url
 end
 
-for {variable, key} <- [
-      {"OPENRESULTS_REGISTRATIONS_PER_ADDRESS", :registrations_per_address},
-      {"OPENRESULTS_REGISTRATIONS_PER_DAY", :registrations_per_day},
-      {"OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE", :installation_publishes_per_minute},
-      {"OPENRESULTS_INSTALLATION_MAX_TOURNAMENTS", :installation_max_tournaments},
-      {"OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES", :installation_max_snapshot_bytes}
+# {variable, key, least, most or nil}
+for {variable, key, least, most} <- [
+      {"OPENRESULTS_REGISTRATIONS_PER_ADDRESS", :registrations_per_address, 0, nil},
+      {"OPENRESULTS_REGISTRATIONS_PER_DAY", :registrations_per_day, 0, nil},
+      {"OPENRESULTS_INSTALLATION_PUBLISHES_PER_MINUTE", :installation_publishes_per_minute, 1,
+       nil},
+      {"OPENRESULTS_INSTALLATION_MAX_TOURNAMENTS", :installation_max_tournaments, 0, nil},
+      # At most the parser's own limit: a larger cap could never be reached.
+      {"OPENRESULTS_INSTALLATION_MAX_SNAPSHOT_BYTES", :installation_max_snapshot_bytes, 1,
+       8_000_000}
     ],
     value = System.get_env(variable) do
-  # Raises at boot on something that is not a number, like BACKUP_RETENTION
-  # above: a limit silently read as something else is worse than a loud start.
-  config :openresults, key, String.to_integer(value)
+  # Raises at boot on something that is not a number in range, like
+  # BACKUP_RETENTION above: a limit silently read as something else is worse
+  # than a loud start.
+  case Integer.parse(String.trim(value)) do
+    {n, ""} when n >= least and (is_nil(most) or n <= most) ->
+      config :openresults, key, n
+
+    _ ->
+      range = if most, do: "from #{least} to #{most}", else: "of at least #{least}"
+      raise "#{variable} is a whole number #{range}, got: #{inspect(value)}"
+  end
 end
 
 # The storage bounds - docs/public-publishing.md, "Storage bounds". Checked
@@ -137,7 +176,7 @@ end
 # cap of 0 would prune the version the public is reading, and a floor above
 # 100 would refuse every installation for ever.
 if max_versions = System.get_env("OPENRESULTS_INSTALLATION_MAX_VERSIONS") do
-  case Integer.parse(max_versions) do
+  case Integer.parse(String.trim(max_versions)) do
     {versions, ""} when versions >= 1 ->
       config :openresults, :installation_max_versions, versions
 
@@ -148,7 +187,7 @@ if max_versions = System.get_env("OPENRESULTS_INSTALLATION_MAX_VERSIONS") do
 end
 
 if free_percent = System.get_env("OPENRESULTS_MIN_FREE_DISK_PERCENT") do
-  case Integer.parse(free_percent) do
+  case Integer.parse(String.trim(free_percent)) do
     {percent, ""} when percent in 0..100 ->
       config :openresults, :min_free_disk_percent, percent
 

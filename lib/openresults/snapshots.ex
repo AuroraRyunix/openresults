@@ -124,7 +124,7 @@ defmodule OpenResults.Snapshots do
              {:ok, snapshot} <- store(slug, payload, received_at) do
           # Inside the transaction that inserted, so the newest N at commit
           # are exactly the ones kept. See `prune_versions/2`.
-          prune_versions(slug, PublicPublishing.installation_max_versions())
+          prune_versions(slug, PublicPublishing.installation_max_versions(installation))
           snapshot
         else
           {:error, reason} -> Repo.rollback(reason)
@@ -355,8 +355,21 @@ defmodule OpenResults.Snapshots do
       order_by: [asc: s.tournament_slug]
     )
     |> only_listed(Keyword.get(opts, :listed_only, false))
+    |> not_hidden(Keyword.get(opts, :visible_only, false))
     |> Repo.all()
   end
+
+  # `visible_only: true` - leave out what moderation hid, and nothing else:
+  # the front page and its search show pending tournaments too (the admin
+  # upgrade, 2026-09-13). In SQL for the reason `only_listed/2` gives.
+  defp not_hidden(query, true) do
+    hidden =
+      from t in OpenResults.Tournaments.Tournament, where: t.status == "hidden", select: t.slug
+
+    where(query, [s], s.tournament_slug not in subquery(hidden))
+  end
+
+  defp not_hidden(query, _all), do: query
 
   # `listed_only: true` - leave out tournaments moderation has not listed
   # (`OpenResults.Tournaments`: pending and hidden), IN the query rather than

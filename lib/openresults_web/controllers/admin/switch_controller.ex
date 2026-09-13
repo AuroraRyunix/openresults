@@ -86,8 +86,9 @@ defmodule OpenResultsWeb.Admin.SwitchController do
          "its address is not blocked and the registration budgets allow it " <>
          "(#{PublicPublishing.registrations_per_address()} per address and " <>
          "#{PublicPublishing.registrations_per_day()} in all, per 24 hours).",
-       "Tournaments those installations publish start pending: reachable at their address, " <>
-         "but not on the front page, in search or on players' history pages until you approve them."
+       "Tournaments those installations publish are public at once - at their address, on the " <>
+         "front page and in its search - but start pending: not on players' history pages " <>
+         "until you show them there, unless the installation is trusted."
      ]}
   end
 

@@ -116,6 +116,23 @@ defmodule OpenResultsWeb.Admin.InstallationHTML do
       >
         Move all tournaments to another installation…
       </a>
+      <a
+        :if={not @installation.trusted and @installation.status != "revoked"}
+        href={~p"/admin/installations/#{@installation.id}/trust"}
+        id="trust-installation"
+      >
+        Trust
+      </a>
+      <a
+        :if={@installation.trusted}
+        href={~p"/admin/installations/#{@installation.id}/untrust"}
+        id="untrust-installation"
+      >
+        Stop trusting
+      </a>
+      <a href={~p"/admin/installations/#{@installation.id}/limits"} id="installation-limits-link">
+        Own limits…
+      </a>
     </nav>
 
     <dl class="admin-facts" id="installation-facts">
@@ -139,6 +156,21 @@ defmodule OpenResultsWeb.Admin.InstallationHTML do
       <dt>Last seen from</dt>
       <dd id="installation-last-seen-from">
         {address(@installation.last_seen_from, @installation.last_seen_at)}
+      </dd>
+
+      <dt>Trusted</dt>
+      <dd id="installation-trusted">
+        <%= if @installation.trusted do %>
+          <strong>Yes</strong>
+          <span class="quiet">- its new tournaments start listed, on player pages at once.</span>
+        <% else %>
+          No <span class="quiet">- its new tournaments start pending.</span>
+        <% end %>
+      </dd>
+
+      <dt>Limits</dt>
+      <dd id="installation-limit-values">
+        <.limits_list limits={@limits} />
       </dd>
 
       <dt>Storage</dt>
@@ -209,6 +241,9 @@ defmodule OpenResultsWeb.Admin.InstallationHTML do
       <p class="admin-consequence">
         OpenPairings stops sending and offers the arbiter a deliberate "Register again", which
         gives that machine a new, separate installation. Its tournaments stay with this one.
+      </p>
+      <p :if={@installation.trusted} class="admin-consequence" id="revoke-ends-trust">
+        It is trusted, and revoking ends that too.
       </p>
 
       <fieldset class={["field", "admin-choice", @error && "field-wrong"]} id="revoke-choice">
@@ -324,6 +359,159 @@ defmodule OpenResultsWeb.Admin.InstallationHTML do
     </.confirmation>
     """
   end
+
+  def trust(assigns) do
+    ~H"""
+    <.confirmation
+      title={"Trust #{@installation.id}?"}
+      action={~p"/admin/installations/#{@installation.id}/trust"}
+      button="Trust installation"
+      cancel={~p"/admin/installations/#{@installation.id}"}
+      danger={false}
+    >
+      <p class="admin-consequence">
+        {@installation.id} ({client_label(@installation)}) is {@installation.status}.
+      </p>
+      <p class="admin-consequence">
+        Tournaments it creates from now on start listed instead of pending: their results appear on
+        players' cross-tournament history pages straight away, with no approval. Trust a machine
+        you know - a federation's or a club's laptop - not a stranger's.
+      </p>
+      <p class="admin-consequence">
+        Its limits stay as they are, and a suspended installation still cannot publish. Revoking
+        it ends the trust.
+      </p>
+
+      <fieldset :if={@pending != []} class="field admin-choice" id="trust-pending">
+        <legend>
+          It has {length(@pending)} pending {if length(@pending) == 1,
+            do: "tournament",
+            else: "tournaments"}
+        </legend>
+        <label class="admin-choice-option">
+          <input type="checkbox" name="list_pending" value="true" id="trust-list-pending" />
+          <span>
+            <strong>Show them on player pages too</strong>
+            (list them now). Unticked, they stay pending until you approve each one.
+          </span>
+        </label>
+        <ul class="admin-moving">
+          <li :for={tournament <- @pending}>
+            <code>{tournament.slug}</code>
+          </li>
+        </ul>
+      </fieldset>
+    </.confirmation>
+    """
+  end
+
+  def limits(assigns) do
+    ~H"""
+    <p class="admin-crumbs">
+      <a href={~p"/admin/installations/#{@installation.id}"}>{@installation.id}</a>
+    </p>
+    <h1>{@installation.id}'s own limits</h1>
+
+    <p>
+      Empty means the server's value, from Settings. A value here applies to this installation
+      alone, in the same range as the server's.
+    </p>
+
+    <form
+      method="get"
+      action={~p"/admin/installations/#{@installation.id}/limits"}
+      class="admin-form"
+      id="limits-form"
+    >
+      <input type="hidden" name="check" value="1" />
+      <p :if={@errors != %{}} class="alarm" role="alert" id="limits-errors">
+        Nothing was changed. Fix what is marked below.
+      </p>
+      <div
+        :for={field <- OpenResults.Installations.Installation.limits()}
+        class={["field", @errors[field] && "field-wrong"]}
+      >
+        <label for={"limit-#{field}"}>{OpenResultsWeb.Admin.InstallationController.limit_label(field)}</label>
+        <input
+          type="number"
+          id={"limit-#{field}"}
+          name={"limits[#{field}]"}
+          value={@values[Atom.to_string(field)]}
+          aria-describedby={"limit-#{field}-hint"}
+        />
+        <p :if={@errors[field]} class="wrong" id={"limit-#{field}-error"}>{@errors[field]}</p>
+        <p class="hint" id={"limit-#{field}-hint"}>
+          Server's value: {thousands(server_value(field))}.
+        </p>
+      </div>
+      <div class="actions">
+        <button type="submit" id="limits-check">Check</button>
+        <a href={~p"/admin/installations/#{@installation.id}"} class="cancel">Cancel</a>
+      </div>
+    </form>
+    """
+  end
+
+  def limits_confirm(assigns) do
+    ~H"""
+    <.confirmation
+      title={"Save #{@installation.id}'s limits?"}
+      action={~p"/admin/installations/#{@installation.id}/limits"}
+      button="Save limits"
+      cancel={~p"/admin/installations/#{@installation.id}"}
+      hidden={@hidden}
+      danger={false}
+    >
+      <div class="scroller">
+        <table class="admin-table" id="limits-change">
+          <caption class="visually-hidden">Limits before and after</caption>
+          <thead>
+            <tr>
+              <th scope="col">Limit</th>
+              <th scope="col">Now</th>
+              <th scope="col">After</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={field <- OpenResults.Installations.Installation.limits()}>
+              <th scope="row">{OpenResultsWeb.Admin.InstallationController.limit_label(field)}</th>
+              <td><.limit_value limit={@before_limits[field]} /></td>
+              <td><.limit_value limit={@after_limits[field]} /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="admin-consequence">
+        They apply from its next request. Every change is written to the action log.
+      </p>
+    </.confirmation>
+    """
+  end
+
+  attr :limits, :map, required: true
+
+  defp limits_list(assigns) do
+    ~H"""
+    <ul class="admin-limits">
+      <li :for={field <- OpenResults.Installations.Installation.limits()}>
+        {OpenResultsWeb.Admin.InstallationController.limit_label(field)}:
+        <.limit_value limit={@limits[field]} />
+      </li>
+    </ul>
+    """
+  end
+
+  attr :limit, :map, required: true
+
+  defp limit_value(assigns) do
+    ~H"""
+    <strong>{thousands(@limit.value)}</strong>
+    <span class="quiet">{if @limit.own == nil, do: "(server's)", else: "(its own)"}</span>
+    """
+  end
+
+  defp server_value(field),
+    do: OpenResults.PublicPublishing.global_for(field) |> OpenResults.ServerSettings.get()
 
   attr :tournaments, :list, required: true
 
