@@ -269,6 +269,47 @@ defmodule OpenResultsWeb.AdminPagesTest do
                "published with the operator token"
     end
 
+    test "a hosted publish's publisher shows in the list and on the tournament page, never on the public page or its API",
+         %{world: _world} do
+      payload =
+        OpenResults.SnapshotPayloads.swiss()
+        |> put_in(["tournament", "slug"], "hosted-with-publisher")
+        |> put_in(["tournament", "name"], "Hosted With Publisher")
+        |> put_in(
+          ["publisher"],
+          %{"email" => "jan.peeters@example.invalid", "host" => "pairings.example.org"}
+        )
+
+      {:ok, _} = OpenResults.Snapshots.ingest(payload)
+
+      list_row =
+        admin_get("/admin/tournaments")
+        |> doc()
+        |> LazyHTML.query("#tournaments tbody tr")
+        |> Enum.map(&LazyHTML.text/1)
+        |> Enum.find(&(&1 =~ "hosted-with-publisher"))
+
+      assert list_row =~ "jan.peeters@example.invalid"
+
+      facts =
+        admin_get("/admin/tournaments/hosted-with-publisher")
+        |> doc()
+        |> text("#tournament-facts")
+
+      assert facts =~ "jan.peeters@example.invalid"
+      assert facts =~ "pairings.example.org"
+
+      # The mutation-checked guard: never reaches the public page or the open API.
+      public_html = get(build_conn(), "/t/hosted-with-publisher") |> html_response(200)
+      refute public_html =~ "jan.peeters@example.invalid"
+
+      public_json =
+        get(build_conn(), "/api/tournaments/hosted-with-publisher") |> json_response(200)
+
+      refute Map.has_key?(public_json, "publisher")
+      refute Jason.encode!(public_json) =~ "jan.peeters@example.invalid"
+    end
+
     test "delete says it removes every snapshot and the entry list with email addresses", %{
       world: world
     } do

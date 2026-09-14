@@ -203,11 +203,19 @@ defmodule OpenResultsWeb.SnapshotController do
         not_found(conn, slug)
 
       snapshot ->
-        # The payload as stored, byte for byte in meaning. A response that
-        # reshaped it would be a second, undocumented contract.
-        json(conn, snapshot.payload)
+        # The payload as stored, byte for byte in meaning - EXCEPT
+        # `publisher`, which this route must never leak: it is the one field
+        # in this document that is personal data for a purpose other than
+        # describing the tournament (an admin-panel moderation contact), and
+        # this is the open, unauthenticated route. See
+        # `docs/snapshot-schema.md`'s `publisher` field and
+        # `docs/privacy-retention.md`.
+        json(conn, public_payload(snapshot.payload))
     end
   end
+
+  defp public_payload(payload) when is_map(payload), do: Map.delete(payload, "publisher")
+  defp public_payload(payload), do: payload
 
   defp not_found(conn, slug) do
     conn

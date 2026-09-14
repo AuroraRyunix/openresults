@@ -64,7 +64,12 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
             </td>
             <td><.status value={tournament.status} /></td>
             <td><.front_page tournament={tournament} /></td>
-            <td><.owner installation_id={tournament.installation_id} /></td>
+            <td>
+              <.owner
+                installation_id={tournament.installation_id}
+                owner_email={tournament.owner_email}
+              />
+            </td>
             <td>{at(tournament.last_published_at, "not yet")}</td>
             <td class="num">{tournament.open_reports}</td>
           </tr>
@@ -131,6 +136,15 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
           </span>
         <% else %>
           <span class="quiet">nobody: published with the operator token</span>
+        <% end %>
+        <%= if @tournament.owner_email do %>
+          <br />
+          <span class="quiet">
+            published by {@tournament.owner_email}
+            <%= if @tournament.owner_host do %>
+              ({@tournament.owner_host})
+            <% end %>
+          </span>
         <% end %>
       </dd>
 
@@ -220,13 +234,22 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
         stats.snapshots >= OpenResults.PublicPublishing.installation_max_versions()
 
   attr :installation_id, :string, default: nil
+  attr :owner_email, :string, default: nil
 
+  # The owner column. `owner_email` only ever accompanies a `nil`
+  # `installation_id` - an installation-key publish never carries the
+  # `publisher` field (see docs/snapshot-schema.md) - so the two are shown
+  # together only in that combination: "operator" alone, an installation id
+  # alone, or "operator · email" for a hosted account's own publish.
   defp owner(assigns) do
     ~H"""
     <a :if={@installation_id} href={~p"/admin/installations/#{@installation_id}"}>
       {@installation_id}
     </a>
-    <span :if={is_nil(@installation_id)} class="quiet">operator</span>
+    <span :if={is_nil(@installation_id) and is_nil(@owner_email)} class="quiet">operator</span>
+    <span :if={is_nil(@installation_id) and @owner_email} class="quiet">
+      operator · {@owner_email}
+    </span>
     """
   end
 end

@@ -27,6 +27,19 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **The admin panel shows which hosted account published a
+  tournament**, instead of just "operator" for every tournament a hosted
+  OpenPairings publishes. A hosted publish now carries a new, additive
+  `publisher` field (owner email and instance host); stored on the
+  tournament row (`owner_email`, `owner_host`) and shown in the tournaments
+  list and on a tournament's own page - admin panel only. `GET
+  /api/tournaments/:slug` strips `publisher` before serving the stored
+  payload, so it never reaches a public page, public JSON, or a feed.
+  Documented in `docs/snapshot-schema.md` and `docs/privacy-retention.md`,
+  and listed on the terms page. An older client, a desktop/local publish, or
+  a publish whose owner could not be resolved keeps showing "operator", as
+  before.
+
 ## [0.16.1] - 2026-09-14
 
 - [Change] **The admin panel no longer says "listed" for a tournament that is
