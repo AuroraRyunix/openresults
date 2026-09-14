@@ -27,6 +27,23 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Change] **The filter/sort bar on standings, round pairings and the
+  cross-table is now one compact toolbar instead of a wrapping row of plain
+  `<select>`s.** A search box with an inline icon on the left, pill-styled
+  filter controls in the middle (only the ones that apply, as before), and
+  sort on the right; active filters and the current sort show as removable
+  chips underneath, each a plain link built from the same `FilterParams` the
+  rest of the site already uses, plus a result count ("12 of 86 players", or
+  just the total when nothing is filtered). On a narrow screen the middle
+  controls collapse behind a `<summary>`/`<details>` "Filters (N)"
+  disclosure - real markup, no script required - open by default only when
+  a filter or a non-default sort is already active. A name search now
+  highlights the matching part of each player's name in the table
+  (`<mark>`, HTML-escaped). Every control is still a real form element
+  submitted by a visible GET button; the button only hides once the page's
+  own script proves it is running (`.js-auto`), and every existing filter
+  URL still works unchanged. Both themes, `prefers-reduced-motion`
+  respected, no new colours outside the existing tokens.
 - [Fix] **The cross-table no longer shows a sideways scrollbar under a table
   that fits the screen.** A long player name widened the whole table past the
   page, because the name column's width cap was ignored; names now shorten

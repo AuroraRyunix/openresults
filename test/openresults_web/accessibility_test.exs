@@ -264,6 +264,33 @@ defmodule OpenResultsWeb.AccessibilityTest do
       # A real, visible submit button - not hidden behind `html.has-js`, so
       # the form works exactly the same with the script switched off.
       assert LazyHTML.query(document, ~s(form[data-filter-form] button[type="submit"])) != []
+
+      # The middle controls collapse behind a real `<details>`/`<summary>` on
+      # a narrow screen - no script required to open it.
+      assert LazyHTML.query(document, "details.filter-disclosure > summary") != []
+    end
+
+    test "the filter chips are links with accessible names, not bare icons", %{world: world} do
+      document =
+        build_conn()
+        |> get("/t/#{world.swiss}?category=A")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      chips = LazyHTML.query(document, ".filter-chip a")
+      assert chips != []
+
+      for chip <- chips do
+        # Either an `aria-label` or real text content names the chip - never
+        # only the aria-hidden "✕".
+        aria = chip |> LazyHTML.attribute("aria-label") |> List.first()
+        text = chip |> LazyHTML.text() |> String.trim()
+        assert (is_binary(aria) and aria != "") or text != ""
+      end
+
+      # The "✕" glyph itself is hidden from assistive tech - the accessible
+      # name comes from the label text/aria-label, not the mark.
+      assert LazyHTML.query(document, ".filter-chip a span[aria-hidden]") != []
     end
 
     test "every tie-break working a reader can open is keyed, so a refresh can reopen it", %{

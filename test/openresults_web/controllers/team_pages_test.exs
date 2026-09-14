@@ -80,7 +80,7 @@ defmodule OpenResultsWeb.TeamPagesTest do
       team_no = payload["teams"] |> hd() |> Map.get("no")
 
       document = conn |> get(~p"/t/#{slug}/round/1?team=#{team_no}") |> doc()
-      assert texts(document, ".filter-field") |> Enum.any?(&(&1 =~ "Team"))
+      assert texts(document, ".filter-pill") |> Enum.any?(&(&1 =~ "Team"))
     end
   end
 

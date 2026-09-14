@@ -405,6 +405,187 @@ defmodule OpenResultsWeb.FilterBarTest do
     end
   end
 
+  describe "chips" do
+    setup %{conn: conn} do
+      payload = SnapshotPayloads.swiss() |> with_categories(["A", "B"])
+      slug = publish(payload)
+      {:ok, conn: conn, slug: slug}
+    end
+
+    defp query(href) do
+      href |> URI.parse() |> Map.get(:query) |> Kernel.||("") |> URI.decode_query()
+    end
+
+    test "each chip removes exactly its own parameter and keeps the others", %{
+      conn: conn,
+      slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}?category=A&fed=BEL&q=abc") |> doc()
+
+      chip_hrefs =
+        document |> LazyHTML.query(".filter-chip:not(.filter-chip-clear) a") |> attr("href")
+
+      # One chip per active key: category, federation, name search.
+      assert length(chip_hrefs) == 3
+
+      for href <- chip_hrefs do
+        params = query(href)
+        # Exactly two of the three keys survive on each chip's link - the
+        # one it removes is gone, the rest are untouched.
+        assert map_size(params) == 2
+      end
+
+      # The category chip specifically drops `category` and keeps the rest.
+      fed_and_q_only =
+        Enum.find(chip_hrefs, fn href ->
+          params = query(href)
+
+          not Map.has_key?(params, "category") and Map.has_key?(params, "fed") and
+            Map.has_key?(params, "q")
+        end)
+
+      assert fed_and_q_only
+
+      # And the reverse: the federation chip drops only `fed`.
+      category_and_q_only =
+        Enum.find(chip_hrefs, fn href ->
+          params = query(href)
+
+          not Map.has_key?(params, "fed") and Map.has_key?(params, "category") and
+            Map.has_key?(params, "q")
+        end)
+
+      assert category_and_q_only
+    end
+
+    test "Clear all goes back to the plain URL", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}?category=A&fed=BEL") |> doc()
+
+      [clear_href] = document |> LazyHTML.query(".filter-chip-clear a") |> attr("href")
+      assert clear_href == ~p"/t/#{slug}"
+    end
+
+    test "no chips at all when nothing is active", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+      assert LazyHTML.query(document, ".filter-chips") |> Enum.empty?()
+    end
+
+    test "a sort chip appears and removing it restores the default", %{conn: conn, slug: slug} do
+      document = conn |> get(~p"/t/#{slug}?sort=rating") |> doc()
+
+      [sort_href] =
+        document
+        |> LazyHTML.query(".filter-chip:not(.filter-chip-clear) a")
+        |> attr("href")
+
+      refute sort_href =~ "sort="
+    end
+
+    test "each chip carries an accessible name naming the filter it removes", %{
+      conn: conn,
+      slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}?category=A") |> doc()
+
+      [label] =
+        document
+        |> LazyHTML.query(".filter-chip:not(.filter-chip-clear) a")
+        |> attr("aria-label")
+
+      assert label =~ "category"
+      assert label =~ "A"
+    end
+  end
+
+  describe "the result count" do
+    test "standings: unfiltered shows the total, filtered shows shown-of-total", %{conn: conn} do
+      payload = SnapshotPayloads.swiss() |> with_categories(["A", "B"])
+      slug = publish(payload)
+
+      plain = conn |> get(~p"/t/#{slug}") |> doc()
+      assert texts(plain, ".filter-count") == ["10 players"]
+
+      filtered = build_conn() |> get(~p"/t/#{slug}?category=A") |> doc()
+      assert texts(filtered, ".filter-count") == ["5 of 10 players"]
+    end
+
+    test "round pairings: counted in boards, not players", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+
+      filtered = conn |> get(~p"/t/#{slug}/round/1?club=KGSRL") |> doc()
+      assert texts(filtered, ".filter-count") == ["1 of 5 boards"]
+    end
+
+    test "cross-table: counted in players", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+
+      filtered = conn |> get(~p"/t/#{slug}/crosstable?club=SF+Berlin") |> doc()
+      assert texts(filtered, ".filter-count") == ["1 of 10 players"]
+    end
+
+    test "singular plural form when exactly one matches", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+      document = conn |> get(~p"/t/#{slug}?club=SF+Berlin") |> doc()
+      assert texts(document, ".filter-count") == ["1 of 10 players"]
+    end
+  end
+
+  describe "no-JS structure" do
+    test "the Apply button is present in the markup", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+      assert LazyHTML.query(document, ~s(button.filter-submit[type="submit"])) != []
+    end
+
+    test "the disclosure exists and holds the filter controls", %{conn: conn} do
+      payload = SnapshotPayloads.swiss() |> with_categories(["A", "B"])
+      slug = publish(payload)
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+
+      details = LazyHTML.query(document, "details.filter-disclosure")
+      assert details != []
+
+      selects_inside =
+        LazyHTML.query(document, "details.filter-disclosure select")
+
+      assert selects_inside != []
+    end
+
+    test "the disclosure opens by default once a filter is active", %{conn: conn} do
+      payload = SnapshotPayloads.swiss() |> with_categories(["A", "B"])
+      slug = publish(payload)
+      document = conn |> get(~p"/t/#{slug}?category=A") |> doc()
+
+      assert LazyHTML.query(document, "details.filter-disclosure[open]") != []
+    end
+
+    test "the disclosure is closed by default with nothing active", %{conn: conn} do
+      payload = SnapshotPayloads.swiss() |> with_categories(["A", "B"])
+      slug = publish(payload)
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+
+      assert LazyHTML.query(document, "details.filter-disclosure[open]") |> Enum.empty?()
+    end
+  end
+
+  describe "name search highlighting" do
+    test "the matching part is wrapped in <mark>, and the raw name is always escaped", %{
+      conn: conn
+    } do
+      payload =
+        SnapshotPayloads.swiss()
+        |> update_in(["players", Access.at(0)], &Map.put(&1, "name", "<b>Xavier</b> Peeters"))
+
+      slug = publish(payload)
+
+      body = conn |> get(~p"/t/#{slug}?q=Xavier") |> html_response(200)
+
+      refute body =~ "<b>Xavier</b>"
+      assert body =~ "&lt;b&gt;"
+      assert body =~ "<mark>Xavier</mark>"
+    end
+  end
+
   describe "the page cache" do
     alias OpenResultsWeb.Plugs.Revalidate.Page
 

@@ -308,6 +308,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         :bar_federations,
         (show.federation && Filter.player_values(payload, "federation")) || []
       )
+      |> assign(:total_players, length(all_rows))
 
     ~H"""
     <p :if={@manual_order?} class="footnote manual-order">
@@ -348,6 +349,9 @@ defmodule OpenResultsWeb.TournamentHTML do
       federations={@bar_federations}
       clubs={@bar_clubs}
       empty?={@empty?}
+      total={@total_players}
+      shown={length(@rows)}
+      unit={:players}
     />
 
     <div :if={@rows != []} class="scroller">
@@ -398,6 +402,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 no={row["player"]}
                 player={@players[row["player"]]}
                 show={@show}
+                q={@filters.q}
                 cards?={@show.player_cards}
                 detail
               />
@@ -896,6 +901,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       # rounds", which is a different and rarer claim about a tournament
       # that has genuinely posted nothing.
       |> assign(:awaiting_standings?, is_nil(Tournament.after_round(payload)))
+      |> assign(:total_players, length(all_rows))
 
     ~H"""
     <p :if={@rounds == [] or (@rows == [] and not @empty?)} class="empty">
@@ -913,6 +919,9 @@ defmodule OpenResultsWeb.TournamentHTML do
       clubs={@bar_clubs}
       sort?={false}
       empty?={@empty?}
+      total={@total_players}
+      shown={length(@rows)}
+      unit={:players}
     />
 
     <div :if={@rows != [] and @rounds != []} class="scroller xt-scroller">
@@ -951,6 +960,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 no={row.no}
                 player={row.player}
                 show={@show}
+                q={@filters.q}
                 cards?={@show.player_cards}
                 detail
               />
@@ -1130,6 +1140,7 @@ defmodule OpenResultsWeb.TournamentHTML do
     assigns =
       assigns
       |> assign(:tagged, shown)
+      |> assign(:total_boards, length(all_boards))
       |> assign(:empty?, all_boards != [] and shown == [])
       |> assign(:show, show)
       |> assign(:results?, Tournament.results_public?(assigns.round))
@@ -1162,6 +1173,9 @@ defmodule OpenResultsWeb.TournamentHTML do
       clubs={@bar_clubs}
       teams={@bar_teams}
       sort?={false}
+      total={@total_boards}
+      shown={length(@tagged)}
+      unit={:boards}
     />
 
     <div :if={@tagged != []} class="scroller">
@@ -1208,6 +1222,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 no={board["white"]}
                 player={@players[board["white"]]}
                 show={@show}
+                q={@filters.q}
                 cards?={@show.player_cards}
                 detail
               />
@@ -1220,6 +1235,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 no={board["black"]}
                 player={@players[board["black"]]}
                 show={@show}
+                q={@filters.q}
                 cards?={@show.player_cards}
                 detail
               />
@@ -2058,6 +2074,17 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   attr :cards?, :boolean, default: true, doc: "false renders the name without a link"
 
+  attr :q, :string,
+    default: nil,
+    doc: """
+    The active search term, if any - when it is a substring of the name
+    shown here, the matching part is wrapped in `<mark>` (escaped through
+    `highlighted_name/2`, never raw player data). `nil` on every page that
+    has no search box at all, and on every render of a name this is not the
+    filter bar's own search for (a bare pairing-number fallback name is
+    never highlighted, since it does not come from the player).
+    """
+
   def player_link(assigns) do
     ~H"""
     <a
@@ -2070,7 +2097,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         {@player["title"]}
       </span>
       <span class="name">
-        {(@player && @player["name"]) || gettext("Player %{number}", number: @no)}
+        {display_name(@player, @no, @q)}
       </span>
     </a>
     <span :if={@no && not @cards?} class="player">
@@ -2078,11 +2105,56 @@ defmodule OpenResultsWeb.TournamentHTML do
         {@player["title"]}
       </span>
       <span class="name">
-        {(@player && @player["name"]) || gettext("Player %{number}", number: @no)}
+        {display_name(@player, @no, @q)}
       </span>
     </span>
     <span :if={is_nil(@no)} class="player">-</span>
     """
+  end
+
+  # `@player["name"]` highlighted against the active search term, or the
+  # "Player %{number}" fallback when there is no player - never highlighted,
+  # since a bare pairing number is not something the search box matched.
+  defp display_name(%{"name" => name}, _no, q) when is_binary(name),
+    do: highlighted_name(name, q)
+
+  defp display_name(_player, no, _q), do: gettext("Player %{number}", number: no)
+
+  defp highlighted_name(name, q) when is_binary(q) and q != "" do
+    case find_match(name, q) do
+      {pre, match, post} ->
+        raw(escaped(pre) <> "<mark>" <> escaped(match) <> "</mark>" <> escaped(post))
+
+      nil ->
+        name
+    end
+  end
+
+  defp highlighted_name(name, _q), do: name
+
+  # Byte-offset matching on the downcased name, sliced out of the ORIGINAL
+  # (correctly-cased) name at the same byte offsets - safe as long as
+  # downcasing does not change the string's byte length, which holds for
+  # every script this site's fixtures and real tournaments actually use. A
+  # case where it does not (a rare expanding downcase, e.g. "İ") simply
+  # finds no match and falls back to the plain name - never a crash, never
+  # a mis-sliced tag.
+  defp find_match(name, q) do
+    down = String.downcase(name)
+    query = String.downcase(q)
+
+    if byte_size(down) == byte_size(name) do
+      case :binary.match(down, query) do
+        {start, len} ->
+          {binary_part(name, 0, start), binary_part(name, start, len),
+           binary_part(name, start + len, byte_size(name) - start - len)}
+
+        :nomatch ->
+          nil
+      end
+    end
+  rescue
+    _ -> nil
   end
 
   @doc """

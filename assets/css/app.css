@@ -551,53 +551,152 @@ html.has-js .index-controls {
    out (no `html.has-js` gate the way the old client-only standings filter
    had): a `<select>` and a submit button both work with no script at all,
    so there is nothing here that needs hiding until JavaScript proves
-   itself. Wraps rather than scrolls at a narrow width - the one rule this
-   bar must never break is the page body moving sideways. */
+   itself - the Apply button only disappears once `.js-auto` proves a
+   script actually ran (see the component's own inline `<script>`). Wraps
+   rather than scrolls at a narrow width - the one rule this bar must never
+   break is the page body moving sideways. */
 .filter-bar {
   margin-bottom: 1rem;
 }
 
-.filter-fields {
+.filter-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.75rem 1rem;
+  align-items: center;
+  gap: 0.6rem 0.75rem;
   margin: 0;
-  border: 0;
-  padding: 0;
-}
-
-.filter-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.75rem;
-  color: var(--quiet);
-  min-width: 0;
-}
-
-.filter-field select,
-.filter-field input {
-  padding: 0.35rem 0.5rem;
-  border: 1px solid var(--quiet);
-  border-radius: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
   background: var(--panel);
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+}
+
+/* The search field: an icon riding inside the input rather than beside it,
+   so the control reads as one thing. The visible label the moduledoc talks
+   about is `.visually-hidden`, not gone - a screen reader still gets
+   "Search player" before it hears the input. */
+.filter-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 12rem;
+  min-width: 8rem;
+  order: 1;
+}
+
+.filter-search-icon {
+  position: absolute;
+  left: 0.6rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--quiet);
+  pointer-events: none;
+}
+
+.filter-search-input {
+  width: 100%;
+  padding: 0.4rem 0.6rem 0.4rem 2rem;
+  border: 1px solid var(--quiet);
+  border-radius: 999px;
+  background: var(--bg);
   color: var(--ink);
   font: inherit;
   font-size: 0.875rem;
-  max-width: 14rem;
+  height: 2.25rem;
+}
+
+/* The disclosure holding category/federation/club/team/sort. Real
+   `<details>`/`<summary>`: it opens and closes with no script at all, and
+   the media query below is the ONLY thing that ever forces it open on a
+   wide screen - overriding a closed `<details>`'s hidden content with
+   author CSS is supported in every browser this site targets. */
+.filter-disclosure {
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filter-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  height: 2.25rem;
+  box-sizing: border-box;
+}
+
+.filter-summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-count-badge {
+  color: var(--accent);
+}
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  order: 2;
+}
+
+/* Real `<select>` elements throughout, `appearance: none` and a hand-drawn
+   chevron in their place - a pill only in how it is dressed, never
+   replaced by anything a keyboard or a screen reader would have to learn
+   afresh. */
+.filter-pill select {
+  appearance: none;
+  height: 2.25rem;
+  padding: 0 1.75rem 0 0.75rem;
+  border: 1px solid var(--quiet);
+  border-radius: 999px;
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236a6a68' stroke-width='1.6'%3E%3Cpath d='M5.5 8l4.5 4.5L14.5 8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.75rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  max-width: 11rem;
+  cursor: pointer;
+}
+
+.filter-pill.is-active select {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.filter-pill select:hover {
+  border-color: var(--accent);
+}
+
+.filter-sort {
+  margin-left: auto;
+  order: 9;
 }
 
 .filter-actions {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  order: 3;
 }
 
 .filter-submit {
-  padding: 0.4rem 0.9rem;
+  padding: 0 0.9rem;
+  height: 2.25rem;
   border: 1px solid var(--accent);
-  border-radius: 4px;
+  border-radius: 999px;
   background: var(--accent);
   color: var(--panel);
   font: inherit;
@@ -606,13 +705,112 @@ html.has-js .index-controls {
   cursor: pointer;
 }
 
-.filter-clear {
-  font-size: 0.8125rem;
+.filter-submit:hover {
+  filter: brightness(1.08);
+}
+
+/* Hidden the instant a script proves it is running (the form gains
+   `js-auto` - see the component's inline `<script>`), never before: with
+   no JavaScript this button is the only way to submit the form at all. */
+.filter-form.js-auto .filter-submit {
+  display: none;
+}
+
+/* ---- chips and the result count ---- */
+
+.filter-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filter-chip a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.filter-chip a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filter-chip a span[aria-hidden] {
   color: var(--quiet);
+}
+
+.filter-chip-clear a {
+  border-style: dashed;
+  color: var(--quiet);
+}
+
+.filter-count {
+  margin: 0;
+  color: var(--quiet);
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
 .filter-empty {
   margin-top: 0.75rem;
+}
+
+/* The matching part of a name under an active search - a token colour, not
+   a new one, so it holds in every theme this file defines. */
+mark {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 0.05em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-disclosure > summary {
+    transition: none;
+  }
+}
+
+/* Below this width the middle controls collapse behind the disclosure and
+   the search field keeps the toolbar's full width to itself; at and above
+   it, the disclosure is always open and its own summary is hidden - see
+   the moduledoc for why forcing a closed `<details>`'s content open with
+   CSS is safe here. The page body never scrolls sideways either way: the
+   toolbar wraps, it never grows wider than its container. */
+@media (min-width: 40rem) {
+  .filter-summary {
+    display: none;
+  }
+
+  .filter-disclosure {
+    display: contents;
+  }
+
+  .filter-disclosure:not([open]) > .filter-controls {
+    display: flex !important;
+  }
+
+  .filter-controls {
+    margin-top: 0;
+  }
 }
 
 /* The place-in-group beside a row's overall rank, e.g. "3" then "1 in
