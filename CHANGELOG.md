@@ -45,9 +45,9 @@ Each entry is tagged so a version can be skimmed:
   order, and its match history. A new board prizes page lists `board_stats`,
   one table per board. The filter bar's Team control narrows a round's board
   lines to one team; category, federation and name keep working alongside
-  it. A team Swiss, which still pairs its players individually, gets the
-  team standings table and roster but no matches, board prizes or
-  cross-table, since none of that data exists yet. Every field this reads is
+  it. A team Swiss paired by teams gets the same pages except the
+  cross-table; an older team Swiss that was paired player by player is sent
+  as an individual event and keeps its individual pages. Every field this reads is
   additive - see `docs/snapshot-schema.md`'s new "Team tournaments" section -
   and an individual tournament's pages are unchanged.
 
