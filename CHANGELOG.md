@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-09-14
+
 - [Change] **The filter/sort bar on standings, round pairings and the
   cross-table is now one compact toolbar instead of a wrapping row of plain
   `<select>`s.** A search box with an inline icon on the left, pill-styled
