@@ -203,6 +203,37 @@ defmodule OpenResultsWeb.AdminPagesTest do
                "No tournament matches"
     end
 
+    test "the front page column tells the arbiter's choice apart from moderation's status", %{
+      world: world
+    } do
+      unlisted =
+        OpenResults.SnapshotPayloads.swiss()
+        |> put_in(["tournament", "slug"], "unlisted-by-arbiter")
+        |> put_in(["tournament", "name"], "Unlisted Open")
+        |> put_in(["tournament", "listed"], false)
+
+      {:ok, _} = OpenResults.Snapshots.ingest(unlisted)
+
+      rows =
+        admin_get("/admin/tournaments")
+        |> doc()
+        |> LazyHTML.query("#tournaments tbody tr")
+        |> Enum.map(&LazyHTML.text/1)
+
+      row = fn slug -> Enum.find(rows, &(&1 =~ slug)) end
+
+      # Moderation says "listed" for both; only one is on the front page.
+      assert row.("unlisted-by-arbiter") =~ "listed: on player pages"
+      assert row.("unlisted-by-arbiter") =~ "no: unlisted by the arbiter"
+      assert row.(world.listed) =~ "listed: on player pages"
+      assert row.(world.listed) =~ "yes"
+      assert row.(world.hidden) =~ "no: hidden"
+      assert row.(world.unpublished) =~ "nothing published yet"
+
+      assert admin_get("/admin/tournaments/unlisted-by-arbiter") |> doc() |> text(".details") =~
+               "front page: no: unlisted by the arbiter"
+    end
+
     test "one tournament: owner, first and last publish, snapshot size, reports", %{world: world} do
       doc = admin_get("/admin/tournaments/#{world.pending}") |> doc()
       stats = Moderation.tournament_stats(world.pending)

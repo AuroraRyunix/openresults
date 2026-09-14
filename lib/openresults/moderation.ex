@@ -179,6 +179,9 @@ defmodule OpenResults.Moderation do
       order_by: [desc: t.inserted_at, asc: t.slug],
       select_merge: %{
         name: fragment("json_extract(?, '$.tournament.name')", s.payload),
+        # SQLite's json_extract turns JSON false into 0 and true into 1;
+        # absent means listed, as `OpenResultsWeb.Tournament.listed?/1` reads it.
+        front_page: fragment("coalesce(json_extract(?, '$.tournament.listed'), 1)", s.payload),
         last_published_at: s.received_at,
         open_reports: coalesce(r.count, 0)
       }

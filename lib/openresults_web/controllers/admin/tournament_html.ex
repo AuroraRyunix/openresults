@@ -48,6 +48,7 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
           <tr>
             <th scope="col">Tournament</th>
             <th scope="col">Status</th>
+            <th scope="col">Front page</th>
             <th scope="col">Owner</th>
             <th scope="col">Last publish</th>
             <th class="num" scope="col">Open reports</th>
@@ -62,6 +63,7 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
               <span class="quiet">{tournament.slug}</span>
             </td>
             <td><.status value={tournament.status} /></td>
+            <td><.front_page tournament={tournament} /></td>
             <td><.owner installation_id={tournament.installation_id} /></td>
             <td>{at(tournament.last_published_at, "not yet")}</td>
             <td class="num">{tournament.open_reports}</td>
@@ -81,6 +83,7 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
     <p class="details">
       <span>{@tournament.slug}</span>
       <span><.status value={@tournament.status} /></span>
+      <span>front page: <.front_page tournament={@tournament} /></span>
     </p>
 
     <nav class="admin-actions-bar" id="tournament-actions" aria-label="Actions">

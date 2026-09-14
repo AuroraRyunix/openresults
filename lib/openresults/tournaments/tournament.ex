@@ -19,6 +19,7 @@ defmodule OpenResults.Tournaments.Tournament do
 
     # Filled by the moderation listings; never stored.
     field :name, :string, virtual: true
+    field :front_page, :integer, virtual: true
     field :last_published_at, :utc_datetime_usec, virtual: true
     field :open_reports, :integer, virtual: true
 

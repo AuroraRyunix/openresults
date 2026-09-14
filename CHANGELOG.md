@@ -27,6 +27,17 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-09-14
+
+- [Change] **The admin panel no longer says "listed" for a tournament that is
+  not on the front page.** The moderation status only ever decided the
+  cross-tournament player pages, but "listed" read as "on the front page",
+  which is the arbiter's own switch in OpenPairings. The statuses now read
+  "pending: not on player pages yet" and "listed: on player pages", and the
+  tournament list and each tournament's page gain a **Front page** column:
+  "yes", "no: unlisted by the arbiter", "no: hidden", or "nothing published
+  yet".
+
 ## [0.16.0] - 2026-09-14
 
 - [Feature] **A match the arbiter forfeited by decision says so.** On a

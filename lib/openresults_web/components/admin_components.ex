@@ -79,11 +79,35 @@ defmodule OpenResultsWeb.Admin.Components do
     """
   end
 
-  # `pending` is the stored word, and since 2026-09-13 it holds a tournament
-  # back from one place only - the cross-tournament player pages - so the
-  # panel says that rather than a word that sounds like "not public yet".
+  # `pending`/`listed` are the stored words, and they are MODERATION's: since
+  # 2026-09-13 they decide one thing only - whether the tournament is on the
+  # cross-tournament player pages. "listed" read as "on the front page", which
+  # is a different switch (the arbiter's, see `front_page/1`), so the panel
+  # says what each one actually does.
   defp status_label("pending"), do: "pending: not on player pages yet"
+  defp status_label("listed"), do: "listed: on player pages"
   defp status_label(value), do: value
+
+  @doc """
+  Whether a tournament appears on the public front page, as a short label.
+
+  That is the ARBITER's choice ("show on the results site's front page" in
+  OpenPairings, the snapshot's `tournament.listed`), not moderation's status:
+  an event its arbiter unlisted is public by link and on player pages, but
+  not advertised on the front page. A hidden tournament is on no page at all.
+  """
+  attr :tournament, :map, required: true
+
+  def front_page(assigns) do
+    ~H"""
+    <span class="admin-front-page">{front_page_label(@tournament)}</span>
+    """
+  end
+
+  defp front_page_label(%{status: "hidden"}), do: "no: hidden"
+  defp front_page_label(%{name: nil}), do: "nothing published yet"
+  defp front_page_label(%{front_page: 0}), do: "no: unlisted by the arbiter"
+  defp front_page_label(_), do: "yes"
 
   # ---------------------------------------------------------------------------
   # Paging
