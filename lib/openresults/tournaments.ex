@@ -146,6 +146,45 @@ defmodule OpenResults.Tournaments do
   end
 
   @doc """
+  Records who published `slug`, from a hosted OpenPairings' `publisher` field
+  - see `docs/snapshot-schema.md`. Admin panel display only.
+
+  `payload` is the whole decoded snapshot; only `publisher.email` and
+  `publisher.host` (both strings) are read. Absent or malformed - an older
+  client, a local/desktop publish, an installation-key publish (which never
+  carries this field) - changes nothing: a tournament keeps showing its last
+  known publisher rather than losing it to a snapshot that does not repeat
+  it. Called after the row is known to exist (`ensure_listed/1` for the
+  operator path); a slug with no row yet is a no-op.
+  """
+  @spec set_publisher(String.t(), map()) :: :ok
+  def set_publisher(slug, payload) when is_binary(slug) and is_map(payload) do
+    case publisher_fields(payload) do
+      nil ->
+        :ok
+
+      {email, host} ->
+        from(t in Tournament, where: t.slug == ^slug)
+        |> Repo.update_all(
+          set: [owner_email: email, owner_host: host, updated_at: DateTime.utc_now()]
+        )
+
+        :ok
+    end
+  end
+
+  defp publisher_fields(payload) do
+    case Map.get(payload, "publisher") do
+      %{"email" => email} = publisher when is_binary(email) ->
+        host = Map.get(publisher, "host")
+        {email, if(is_binary(host), do: host, else: nil)}
+
+      _absent_or_malformed ->
+        nil
+    end
+  end
+
+  @doc """
   May `installation` publish to `slug`? Called inside the publish transaction
   - see `OpenResults.Snapshots.ingest/2` - so the answer cannot change between
   being given and the snapshot being stored.

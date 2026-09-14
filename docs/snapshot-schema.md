@@ -493,6 +493,39 @@ a board prize is normally awarded against rather than every board a reserve
 ever filled in for. Gated the same way `team_standings` is: empty until
 standings have been published through at least one round.
 
+## `publisher` - who published, hosted server only
+
+Added 2026-09-14. **Absent means unknown** - an older OpenPairings, a
+local/desktop publish (which has no accounts to name and already identifies
+itself with its installation key), or a hosted publish whose tournament owner
+could not be resolved.
+
+```json
+{ "publisher": { "email": "jan.peeters@example.invalid", "host": "pairings.example.org" } }
+```
+
+- **`publisher.email`** - the hosted account that owns the tournament being
+  published. OpenPairings' account schema carries only an email today, no
+  separate display name, so that is the whole identity sent; a `name` key may
+  be added later, additively, without this key changing shape.
+- **`publisher.host`** - the hosted instance's own public host
+  (`PHX_HOST`/the endpoint's configured host), so a server aggregating
+  publishes from more than one hosted OpenPairings can say which one.
+- **Moderation contact only.** This field exists so the admin panel can show
+  who published a tournament instead of the generic "operator" every
+  operator-token publish otherwise shows. It is personal data (an email) and
+  **must never reach a public page, public JSON, or a feed** - see
+  `docs/privacy-retention.md` for what is stored, why, and for how long.
+- Stored on the tournament row (`owner_email`, `owner_host`), updated on every
+  publish that carries it, and left alone (not cleared) by a publish that
+  omits it - so a tournament keeps showing its last known publisher even if a
+  later snapshot (an older client, or a re-publish in local mode after a
+  handoff) does not repeat it. Deleting or purging a tournament removes it
+  along with everything else.
+- An installation-key publish never carries this field: public-mode
+  publishing already identifies its installation in the admin panel, and an
+  installation is not a hosted account.
+
 ## What is deliberately NOT in here
 
 **Anything a spectator has no business seeing.** No email addresses, no

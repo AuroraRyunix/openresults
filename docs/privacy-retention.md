@@ -28,6 +28,13 @@ Defaults assume `BACKUP_RETENTION` is unset (30 days).
 | Free-text report details | `reports.details` | the report itself | not removed by retention, and a tournament delete leaves reports in place too. The form asks reporters not to add personal data. | until an operator deletes the database row |
 | Admin email addresses | `moderation_actions.actor`, `reports.resolved_by`, `address_blocks.created_by` | who did what - the audit trail | never (the audit trail is the point) | for as long as the log is kept |
 | Player names and results an arbiter published | `snapshots.payload` | the published tournament | when the tournament is deleted (by its arbiter through the API, or by the admin panel) | 30 days after the delete |
+| Publisher email and host, from a hosted OpenPairings' `publisher` field | `tournaments.owner_email`, `tournaments.owner_host` | admin-panel moderation contact: who to ask about a tournament published from a hosted account, added 2026-09-14 | as long as the tournament exists - removed with its `tournaments` row when the tournament is deleted or purged, exactly like the owner installation is | 30 days after the delete, same as the tournament's snapshots |
+
+The publisher's email and host are shown only in the admin panel (the
+tournaments list and a tournament's own page) - never on a public page,
+public JSON, or a feed; `GET /api/tournaments/:slug` strips `publisher` from
+the stored payload before serving it. See `docs/snapshot-schema.md`'s
+`publisher` field.
 
 ## Outside the database
 

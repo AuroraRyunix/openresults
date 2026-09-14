@@ -201,6 +201,19 @@ defmodule OpenResultsWeb.SnapshotControllerTest do
       assert json_response(read_back, 200) == payload
     end
 
+    test "never carries `publisher`, even though the stored payload does", %{conn: conn} do
+      payload =
+        Map.put(SnapshotPayloads.swiss(), "publisher", %{"email" => "jan@example.invalid"})
+
+      publish(conn, payload)
+
+      read_back = get(build_conn(), ~p"/api/tournaments/#{slug_of(payload)}")
+      body = json_response(read_back, 200)
+
+      refute Map.has_key?(body, "publisher")
+      refute body |> Jason.encode!() =~ "jan@example.invalid"
+    end
+
     test "needs no token, because a snapshot holds nothing that was withheld" do
       payload = SnapshotPayloads.keizer()
       publish(put_req_header(build_conn(), "content-type", "application/json"), payload)

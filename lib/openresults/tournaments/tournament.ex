@@ -15,6 +15,12 @@ defmodule OpenResults.Tournaments.Tournament do
     field :status, :string
     field :minted_at, :utc_datetime_usec
 
+    # Who published, from a hosted OpenPairings only - see
+    # `OpenResults.Tournaments.set_publisher/2` and `docs/snapshot-schema.md`'s
+    # `publisher` field. Admin panel only: never selected on any public query.
+    field :owner_email, :string
+    field :owner_host, :string
+
     belongs_to :installation, OpenResults.Installations.Installation, type: :string
 
     # Filled by the moderation listings; never stored.

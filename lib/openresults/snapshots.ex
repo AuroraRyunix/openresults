@@ -112,6 +112,10 @@ defmodule OpenResults.Snapshots do
     with :ok <- TournamentKeys.authorize_publish(slug, key),
          {:ok, snapshot} <- store(slug, payload, received_at) do
       Tournaments.ensure_listed(slug)
+      # Only the operator path: an installation-key publish never carries
+      # `publisher` (see docs/snapshot-schema.md) - it already identifies its
+      # installation in the admin panel.
+      Tournaments.set_publisher(slug, payload)
       {:ok, snapshot}
     end
   end

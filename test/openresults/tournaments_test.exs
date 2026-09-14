@@ -186,4 +186,64 @@ defmodule OpenResults.TournamentsTest do
       refute is_nil(Installations.get(installation.id))
     end
   end
+
+  describe "set_publisher/2 (2026-09-14)" do
+    test "an operator-token publish carrying `publisher` stores email and host" do
+      slug = unique_slug()
+
+      with_publisher =
+        put_in(payload(slug), ["publisher"], %{
+          "email" => "jan@example.invalid",
+          "host" => "pairings.example.org"
+        })
+
+      {:ok, _} = Snapshots.ingest(with_publisher)
+
+      tournament = Tournaments.get(slug)
+      assert tournament.owner_email == "jan@example.invalid"
+      assert tournament.owner_host == "pairings.example.org"
+    end
+
+    test "a publish with no `publisher` leaves an earlier one alone" do
+      slug = unique_slug()
+      with_publisher = put_in(payload(slug), ["publisher"], %{"email" => "jan@example.invalid"})
+      {:ok, _} = Snapshots.ingest(with_publisher)
+
+      {:ok, _} = Snapshots.ingest(payload(slug))
+
+      assert Tournaments.get(slug).owner_email == "jan@example.invalid"
+    end
+
+    test "absent when the payload never carried it" do
+      slug = unique_slug()
+      {:ok, _} = Snapshots.ingest(payload(slug))
+
+      tournament = Tournaments.get(slug)
+      assert tournament.owner_email == nil
+      assert tournament.owner_host == nil
+    end
+
+    test "an installation-key publish's own `publisher` (it should never send one) is not applied" do
+      {installation, _} = installation!()
+      {:ok, %{slug: slug}} = Tournaments.mint(installation)
+
+      with_publisher =
+        put_in(payload(slug), ["publisher"], %{"email" => "should-not-apply@example.invalid"})
+
+      {:ok, _} =
+        Snapshots.ingest(with_publisher, installation: installation, key: random_key())
+
+      assert Tournaments.get(slug).owner_email == nil
+    end
+
+    test "purging a tournament removes the stored publisher" do
+      slug = unique_slug()
+      with_publisher = put_in(payload(slug), ["publisher"], %{"email" => "jan@example.invalid"})
+      {:ok, _} = Snapshots.ingest(with_publisher)
+
+      Takedown.purge(slug)
+
+      assert Tournaments.get(slug) == nil
+    end
+  end
 end
