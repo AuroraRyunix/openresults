@@ -240,7 +240,9 @@ defmodule OpenResultsWeb.SnapshotController do
       {:ok, instant} ->
         case Snapshots.as_of(slug, instant) do
           nil -> not_found(conn, slug)
-          snapshot -> json(conn, snapshot.payload)
+          # The publisher's email is for the admin panel only - see
+          # `public_payload/1` - even to a caller holding the tournament's key.
+          snapshot -> json(conn, Map.delete(snapshot.payload, "publisher"))
         end
 
       :error ->
