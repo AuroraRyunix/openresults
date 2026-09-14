@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-14
+
 - [Feature] **A match the arbiter forfeited by decision says so.** On a
   round page's match line and in a team page's match history, such a match
   reads "Awarded to Team A by the arbiter" under its score, and its boards
