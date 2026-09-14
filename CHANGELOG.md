@@ -27,6 +27,12 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **The cross-table no longer shows a sideways scrollbar under a table
+  that fits the screen.** A long player name widened the whole table past the
+  page, because the name column's width cap was ignored; names now shorten
+  with an ellipsis at the intended width. When a cross-table really is wider
+  than the screen, its scrollbar is slim.
+
 ## [0.16.1] - 2026-09-14
 
 - [Change] **The admin panel no longer says "listed" for a tournament that is

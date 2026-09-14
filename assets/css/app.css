@@ -1534,9 +1534,31 @@ a.xt-opp:hover {
    away, on that player's own page. */
 .crosstable .xt-name {
   left: var(--xt-key);
+  box-sizing: border-box;
+  width: 11rem;
+  min-width: 11rem;
   max-width: 11rem;
+}
+
+/* The cap has to live on a block INSIDE the cell. Automatic table layout
+   ignores `max-width` on a table cell, so a long name used to widen the whole
+   cross-table past the page and put a sideways scrollbar under a table that
+   otherwise fit. A block child with a fixed width gives the column exactly
+   that width, and the ellipsis actually happens. */
+.crosstable .xt-name > a,
+.crosstable .xt-name > span {
+  display: block;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* When a cross-table really is wider than the screen (a phone, a long
+   event), keep its scrollbar slim rather than a full-height bar. */
+.xt-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
 }
 
 /* ---- the chart ---- */
