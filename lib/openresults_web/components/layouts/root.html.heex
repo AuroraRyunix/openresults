@@ -217,7 +217,9 @@
         notice={@public_notice}
       />
       <main id="main" tabindex="-1">
-        <div id="live-region" data-live>{@inner_content}</div>
+        <div id="live-region" data-live data-version={region_version(assigns)}>
+          {@inner_content}
+        </div>
       </main>
 
       <footer class="site-foot">
@@ -407,12 +409,14 @@
             node = node.parentElement;
           }
 
-          return null;
+          // Nothing identifying on the way up: the path from the region
+          // itself, rather than no answer - most <details> have no id.
+          return live && node === live ? {selector: null, index: 0, path} : null;
         };
 
         const relocate = (spot) => {
           if (!live || !spot) { return null; }
-          const matches = live.querySelectorAll(spot.selector);
+          const matches = spot.selector ? live.querySelectorAll(spot.selector) : [live];
           let node = matches[spot.index] || matches[0] || null;
           for (const step of spot.path) { node = node ? node.children[step] : null; }
           return node;
@@ -512,6 +516,7 @@
 
         if (live && !isForm && !isProjector) {
           let failures = 0;
+          let busy = false;
 
           // Somebody in the middle of using a control - a filter dropdown
           // open, a search half typed. Swapping now would close the dropdown
@@ -535,7 +540,12 @@
 
             return {
               focus: at && at !== live && live.contains(at) ? locate(at) : null,
-              open: Array.from(live.querySelectorAll("details[open]")).map(locate).filter(Boolean),
+              // Open AND closed: the phone filter disclosure arrives open
+              // from the server, so a reader who closed it must get it back
+              // closed, not just the opened ones back open.
+              details: Array.from(live.querySelectorAll("details"))
+                .map((el) => [locate(el), el.open])
+                .filter(([spot]) => spot),
               scroll: scrollers().map((el) => el.scrollLeft),
               typed: Array.from(live.querySelectorAll("input[type=search], input[type=text]"))
                 .map((el) => [locate(el), el.value])
@@ -551,17 +561,29 @@
             // Compare before touching the DOM. Most polls find nothing new,
             // and replacing identical markup would collapse an open <details>
             // and drop focus for no reason.
-            if (fresh.innerHTML === live.innerHTML) { return false; }
+            //
+            // By the server's fingerprint of what it sent, not by markup: the
+            // region in the browser has been changed by its own scripts (a
+            // class on the filter form, a closed disclosure, hidden rows), so
+            // it never equals fresh server HTML and every poll looked like an
+            // update. The markup is only the fallback for a response from a
+            // server that sends no fingerprint.
+            const version = fresh.getAttribute("data-version");
+            const unchanged = version
+              ? version === live.getAttribute("data-version")
+              : fresh.innerHTML === live.innerHTML;
+            if (unchanged) { return false; }
 
             const kept = capture();
 
             live.innerHTML = fresh.innerHTML;
+            if (version) { live.setAttribute("data-version", version); }
 
             // Before the scripts below re-run, so they read what the reader
             // had typed rather than an empty box.
-            kept.open.forEach((spot) => {
+            kept.details.forEach(([spot, open]) => {
               const details = relocate(spot);
-              if (details) { details.open = true; }
+              if (details && details.tagName === "DETAILS") { details.open = open; }
             });
             kept.typed.forEach(([spot, value]) => {
               const box = relocate(spot);
@@ -598,16 +620,23 @@
           const tick = () => {
             // Nothing to update while the tab is in the background, and a
             // phone in a pocket should not be polling a server all round.
-            if (document.hidden || inUse()) { return; }
+            // One poll at a time: a tab brought to the front can ask while
+            // the timer's own request is still out, and two swaps racing
+            // each other can land in either order.
+            if (document.hidden || inUse() || busy) { return; }
+            busy = true;
 
             fetch(window.location.href, {
               headers: {"accept": "text/html", "x-openresults-refresh": "1"}
             })
-              .then((r) => r.ok ? r.text() : Promise.reject(r.status))
-              .then((html) => {
+              .then((r) => r.ok ? r.text().then((html) => [r, html]) : Promise.reject(r.status))
+              .then(([r, html]) => {
+                busy = false;
                 failures = 0;
                 if (status) { status.hidden = true; }
-                if (inUse()) { return; }
+                // Redirected somewhere else - a renamed or withdrawn page. That
+                // page's region does not belong under this address.
+                if (r.redirected || inUse()) { return; }
                 if (swap(html)) {
                   // Said quietly and only when something actually changed, so
                   // a spectator knows the page is live rather than stuck.
@@ -619,6 +648,7 @@
                 }
               })
               .catch(() => {
+                busy = false;
                 // A hall's wifi drops. Say so rather than showing a page that
                 // has silently stopped being current, and keep trying - this
                 // is not an error worth ending the session over.

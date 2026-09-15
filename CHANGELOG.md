@@ -27,6 +27,25 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **The page no longer "updates" every 10 to 20 seconds when nothing
+  changed.** The refresher compared the page's own markup, which the filter
+  bar's script had already altered, so every poll replaced the table, said
+  "updated just now" to a screen reader again, and closed the phone filter
+  panel. It now compares a fingerprint the server sends, and keeps open or
+  closed panels as the reader left them.
+- [Fix] **Typing in the search box filters the right rows.** It no longer
+  matches a player through the opponents listed in their tie-break working,
+  leaves the team matches table alone on a team round, and keeps filtering
+  after the page refreshes instead of showing every row under a filled box.
+- [Change] **The name search ignores accents and word order.** "muller" finds
+  "Müller" and "Ilse De Vos" finds "De Vos, Ilse", both while typing and after
+  pressing Enter, so the two can no longer disagree. The tournament list's
+  search ignores accents too.
+- [Accessibility] **Typing in the search box says how many rows match**, in
+  the count under the bar and to a screen reader once you pause.
+- [Fix] The projector view no longer rewrites its boards every minute when
+  nothing changed.
+
 ## [0.16.5] - 2026-09-15
 
 - [Change] **On a wide screen a chosen filter no longer shows twice.** The

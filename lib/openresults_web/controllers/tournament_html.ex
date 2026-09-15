@@ -1784,6 +1784,8 @@ defmodule OpenResultsWeb.TournamentHTML do
         const bar = document.getElementById("projector-bar");
         const barFill = document.getElementById("projector-bar-fill");
 
+        // Before anything below touches the rows.
+        let served = tbody.innerHTML;
         let rowsPerPage = 1;
         let page = 0;
         let paused = false;
@@ -1930,9 +1932,13 @@ defmodule OpenResultsWeb.TournamentHTML do
             .then((html) => {
               const doc = new DOMParser().parseFromString(html, "text/html");
               const fresh = doc.querySelector("#projector-boards tbody");
-              if (!fresh || fresh.innerHTML === tbody.innerHTML) { return; }
+              // Against the rows as the server last sent them, not as they
+              // stand: paging sets `hidden` on them, so the live markup never
+              // matched and every poll re-wrote the table.
+              if (!fresh || fresh.innerHTML === served) { return; }
 
-              tbody.innerHTML = fresh.innerHTML;
+              served = fresh.innerHTML;
+              tbody.innerHTML = served;
               refit();
             })
             .catch(() => {

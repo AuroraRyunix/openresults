@@ -82,6 +82,39 @@ defmodule OpenResultsWeb.Layouts do
     """
   end
 
+  @doc """
+  A fingerprint of the refreshed region's HTML, for `data-version`.
+
+  The refresher decides "did this page change" by comparing this, not the
+  region's markup. The markup in the browser is never the markup the server
+  sent: the filter bar's script marks its form, closes the phone disclosure
+  and hides rows before the refresher ever runs, so comparing markup found a
+  change on every poll - replacing the region, re-announcing "updated just
+  now" and resetting what the reader had opened every 10 to 20 seconds.
+
+  A digest of the content rather than the snapshot id: the region is what
+  gets swapped, so the region is what must be compared. Not a secret and not
+  an ETag - identical HTML gives an identical value on any node.
+
+  Only on a page that answered 200. The refresher never swaps anything else
+  in, and an error page must stay byte-identical whichever slug it was asked
+  for (see `OpenResultsWeb.VisibilityTest`) - a digest over content that
+  echoes the slug would not be.
+  """
+  def region_version(assigns) do
+    case assigns[:conn] do
+      %Plug.Conn{status: status} when status in [nil, 200] ->
+        :crypto.hash(:sha256, Phoenix.HTML.Safe.to_iodata(assigns[:inner_content]))
+        |> binary_part(0, 12)
+        |> Base.url_encode64(padding: false)
+
+      _other ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
   @doc "The locale this page rendered in, for `<html lang>` and `og:locale`."
   def locale(assigns) do
     case assigns[:locale] do

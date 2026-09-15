@@ -152,8 +152,35 @@ defmodule OpenResultsWeb.Tournament.Filter do
   defp name_match?(nil, _actual), do: true
   defp name_match?(_wanted, nil), do: false
 
-  defp name_match?(wanted, actual),
-    do: String.contains?(String.downcase(actual), String.downcase(wanted))
+  # Every word of the search, in any order, somewhere in the name, with
+  # accents and case ignored on both sides. "Ilse De Vos" finds the arbiter's
+  # "De Vos, Ilse", and "muller" finds "Müller" - the same rule the filter
+  # bar's script applies to the rows while the reader is still typing (see
+  # `OpenResultsWeb.Components.FilterBar`), so pressing Enter never turns a
+  # row the reader could see into "No players match". The two are kept in
+  # step by hand: a change here is a change there.
+  defp name_match?(wanted, actual) do
+    haystack = fold(actual)
+
+    wanted
+    |> fold()
+    |> String.split(~r/[\s,]+/u, trim: true)
+    |> Enum.all?(&String.contains?(haystack, &1))
+  end
+
+  @doc false
+  # Lower case with the combining accents taken off - the NFD-and-strip the
+  # script does with `normalize("NFD").replace(/[̀-ͯ]/g, "")`.
+  def fold(text) do
+    text
+    |> :unicode.characters_to_nfd_binary()
+    |> case do
+      binary when is_binary(binary) -> binary
+      _invalid -> text
+    end
+    |> String.replace(~r/[\x{0300}-\x{036F}]/u, "")
+    |> String.downcase()
+  end
 
   @doc """
   Standings rows, filtered and sorted for display, and the place-in-group
