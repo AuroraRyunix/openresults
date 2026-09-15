@@ -41,7 +41,7 @@ Each entry is tagged so a version can be skimmed:
   "Müller" and "Ilse De Vos" finds "De Vos, Ilse", both while typing and after
   pressing Enter, so the two can no longer disagree. The tournament list's
   search ignores accents too.
-- [Accessibility] **Typing in the search box says how many rows match**, in
+- [Fix] **Typing in the search box says how many rows match**, in
   the count under the bar and to a screen reader once you pause.
 - [Fix] The projector view no longer rewrites its boards every minute when
   nothing changed.
