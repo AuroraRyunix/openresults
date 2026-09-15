@@ -559,12 +559,39 @@ defmodule OpenResultsWeb.FilterBarTest do
       assert LazyHTML.query(document, "details.filter-disclosure[open]") != []
     end
 
-    test "the disclosure is closed by default with nothing active", %{conn: conn} do
+    test "the controls are always rendered open, so sorting is never hidden", %{conn: conn} do
+      # A closed <details> hid the sort and filter controls on desktop too:
+      # CSS cannot reliably reveal a closed disclosure. The server always
+      # renders it open; only the script folds it, on a narrow screen, when
+      # `data-keep-open` is "false".
       payload = SnapshotPayloads.swiss() |> with_categories(["A", "B"])
       slug = publish(payload)
       document = conn |> get(~p"/t/#{slug}") |> doc()
 
-      assert LazyHTML.query(document, "details.filter-disclosure[open]") |> Enum.empty?()
+      refute LazyHTML.query(document, "details.filter-disclosure[open]") |> Enum.empty?()
+      refute LazyHTML.query(document, ~s(details[data-keep-open="false"])) |> Enum.empty?()
+
+      filtered = conn |> get(~p"/t/#{slug}?sort=rating") |> doc()
+      refute LazyHTML.query(filtered, ~s(details[data-keep-open="true"])) |> Enum.empty?()
+    end
+
+    test "standings column headers sort, as plain links keeping the other filters", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+      document = conn |> get(~p"/t/#{slug}?fed=BEL") |> doc()
+
+      hrefs =
+        document
+        |> LazyHTML.query("table.standings thead a.sort-link")
+        |> LazyHTML.attribute("href")
+
+      assert Enum.any?(hrefs, &(&1 =~ "sort=name" and &1 =~ "fed=BEL"))
+      assert Enum.any?(hrefs, &(&1 =~ "sort=rating"))
+
+      sorted = conn |> get(~p"/t/#{slug}?sort=name") |> doc()
+
+      assert sorted
+             |> LazyHTML.query(~s(table.standings thead th[aria-sort="ascending"]))
+             |> Enum.count() == 1
     end
   end
 

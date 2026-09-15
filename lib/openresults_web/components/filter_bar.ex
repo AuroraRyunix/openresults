@@ -151,7 +151,12 @@ defmodule OpenResultsWeb.Components.FilterBar do
             />
           </label>
 
-          <details :if={@any_control? or @sort?} class="filter-disclosure" open={@disclosure_open?}>
+          <details
+            :if={@any_control? or @sort?}
+            class="filter-disclosure"
+            open
+            data-keep-open={to_string(@disclosure_open?)}
+          >
             <summary class="filter-summary">
               {gettext("Filters")}
               <span :if={@active_count > 0} class="filter-count-badge">({@active_count})</span>
@@ -290,14 +295,34 @@ defmodule OpenResultsWeb.Components.FilterBar do
             select.addEventListener("change", () => form.requestSubmit());
           });
 
-          // Debounced, and only once the reader has paused - not on every
-          // keystroke, which would submit and reload the page mid-word.
-          let timer = null;
+          // A closed disclosure is only for narrow screens with nothing
+          // active: the server always renders it open, so no-JS readers and
+          // wide screens always see the controls.
+          const details = form.querySelector(".filter-disclosure");
+          if (details && details.dataset.keepOpen !== "true" &&
+              window.matchMedia("(max-width: 39.99rem)").matches) {
+            details.open = false;
+          }
+
+          // Typing filters the rows already on the page, instantly and
+          // without a reload (the old version reloaded the page half a
+          // second after each pause, mid-name). Enter submits the real
+          // filter, which is what makes a shareable link.
           const search = form.querySelector('input[name="q"]');
-          if (search) {
+          if (search && !search.dataset.liveFilter) {
+            search.dataset.liveFilter = "1";
+            const fold = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
             search.addEventListener("input", () => {
-              if (timer) { clearTimeout(timer); }
-              timer = setTimeout(() => form.requestSubmit(), 500);
+              const q = fold(search.value.trim());
+              const bar = form.closest(".filter-bar");
+              const scope = (bar && bar.parentElement) || document;
+              scope.querySelectorAll("table tbody tr").forEach((row) => {
+                const names = row.querySelectorAll(".name");
+                const text = names.length
+                  ? Array.from(names, (n) => n.textContent).join(" ")
+                  : row.textContent;
+                row.hidden = q !== "" && !fold(text).includes(q);
+              });
             });
           }
         };

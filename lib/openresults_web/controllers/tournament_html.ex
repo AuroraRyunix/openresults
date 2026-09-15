@@ -233,6 +233,41 @@ defmodule OpenResultsWeb.TournamentHTML do
   """
   def escaped(value), do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
+  # A column header that sorts the standings: a plain link to the same page
+  # with `sort` set (every other filter kept), so it works without
+  # JavaScript and can be shared. Clicking the active column again goes back
+  # to rank order. Rank and rating sort highest-first; name and federation
+  # alphabetically - the same orders the Sort control offers.
+  attr :slug, :string, required: true
+  attr :filters, :any, required: true
+  attr :key, :string, required: true
+  slot :inner_block, required: true
+
+  defp sort_link(assigns) do
+    next = if assigns.filters.sort == assigns.key, do: "rank", else: assigns.key
+    params = assigns.filters |> Map.put(:sort, next) |> OpenResultsWeb.FilterParams.to_params()
+
+    assigns =
+      assign(assigns,
+        href: ~p"/t/#{assigns.slug}?#{params}",
+        active?: assigns.filters.sort == assigns.key
+      )
+
+    ~H"""
+    <a href={@href} class={["sort-link", @active? && "is-sorted"]}>
+      {render_slot(@inner_block)}<span :if={@active?} class="sort-mark" aria-hidden="true">▾</span>
+    </a>
+    """
+  end
+
+  defp aria_sort(filters, key) do
+    cond do
+      filters.sort != key -> nil
+      key in ["name", "federation"] -> "ascending"
+      true -> "descending"
+    end
+  end
+
   @doc """
   The standings, filtered and sorted per the filter bar's own query string -
   see `OpenResultsWeb.Tournament.Filter.standings/2` for what decides which
@@ -359,9 +394,25 @@ defmodule OpenResultsWeb.TournamentHTML do
         <caption class="visually-hidden">{standings_caption(@payload)}</caption>
         <thead>
           <tr>
-            <th class="num" scope="col">{gettext("#")}</th>
-            <th scope="col">{gettext("Player")}</th>
-            <th :if={@show.rating} class="num" scope="col">{gettext("Rating")}</th>
+            <th class="num" scope="col" aria-sort={aria_sort(@filters, "rank")}>
+              <.sort_link slug={@slug} filters={@filters} key="rank">{gettext("#")}</.sort_link>
+            </th>
+            <th scope="col" aria-sort={aria_sort(@filters, "name")}>
+              <.sort_link slug={@slug} filters={@filters} key="name">{gettext("Player")}</.sort_link>
+              <span :if={@show.federation} class="th-sub">
+                <.sort_link slug={@slug} filters={@filters} key="federation">
+                  {gettext("Fed")}
+                </.sort_link>
+              </span>
+            </th>
+            <th
+              :if={@show.rating}
+              class="num"
+              scope="col"
+              aria-sort={aria_sort(@filters, "rating")}
+            >
+              <.sort_link slug={@slug} filters={@filters} key="rating">{gettext("Rating")}</.sort_link>
+            </th>
             <th :if={@categories? and @show.category} scope="col">{gettext("Cat")}</th>
             <%= if @keizer? do %>
               <th class="num" scope="col">{gettext("Value")}</th>

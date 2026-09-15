@@ -11,27 +11,27 @@ msgstr ""
 "Language: nl\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/openresults_web/controllers/tournament_html.ex:362
-#: lib/openresults_web/controllers/tournament_html.ex:489
+#: lib/openresults_web/controllers/tournament_html.ex:398
+#: lib/openresults_web/controllers/tournament_html.ex:540
 #, elixir-autogen, elixir-format
 msgid "#"
 msgstr "#"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2234
+#: lib/openresults_web/controllers/tournament_html.ex:2285
 #, elixir-autogen, elixir-format
 msgid "%{count} discarded"
 msgid_plural "%{count} discarded"
 msgstr[0] "%{count} geschrapt"
 msgstr[1] "%{count} geschrapt"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2235
+#: lib/openresults_web/controllers/tournament_html.ex:2286
 #, elixir-autogen, elixir-format
 msgid "%{count} not counted"
 msgid_plural "%{count} not counted"
 msgstr[0] "%{count} niet meegeteld"
 msgstr[1] "%{count} niet meegeteld"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2233
+#: lib/openresults_web/controllers/tournament_html.ex:2284
 #, elixir-autogen, elixir-format
 msgid "%{count} unplayed"
 msgid_plural "%{count} unplayed"
@@ -68,12 +68,12 @@ msgstr "%{tournament} op OpenResults."
 msgid ", not published"
 msgstr ", niet gepubliceerd"
 
-#: lib/openresults_web/controllers/tournament_html.ex:319
+#: lib/openresults_web/controllers/tournament_html.ex:354
 #, elixir-autogen, elixir-format
 msgid "A player was added after that order was set and has not been placed in it yet."
 msgstr "Er is een speler toegevoegd nadat die volgorde werd vastgelegd, en die heeft er nog geen plaats in."
 
-#: lib/openresults_web/controllers/tournament_html.ex:325
+#: lib/openresults_web/controllers/tournament_html.ex:360
 #, elixir-autogen, elixir-format
 msgid "A result has changed since the order was last set, so it may no longer match the real standings."
 msgstr "Er is een uitslag gewijzigd sinds de volgorde voor het laatst werd vastgelegd, dus die komt mogelijk niet meer overeen met de werkelijke stand."
@@ -112,9 +112,9 @@ msgstr "Terug naar %{tournament}"
 msgid "Back to the tournament"
 msgstr "Terug naar het toernooi"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1188
-#: lib/openresults_web/controllers/tournament_html.ex:1330
-#: lib/openresults_web/controllers/tournament_html.ex:1648
+#: lib/openresults_web/controllers/tournament_html.ex:1239
+#: lib/openresults_web/controllers/tournament_html.ex:1381
+#: lib/openresults_web/controllers/tournament_html.ex:1699
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:33
 #, elixir-autogen, elixir-format
 msgid "Bd"
@@ -125,11 +125,11 @@ msgstr "Bd"
 msgid "Birth year"
 msgstr "Geboortejaar"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1104
-#: lib/openresults_web/controllers/tournament_html.ex:1200
-#: lib/openresults_web/controllers/tournament_html.ex:1333
-#: lib/openresults_web/controllers/tournament_html.ex:1651
-#: lib/openresults_web/controllers/tournament_html.ex:1978
+#: lib/openresults_web/controllers/tournament_html.ex:1155
+#: lib/openresults_web/controllers/tournament_html.ex:1251
+#: lib/openresults_web/controllers/tournament_html.ex:1384
+#: lib/openresults_web/controllers/tournament_html.ex:1702
+#: lib/openresults_web/controllers/tournament_html.ex:2029
 #, elixir-autogen, elixir-format
 msgid "Black"
 msgstr "Zwart"
@@ -139,13 +139,13 @@ msgstr "Zwart"
 msgid "Board"
 msgstr "Bord"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1548
+#: lib/openresults_web/controllers/tournament_html.ex:1599
 #, elixir-autogen, elixir-format
 msgid "Bye"
 msgstr "Bye"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1543
-#: lib/openresults_web/controllers/tournament_html.ex:1712
+#: lib/openresults_web/controllers/tournament_html.ex:1594
+#: lib/openresults_web/controllers/tournament_html.ex:1763
 #: lib/openresults_web/controllers/tournament_html/round.html.heex:58
 #, elixir-autogen, elixir-format
 msgid "Byes"
@@ -157,7 +157,7 @@ msgstr "Byes"
 msgid "Cancel"
 msgstr "Annuleren"
 
-#: lib/openresults_web/controllers/tournament_html.ex:365
+#: lib/openresults_web/controllers/tournament_html.ex:416
 #, elixir-autogen, elixir-format
 msgid "Cat"
 msgstr "Cat"
@@ -172,15 +172,15 @@ msgstr "Categorie %{category}"
 msgid "Close"
 msgstr "Sluiten"
 
-#: lib/openresults_web/components/filter_bar.ex:190
-#: lib/openresults_web/components/filter_bar.ex:192
+#: lib/openresults_web/components/filter_bar.ex:195
+#: lib/openresults_web/components/filter_bar.ex:197
 #: lib/openresults_web/controllers/registration_html.ex:158
-#: lib/openresults_web/controllers/tournament_html.ex:676
+#: lib/openresults_web/controllers/tournament_html.ex:727
 #, elixir-autogen, elixir-format
 msgid "Club"
 msgstr "Club"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1950
+#: lib/openresults_web/controllers/tournament_html.ex:2001
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Kleur"
@@ -197,11 +197,11 @@ msgstr "Kleurthema"
 msgid "Deputy: %{name}"
 msgstr "Plaatsvervangend arbiter: %{name}"
 
-#: lib/openresults_web/controllers/tournament_html.ex:934
-#: lib/openresults_web/controllers/tournament_html.ex:1189
-#: lib/openresults_web/controllers/tournament_html.ex:1209
-#: lib/openresults_web/controllers/tournament_html.ex:1547
-#: lib/openresults_web/controllers/tournament_html.ex:1957
+#: lib/openresults_web/controllers/tournament_html.ex:985
+#: lib/openresults_web/controllers/tournament_html.ex:1240
+#: lib/openresults_web/controllers/tournament_html.ex:1260
+#: lib/openresults_web/controllers/tournament_html.ex:1598
+#: lib/openresults_web/controllers/tournament_html.ex:2008
 #, elixir-autogen, elixir-format
 msgid "Elo"
 msgstr "Elo"
@@ -247,10 +247,10 @@ msgstr "FIDE-ID"
 msgid "FIDE rated"
 msgstr "FIDE-rated"
 
-#: lib/openresults_web/components/filter_bar.ex:176
-#: lib/openresults_web/components/filter_bar.ex:178
+#: lib/openresults_web/components/filter_bar.ex:181
+#: lib/openresults_web/components/filter_bar.ex:183
 #: lib/openresults_web/controllers/registration_html.ex:142
-#: lib/openresults_web/controllers/tournament_html.ex:675
+#: lib/openresults_web/controllers/tournament_html.ex:726
 #, elixir-autogen, elixir-format
 msgid "Federation"
 msgstr "Federatie"
@@ -265,9 +265,9 @@ msgstr "Zoek uzelf op de FIDE-lijst"
 msgid "Four digits. Some tournaments have age categories, and the arbiter cannot work one out from a name. Leave it empty if you would rather not say."
 msgstr "Vier cijfers. Sommige toernooien hebben leeftijdscategorieën, en de arbiter kan er geen afleiden uit een naam. Laat het leeg als u het liever niet zegt."
 
-#: lib/openresults_web/controllers/tournament_html.ex:553
-#: lib/openresults_web/controllers/tournament_html.ex:774
-#: lib/openresults_web/controllers/tournament_html.ex:2281
+#: lib/openresults_web/controllers/tournament_html.ex:604
+#: lib/openresults_web/controllers/tournament_html.ex:825
+#: lib/openresults_web/controllers/tournament_html.ex:2332
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "Van"
@@ -287,7 +287,7 @@ msgstr "Hoog contrast"
 msgid "If you were told to enter here, contact the organisers directly - they can still add you by hand, and they are the only ones who can. Entries sometimes close for a while and open again, so it is worth checking back."
 msgstr "Als u de opdracht kreeg om hier in te schrijven, neem dan rechtstreeks contact op met de organisatoren - zij kunnen u nog met de hand toevoegen, en zij alleen. Inschrijvingen sluiten soms een tijdje en gaan daarna weer open, dus het loont om later nog eens te kijken."
 
-#: lib/openresults_web/controllers/tournament_html.ex:368
+#: lib/openresults_web/controllers/tournament_html.ex:419
 #, elixir-autogen, elixir-format
 msgid "Keizer points"
 msgstr "Keizerpunten"
@@ -323,7 +323,7 @@ msgstr "Volg het toestel"
 msgid "Name"
 msgstr "Naam"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1954
+#: lib/openresults_web/controllers/tournament_html.ex:2005
 #, elixir-autogen, elixir-format
 msgid "Nat"
 msgstr "Nat"
@@ -333,15 +333,15 @@ msgstr "Nat"
 msgid "Night"
 msgstr "Nacht"
 
-#: lib/openresults_web/controllers/tournament_html.ex:672
-#: lib/openresults_web/controllers/tournament_html.ex:932
-#: lib/openresults_web/controllers/tournament_html.ex:1952
+#: lib/openresults_web/controllers/tournament_html.ex:723
+#: lib/openresults_web/controllers/tournament_html.ex:983
+#: lib/openresults_web/controllers/tournament_html.ex:2003
 #, elixir-autogen, elixir-format
 msgid "No"
 msgstr "Nr"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1163
-#: lib/openresults_web/controllers/tournament_html.ex:1634
+#: lib/openresults_web/controllers/tournament_html.ex:1214
+#: lib/openresults_web/controllers/tournament_html.ex:1685
 #, elixir-autogen, elixir-format
 msgid "No boards were published for this round."
 msgstr "Voor deze ronde zijn geen borden gepubliceerd."
@@ -351,7 +351,7 @@ msgstr "Voor deze ronde zijn geen borden gepubliceerd."
 msgid "No match. Fill the fields in below instead."
 msgstr "Geen resultaat. Vul de velden hieronder zelf in."
 
-#: lib/openresults_web/controllers/tournament_html.ex:341
+#: lib/openresults_web/controllers/tournament_html.ex:376
 #, elixir-autogen, elixir-format
 msgid "No standings have been published for this tournament yet."
 msgstr "Voor dit toernooi is nog geen stand gepubliceerd."
@@ -397,18 +397,18 @@ msgstr "Er is niets verstuurd. Verbeter wat hieronder is aangeduid en verstuur h
 msgid "Only the arbiter sees this. It is never shown on these pages and never travels in a published tournament - it is here so they can tell you whether you are in."
 msgstr "Alleen de arbiter ziet dit. Het wordt nooit op deze pagina's getoond en reist nooit mee in een gepubliceerd toernooi - het staat hier zodat zij u kunnen laten weten of u erbij bent."
 
-#: lib/openresults_web/controllers/tournament_html.ex:1956
+#: lib/openresults_web/controllers/tournament_html.ex:2007
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:75
 #, elixir-autogen, elixir-format
 msgid "Opponent"
 msgstr "Tegenstander"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1951
+#: lib/openresults_web/controllers/tournament_html.ex:2002
 #, elixir-autogen, elixir-format
 msgid "Opponent's pairing number"
 msgstr "Paringsnummer van de tegenstander"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1966
+#: lib/openresults_web/controllers/tournament_html.ex:2017
 #, elixir-autogen, elixir-format
 msgid "Opponent's total"
 msgstr "Totaal van de tegenstander"
@@ -418,7 +418,7 @@ msgstr "Totaal van de tegenstander"
 msgid "Optional. It fills in the fields below - check them, and correct anything that is out of date. If you are not on the FIDE list, just fill them in yourself."
 msgstr "Optioneel. Het vult de velden hieronder in - controleer ze en verbeter wat niet meer klopt. Staat u niet op de FIDE-lijst, vul ze dan gewoon zelf in."
 
-#: lib/openresults_web/controllers/tournament_html.ex:1693
+#: lib/openresults_web/controllers/tournament_html.ex:1744
 #, elixir-autogen, elixir-format
 msgid "Page %{page} of %{count}"
 msgstr "Pagina %{page} van %{count}"
@@ -433,22 +433,22 @@ msgstr "Paringen - %{round}, %{tournament}."
 msgid "Paper"
 msgstr "Papier"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1698
+#: lib/openresults_web/controllers/tournament_html.ex:1749
 #, elixir-autogen, elixir-format
 msgid "Paused - tap or press space to resume"
 msgstr "Gepauzeerd - tik of druk op de spatiebalk om verder te gaan"
 
-#: lib/openresults_web/controllers/tournament_html.ex:363
-#: lib/openresults_web/controllers/tournament_html.ex:673
-#: lib/openresults_web/controllers/tournament_html.ex:933
-#: lib/openresults_web/controllers/tournament_html.ex:1546
+#: lib/openresults_web/controllers/tournament_html.ex:401
+#: lib/openresults_web/controllers/tournament_html.ex:724
+#: lib/openresults_web/controllers/tournament_html.ex:984
+#: lib/openresults_web/controllers/tournament_html.ex:1597
 #: lib/openresults_web/controllers/tournament_html/board_prizes.html.heex:22
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:34
 #, elixir-autogen, elixir-format
 msgid "Player"
 msgstr "Speler"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2121
+#: lib/openresults_web/controllers/tournament_html.ex:2172
 #: lib/openresults_web/meta.ex:110
 #, elixir-autogen, elixir-format
 msgid "Player %{number}"
@@ -459,17 +459,17 @@ msgstr "Speler %{number}"
 msgid "Player card"
 msgstr "Spelerskaart"
 
-#: lib/openresults_web/controllers/tournament_html.ex:371
-#: lib/openresults_web/controllers/tournament_html.ex:949
-#: lib/openresults_web/controllers/tournament_html.ex:1549
+#: lib/openresults_web/controllers/tournament_html.ex:422
+#: lib/openresults_web/controllers/tournament_html.ex:1000
+#: lib/openresults_web/controllers/tournament_html.ex:1600
 #: lib/openresults_web/controllers/tournament_html/board_prizes.html.heex:25
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:38
 #, elixir-autogen, elixir-format
 msgid "Points"
 msgstr "Punten"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1194
-#: lib/openresults_web/controllers/tournament_html.ex:1205
+#: lib/openresults_web/controllers/tournament_html.ex:1245
+#: lib/openresults_web/controllers/tournament_html.ex:1256
 #, elixir-autogen, elixir-format
 msgid "Points going into this round"
 msgstr "Punten bij aanvang van deze ronde"
@@ -479,9 +479,9 @@ msgstr "Punten bij aanvang van deze ronde"
 msgid "Projector view - large boards, cycling automatically"
 msgstr "Beamerweergave - grote borden, wisselt automatisch"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1196
-#: lib/openresults_web/controllers/tournament_html.ex:1207
-#: lib/openresults_web/controllers/tournament_html.ex:1967
+#: lib/openresults_web/controllers/tournament_html.ex:1247
+#: lib/openresults_web/controllers/tournament_html.ex:1258
+#: lib/openresults_web/controllers/tournament_html.ex:2018
 #, elixir-autogen, elixir-format
 msgid "Pts"
 msgstr "Ptn"
@@ -497,26 +497,26 @@ msgid "Published tournaments"
 msgstr "Gepubliceerde toernooien"
 
 #: lib/openresults_web/controllers/registration_html.ex:135
-#: lib/openresults_web/controllers/tournament_html.ex:364
-#: lib/openresults_web/controllers/tournament_html.ex:674
+#: lib/openresults_web/controllers/tournament_html.ex:414
+#: lib/openresults_web/controllers/tournament_html.ex:725
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:36
 #, elixir-autogen, elixir-format
 msgid "Rating"
 msgstr "Rating"
 
-#: lib/openresults_web/controllers/tournament_html.ex:552
-#: lib/openresults_web/controllers/tournament_html.ex:773
-#: lib/openresults_web/controllers/tournament_html.ex:1949
-#: lib/openresults_web/controllers/tournament_html.ex:2280
+#: lib/openresults_web/controllers/tournament_html.ex:603
+#: lib/openresults_web/controllers/tournament_html.ex:824
+#: lib/openresults_web/controllers/tournament_html.ex:2000
+#: lib/openresults_web/controllers/tournament_html.ex:2331
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:74
 #, elixir-autogen, elixir-format
 msgid "Rd"
 msgstr "R"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1199
-#: lib/openresults_web/controllers/tournament_html.ex:1332
-#: lib/openresults_web/controllers/tournament_html.ex:1650
-#: lib/openresults_web/controllers/tournament_html.ex:1969
+#: lib/openresults_web/controllers/tournament_html.ex:1250
+#: lib/openresults_web/controllers/tournament_html.ex:1383
+#: lib/openresults_web/controllers/tournament_html.ex:1701
+#: lib/openresults_web/controllers/tournament_html.ex:2020
 #, elixir-autogen, elixir-format
 msgid "Result"
 msgstr "Uitslag"
@@ -532,13 +532,13 @@ msgstr "Ronde %{number}"
 msgid "Round %{number} of %{tournament} has not been published."
 msgstr "Ronde %{number} van %{tournament} is niet gepubliceerd."
 
-#: lib/openresults_web/controllers/tournament_html.ex:1946
+#: lib/openresults_web/controllers/tournament_html.ex:1997
 #: lib/openresults_web/controllers/tournament_html/player.html.heex:66
 #, elixir-autogen, elixir-format
 msgid "Round by round"
 msgstr "Ronde per ronde"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1621
+#: lib/openresults_web/controllers/tournament_html.ex:1672
 #, elixir-autogen, elixir-format
 msgid "Round pairings, projector view"
 msgstr "Paringen van de ronde, beamerweergave"
@@ -553,10 +553,10 @@ msgstr "Rondes"
 msgid "Rounds you already know you cannot play"
 msgstr "Rondes waarvan u nu al weet dat u niet kunt spelen"
 
-#: lib/openresults_web/controllers/tournament_html.ex:369
-#: lib/openresults_web/controllers/tournament_html.ex:949
-#: lib/openresults_web/controllers/tournament_html.ex:1294
-#: lib/openresults_web/controllers/tournament_html.ex:1970
+#: lib/openresults_web/controllers/tournament_html.ex:420
+#: lib/openresults_web/controllers/tournament_html.ex:1000
+#: lib/openresults_web/controllers/tournament_html.ex:1345
+#: lib/openresults_web/controllers/tournament_html.ex:2021
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:76
 #, elixir-autogen, elixir-format
 msgid "Score"
@@ -645,17 +645,17 @@ msgstr "De gegevens voor %{name} staan in de wachtrij voor de arbiter van %{tour
 msgid "The number on your FIDE profile, if you have one."
 msgstr "Het nummer op uw FIDE-profiel, als u er een hebt."
 
-#: lib/openresults_web/controllers/tournament_html.ex:335
+#: lib/openresults_web/controllers/tournament_html.ex:370
 #, elixir-autogen, elixir-format
 msgid "The order also uses tie-breaks this tournament does not publish, so two players can appear one above the other with every column here identical."
 msgstr "De volgorde gebruikt ook tiebreaks die dit toernooi niet publiceert, dus twee spelers kunnen boven elkaar staan terwijl elke kolom hier identiek is."
 
-#: lib/openresults_web/controllers/tournament_html.ex:2217
+#: lib/openresults_web/controllers/tournament_html.ex:2268
 #, elixir-autogen, elixir-format
 msgid "The order also uses tie-breaks this tournament does not publish."
 msgstr "De volgorde gebruikt ook tiebreaks die dit toernooi niet publiceert."
 
-#: lib/openresults_web/controllers/tournament_html.ex:315
+#: lib/openresults_web/controllers/tournament_html.ex:350
 #, elixir-autogen, elixir-format
 msgid "The order below was set by the arbiter, not computed from the tiebreaks. The points and tiebreak columns are unchanged; the rank column is their decision."
 msgstr "De volgorde hieronder is door de arbiter vastgelegd, niet berekend uit de tiebreaks. De kolommen met punten en tiebreaks zijn ongewijzigd; de plaatskolom is hun beslissing."
@@ -665,12 +665,12 @@ msgstr "De volgorde hieronder is door de arbiter vastgelegd, niet berekend uit d
 msgid "The organisers have closed entries for this tournament, so this form is no longer taking them. Nothing you typed has been stored."
 msgstr "De organisatoren hebben de inschrijvingen voor dit toernooi gesloten, dus dit formulier neemt er geen meer aan. Niets van wat u typte is opgeslagen."
 
-#: lib/openresults_web/controllers/tournament_html.ex:2489
+#: lib/openresults_web/controllers/tournament_html.ex:2540
 #, elixir-autogen, elixir-format
 msgid "The player's running score by round, and each round's contribution to %{tiebreak}."
 msgstr "De lopende score van de speler per ronde, en de bijdrage van elke ronde aan %{tiebreak}."
 
-#: lib/openresults_web/controllers/tournament_html.ex:2486
+#: lib/openresults_web/controllers/tournament_html.ex:2537
 #, elixir-autogen, elixir-format
 msgid "The player's running score by round."
 msgstr "De lopende score van de speler per ronde."
@@ -690,12 +690,12 @@ msgstr "De FIDE-code van drie letters, zoals BEL. Laat het leeg als u het niet z
 msgid "Theme"
 msgstr "Thema"
 
-#: lib/openresults_web/controllers/tournament_html.ex:448
+#: lib/openresults_web/controllers/tournament_html.ex:499
 #, elixir-autogen, elixir-format
 msgid "These are Keizer points, not FIDE tiebreaks - the whole ladder is recalculated from results, byes and absences every time."
 msgstr "Dit zijn Keizerpunten, geen FIDE-tiebreaks - de hele ladder wordt telkens opnieuw berekend uit uitslagen, byes en afwezigheden."
 
-#: lib/openresults_web/controllers/tournament_html.ex:2307
+#: lib/openresults_web/controllers/tournament_html.ex:2358
 #, elixir-autogen, elixir-format
 msgid "These are the arbiter's numbers, published with the results - this page does not calculate them. An unplayed round contributes a notional opponent under FIDE Article 16 rather than a real one, which is why some rows name nobody."
 msgstr "Dit zijn de cijfers van de arbiter, gepubliceerd bij de uitslagen - deze pagina berekent ze niet. Een niet-gespeelde ronde levert een fictieve tegenstander op volgens FIDE-artikel 16 in plaats van een echte, en daarom noemen sommige rijen niemand."
@@ -720,12 +720,12 @@ msgstr "Deze pagina is hier niet gepubliceerd."
 msgid "This tournament is no longer taking entries here."
 msgstr "Dit toernooi neemt hier geen inschrijvingen meer aan."
 
-#: lib/openresults_web/controllers/tournament_html.ex:2211
+#: lib/openresults_web/controllers/tournament_html.ex:2262
 #, elixir-autogen, elixir-format
 msgid "This tournament publishes no breakdown of its tie-breaks."
 msgstr "Dit toernooi publiceert geen uitsplitsing van zijn tiebreaks."
 
-#: lib/openresults_web/controllers/tournament_html.ex:1955
+#: lib/openresults_web/controllers/tournament_html.ex:2006
 #, elixir-autogen, elixir-format
 msgid "Tit"
 msgstr "Tit"
@@ -764,15 +764,15 @@ msgid_plural "Try again in about %{count} minutes."
 msgstr[0] "Probeer het over ongeveer %{count} minuut opnieuw."
 msgstr[1] "Probeer het over ongeveer %{count} minuten opnieuw."
 
-#: lib/openresults_web/controllers/tournament_html.ex:367
-#: lib/openresults_web/controllers/tournament_html.ex:554
-#: lib/openresults_web/controllers/tournament_html.ex:775
-#: lib/openresults_web/controllers/tournament_html.ex:2282
+#: lib/openresults_web/controllers/tournament_html.ex:418
+#: lib/openresults_web/controllers/tournament_html.ex:605
+#: lib/openresults_web/controllers/tournament_html.ex:826
+#: lib/openresults_web/controllers/tournament_html.ex:2333
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr "Waarde"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2267
+#: lib/openresults_web/controllers/tournament_html.ex:2318
 #, elixir-autogen, elixir-format
 msgid "Where the tie-breaks come from"
 msgstr "Waar de tiebreaks vandaan komen"
@@ -782,11 +782,11 @@ msgstr "Waar de tiebreaks vandaan komen"
 msgid "Whichever rating you play under. Leave it empty if you have none."
 msgstr "De rating waaronder u speelt. Laat het leeg als u er geen hebt."
 
-#: lib/openresults_web/controllers/tournament_html.ex:1103
-#: lib/openresults_web/controllers/tournament_html.ex:1198
-#: lib/openresults_web/controllers/tournament_html.ex:1331
-#: lib/openresults_web/controllers/tournament_html.ex:1649
-#: lib/openresults_web/controllers/tournament_html.ex:1978
+#: lib/openresults_web/controllers/tournament_html.ex:1154
+#: lib/openresults_web/controllers/tournament_html.ex:1249
+#: lib/openresults_web/controllers/tournament_html.ex:1382
+#: lib/openresults_web/controllers/tournament_html.ex:1700
+#: lib/openresults_web/controllers/tournament_html.ex:2029
 #, elixir-autogen, elixir-format
 msgid "White"
 msgstr "Wit"
@@ -801,7 +801,7 @@ msgstr "Uw FIDE-titel, als u er een hebt."
 msgid "Your entry for %{tournament} is with the arbiter."
 msgstr "Uw inschrijving voor %{tournament} ligt bij de arbiter."
 
-#: lib/openresults_web/controllers/tournament_html.ex:2607
+#: lib/openresults_web/controllers/tournament_html.ex:2658
 #, elixir-autogen, elixir-format
 msgid "absent"
 msgstr "afwezig"
@@ -811,48 +811,48 @@ msgstr "afwezig"
 msgid "after round %{number}"
 msgstr "na ronde %{number}"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1496
-#: lib/openresults_web/controllers/tournament_html.ex:1497
+#: lib/openresults_web/controllers/tournament_html.ex:1547
+#: lib/openresults_web/controllers/tournament_html.ex:1548
 #, elixir-autogen, elixir-format
 msgid "an earlier round is not public"
 msgstr "een eerdere ronde is niet openbaar"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2619
+#: lib/openresults_web/controllers/tournament_html.ex:2670
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:86
 #, elixir-autogen, elixir-format
 msgid "bye"
 msgstr "bye"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2334
+#: lib/openresults_web/controllers/tournament_html.ex:2385
 #, elixir-autogen, elixir-format
 msgid "discarded"
 msgstr "geschrapt"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2567
+#: lib/openresults_web/controllers/tournament_html.ex:2618
 #, elixir-autogen, elixir-format
 msgid "forfeit"
 msgstr "forfait"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2232
+#: lib/openresults_web/controllers/tournament_html.ex:2283
 #, elixir-autogen, elixir-format
 msgid "from %{count} round"
 msgid_plural "from %{count} rounds"
 msgstr[0] "uit %{count} ronde"
 msgstr[1] "uit %{count} rondes"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2606
+#: lib/openresults_web/controllers/tournament_html.ex:2657
 #, elixir-autogen, elixir-format
 msgid "full-point bye"
 msgstr "bye van een heel punt"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2604
+#: lib/openresults_web/controllers/tournament_html.ex:2655
 #, elixir-autogen, elixir-format
 msgid "half-point bye"
 msgstr "bye van een half punt"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1028
-#: lib/openresults_web/controllers/tournament_html.ex:1081
-#: lib/openresults_web/controllers/tournament_html.ex:2020
+#: lib/openresults_web/controllers/tournament_html.ex:1079
+#: lib/openresults_web/controllers/tournament_html.ex:1132
+#: lib/openresults_web/controllers/tournament_html.ex:2071
 #, elixir-autogen, elixir-format
 msgid "no game published for this round"
 msgstr "voor deze ronde is geen partij gepubliceerd"
@@ -862,14 +862,14 @@ msgstr "voor deze ronde is geen partij gepubliceerd"
 msgid "no. %{number}"
 msgstr "nr. %{number}"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2336
-#: lib/openresults_web/controllers/tournament_html.ex:2348
+#: lib/openresults_web/controllers/tournament_html.ex:2387
+#: lib/openresults_web/controllers/tournament_html.ex:2399
 #, elixir-autogen, elixir-format
 msgid "not counted"
 msgstr "niet meegeteld"
 
 #: lib/openresults_web/controllers/tournament_html.ex:136
-#: lib/openresults_web/controllers/tournament_html.ex:2017
+#: lib/openresults_web/controllers/tournament_html.ex:2068
 #, elixir-autogen, elixir-format
 msgid "not published"
 msgstr "niet gepubliceerd"
@@ -879,20 +879,20 @@ msgstr "niet gepubliceerd"
 msgid "not updating - connection lost"
 msgstr "wordt niet bijgewerkt - verbinding verbroken"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1055
-#: lib/openresults_web/controllers/tournament_html.ex:1056
-#: lib/openresults_web/controllers/tournament_html.ex:2556
-#: lib/openresults_web/controllers/tournament_html.ex:2557
+#: lib/openresults_web/controllers/tournament_html.ex:1106
+#: lib/openresults_web/controllers/tournament_html.ex:1107
+#: lib/openresults_web/controllers/tournament_html.ex:2607
+#: lib/openresults_web/controllers/tournament_html.ex:2608
 #, elixir-autogen, elixir-format
 msgid "not yet reported"
 msgstr "nog niet doorgegeven"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2192
+#: lib/openresults_web/controllers/tournament_html.ex:2243
 #, elixir-autogen, elixir-format
 msgid "of %{total}, on %{points}"
 msgstr "van %{total}, met %{points}"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2603
+#: lib/openresults_web/controllers/tournament_html.ex:2654
 #, elixir-autogen, elixir-format
 msgid "pairing-allocated bye"
 msgstr "bye toegekend door de paring"
@@ -903,12 +903,12 @@ msgstr "bye toegekend door de paring"
 msgid "required"
 msgstr "verplicht"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2476
+#: lib/openresults_web/controllers/tournament_html.ex:2527
 #, elixir-autogen, elixir-format
 msgid "running score"
 msgstr "lopende score"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2616
+#: lib/openresults_web/controllers/tournament_html.ex:2667
 #, elixir-autogen, elixir-format
 msgid "seat vacated"
 msgstr "plaats vrijgemaakt"
@@ -924,13 +924,13 @@ msgstr "stand"
 msgid "starts %{date}"
 msgstr "start %{date}"
 
-#: lib/openresults_web/controllers/tournament_html.ex:566
-#: lib/openresults_web/controllers/tournament_html.ex:2349
+#: lib/openresults_web/controllers/tournament_html.ex:617
+#: lib/openresults_web/controllers/tournament_html.ex:2400
 #, elixir-autogen, elixir-format
 msgid "unplayed round"
 msgstr "niet-gespeelde ronde"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2568
+#: lib/openresults_web/controllers/tournament_html.ex:2619
 #, elixir-autogen, elixir-format
 msgid "unrated"
 msgstr "niet voor rating"
@@ -940,12 +940,12 @@ msgstr "niet voor rating"
 msgid "updated just now"
 msgstr "zojuist bijgewerkt"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2479
+#: lib/openresults_web/controllers/tournament_html.ex:2530
 #, elixir-autogen, elixir-format
 msgid "what each round gave to %{tiebreak}"
 msgstr "wat elke ronde bijdroeg aan %{tiebreak}"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2605
+#: lib/openresults_web/controllers/tournament_html.ex:2656
 #, elixir-autogen, elixir-format
 msgid "zero-point bye"
 msgstr "bye van nul punten"
@@ -986,20 +986,20 @@ msgstr "Dit gaat over het formulier, niet over het toernooi: niemand heeft hier 
 msgid "Too many entries are waiting"
 msgstr "Er wachten te veel inschrijvingen"
 
-#: lib/openresults_web/controllers/tournament_html.ex:988
+#: lib/openresults_web/controllers/tournament_html.ex:1039
 #, elixir-autogen, elixir-format
 msgid "A bye or a forfeit is named under the score, because neither is an ordinary result. An empty cell is a round this player is not listed in."
 msgstr "Een bye of een forfait wordt onder de score benoemd, want geen van beide is een gewone uitslag. Een lege cel is een ronde waarin deze speler niet vermeld staat."
 
 #: lib/openresults_web/controllers/tournament_controller.ex:109
 #: lib/openresults_web/controllers/tournament_html.ex:113
-#: lib/openresults_web/controllers/tournament_html.ex:929
+#: lib/openresults_web/controllers/tournament_html.ex:980
 #: lib/openresults_web/controllers/tournament_html/crosstable.html.heex:15
 #, elixir-autogen, elixir-format
 msgid "Cross-table"
 msgstr "Kruistabel"
 
-#: lib/openresults_web/controllers/tournament_html.ex:985
+#: lib/openresults_web/controllers/tournament_html.ex:1036
 #, elixir-autogen, elixir-format
 msgid "Each cell is one round: the opponent's pairing number, the colour this player had - w for White, b for Black - and the score from this player's own side."
 msgstr "Elke cel is één ronde: het paringsnummer van de tegenstander, de kleur die deze speler had - w voor wit, b voor zwart - en de score vanuit deze speler bekeken."
@@ -1009,18 +1009,18 @@ msgstr "Elke cel is één ronde: het paringsnummer van de tegenstander, de kleur
 msgid "Every published result of %{tournament}, round by round, as one cross-table."
 msgstr "Alle gepubliceerde uitslagen van %{tournament}, ronde per ronde, in één kruistabel."
 
-#: lib/openresults_web/controllers/tournament_html.ex:910
+#: lib/openresults_web/controllers/tournament_html.ex:961
 #, elixir-autogen, elixir-format
 msgid "No rounds have been published for this tournament yet."
 msgstr "Voor dit toernooi is nog geen enkele ronde gepubliceerd."
 
-#: lib/openresults_web/controllers/tournament_html.ex:951
+#: lib/openresults_web/controllers/tournament_html.ex:1002
 #, elixir-autogen, elixir-format
 msgid "Rank"
 msgstr "Plaats"
 
-#: lib/openresults_web/controllers/tournament_html.ex:672
-#: lib/openresults_web/controllers/tournament_html.ex:932
+#: lib/openresults_web/controllers/tournament_html.ex:723
+#: lib/openresults_web/controllers/tournament_html.ex:983
 #, elixir-autogen, elixir-format
 msgid "Starting number"
 msgstr "Startnummer"
@@ -1062,14 +1062,14 @@ msgstr "Geschiedenis van deze speler, over toernooien heen"
 msgid "rank %{rank} of %{total}, on %{points}"
 msgstr "plaats %{rank} van %{total}, met %{points}"
 
-#: lib/openresults_web/components/filter_bar.ex:162
-#: lib/openresults_web/components/filter_bar.ex:164
+#: lib/openresults_web/components/filter_bar.ex:167
+#: lib/openresults_web/components/filter_bar.ex:169
 #, elixir-autogen, elixir-format
 msgid "Category"
 msgstr "Categorie"
 
-#: lib/openresults_web/controllers/tournament_html.ex:545
-#: lib/openresults_web/controllers/tournament_html.ex:763
+#: lib/openresults_web/controllers/tournament_html.ex:596
+#: lib/openresults_web/controllers/tournament_html.ex:814
 #, elixir-autogen, elixir-format
 msgid "show how this was reached"
 msgstr "toon hoe dit tot stand kwam"
@@ -1104,12 +1104,12 @@ msgstr "Zoek toernooien…"
 msgid "Upcoming"
 msgstr "Binnenkort"
 
-#: lib/openresults_web/controllers/tournament_html.ex:660
+#: lib/openresults_web/controllers/tournament_html.ex:711
 #, elixir-autogen, elixir-format
 msgid "No players have been published for this tournament yet."
 msgstr "Voor dit toernooi zijn nog geen spelers gepubliceerd."
 
-#: lib/openresults_web/controllers/tournament_html.ex:666
+#: lib/openresults_web/controllers/tournament_html.ex:717
 #: lib/openresults_web/meta.ex:55
 #, elixir-autogen, elixir-format
 msgid "Standings of %{tournament}, before round 1."
@@ -1120,7 +1120,7 @@ msgstr "Stand van %{tournament}, voor ronde 1."
 msgid "before round 1"
 msgstr "voor ronde 1"
 
-#: lib/openresults_web/controllers/tournament_html.ex:909
+#: lib/openresults_web/controllers/tournament_html.ex:960
 #: lib/openresults_web/controllers/tournament_html/player.html.heex:61
 #, elixir-autogen, elixir-format
 msgid "Results appear here once the standings after round 1 are published."
@@ -1327,7 +1327,7 @@ msgstr "De gevonden spelers staan onder het zoekvak."
 msgid "Skip to content"
 msgstr "Naar de inhoud"
 
-#: lib/openresults_web/controllers/tournament_html.ex:2200
+#: lib/openresults_web/controllers/tournament_html.ex:2251
 #, elixir-autogen, elixir-format
 msgid "Tie-breaks"
 msgstr "Tiebreaks"
@@ -1610,17 +1610,17 @@ msgstr "U kunt de beheerder ook rechtstreeks schrijven:"
 msgid "Your rights"
 msgstr "Uw rechten"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1461
+#: lib/openresults_web/controllers/tournament_html.ex:1512
 #, elixir-autogen, elixir-format
 msgid "%{reported} of %{total} results"
 msgstr "%{reported} van %{total} resultaten"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1459
+#: lib/openresults_web/controllers/tournament_html.ex:1510
 #, elixir-autogen, elixir-format
 msgid "Live"
 msgstr "Live"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1477
+#: lib/openresults_web/controllers/tournament_html.ex:1528
 #, elixir-autogen, elixir-format
 msgid "Results for round %{round} are not published yet."
 msgstr "De resultaten van ronde %{round} zijn nog niet gepubliceerd."
@@ -1630,18 +1630,18 @@ msgstr "De resultaten van ronde %{round} zijn nog niet gepubliceerd."
 msgid "after round %{number}, round %{live} in progress"
 msgstr "na ronde %{number}, ronde %{live} is bezig"
 
-#: lib/openresults_web/controllers/tournament_html.ex:391
+#: lib/openresults_web/controllers/tournament_html.ex:442
 #, elixir-autogen, elixir-format
 msgid "%{place} in %{category}"
 msgstr "%{place} in %{category}"
 
-#: lib/openresults_web/components/filter_bar.ex:234
+#: lib/openresults_web/components/filter_bar.ex:242
 #, elixir-autogen, elixir-format
 msgid "Apply"
 msgstr "Toepassen"
 
-#: lib/openresults_web/components/filter_bar.ex:257
-#: lib/openresults_web/controllers/tournament_html.ex:1164
+#: lib/openresults_web/components/filter_bar.ex:265
+#: lib/openresults_web/controllers/tournament_html.ex:1215
 #, elixir-autogen, elixir-format
 msgid "Clear filters"
 msgstr "Filters wissen"
@@ -1651,19 +1651,19 @@ msgstr "Filters wissen"
 msgid "Filter and sort"
 msgstr "Filteren en sorteren"
 
-#: lib/openresults_web/components/filter_bar.ex:256
-#: lib/openresults_web/controllers/tournament_html.ex:1162
+#: lib/openresults_web/components/filter_bar.ex:264
+#: lib/openresults_web/controllers/tournament_html.ex:1213
 #, elixir-autogen, elixir-format
 msgid "No players match these filters."
 msgstr "Geen spelers voldoen aan deze filters."
 
-#: lib/openresults_web/components/filter_bar.ex:214
+#: lib/openresults_web/components/filter_bar.ex:222
 #, elixir-autogen, elixir-format
 msgid "Sort by"
 msgstr "Sorteren op"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1229
-#: lib/openresults_web/controllers/tournament_html.ex:1242
+#: lib/openresults_web/controllers/tournament_html.ex:1280
+#: lib/openresults_web/controllers/tournament_html.ex:1293
 #, elixir-autogen, elixir-format
 msgid "matches your filter"
 msgstr "voldoet aan uw filter"
@@ -1688,9 +1688,9 @@ msgstr "%{team} in %{tournament}."
 msgid "%{tournament} has no team %{number}."
 msgstr "%{tournament} heeft geen ploeg %{number}."
 
-#: lib/openresults_web/controllers/tournament_html.ex:617
-#: lib/openresults_web/controllers/tournament_html.ex:1425
-#: lib/openresults_web/controllers/tournament_html.ex:1440
+#: lib/openresults_web/controllers/tournament_html.ex:668
+#: lib/openresults_web/controllers/tournament_html.ex:1476
+#: lib/openresults_web/controllers/tournament_html.ex:1491
 #, elixir-autogen, elixir-format
 msgid "?"
 msgstr "?"
@@ -1717,12 +1717,12 @@ msgstr "Bordprijzen"
 msgid "Board prizes for %{tournament}, each board's players and their results."
 msgstr "Bordprijzen voor %{tournament}, de spelers en resultaten van elk bord."
 
-#: lib/openresults_web/controllers/tournament_html.ex:1323
+#: lib/openresults_web/controllers/tournament_html.ex:1374
 #, elixir-autogen, elixir-format
 msgid "Boards"
 msgstr "Borden"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1326
+#: lib/openresults_web/controllers/tournament_html.ex:1377
 #, elixir-autogen, elixir-format
 msgid "Boards of match %{number}"
 msgstr "Borden van wedstrijd %{number}"
@@ -1732,8 +1732,8 @@ msgstr "Borden van wedstrijd %{number}"
 msgid "Captain: %{name}"
 msgstr "Kapitein: %{name}"
 
-#: lib/openresults_web/controllers/tournament_html.ex:492
-#: lib/openresults_web/controllers/tournament_html.ex:602
+#: lib/openresults_web/controllers/tournament_html.ex:543
+#: lib/openresults_web/controllers/tournament_html.ex:653
 #, elixir-autogen, elixir-format
 msgid "GP"
 msgstr "GP"
@@ -1743,19 +1743,19 @@ msgstr "GP"
 msgid "Games"
 msgstr "Partijen"
 
-#: lib/openresults_web/controllers/tournament_html.ex:549
+#: lib/openresults_web/controllers/tournament_html.ex:600
 #, elixir-autogen, elixir-format
 msgid "How this tie-break was reached"
 msgstr "Hoe dit weerstandspunt tot stand kwam"
 
-#: lib/openresults_web/controllers/tournament_html.ex:491
-#: lib/openresults_web/controllers/tournament_html.ex:601
-#: lib/openresults_web/controllers/tournament_html.ex:1391
+#: lib/openresults_web/controllers/tournament_html.ex:542
+#: lib/openresults_web/controllers/tournament_html.ex:652
+#: lib/openresults_web/controllers/tournament_html.ex:1442
 #, elixir-autogen, elixir-format
 msgid "MP"
 msgstr "MP"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1292
+#: lib/openresults_web/controllers/tournament_html.ex:1343
 #, elixir-autogen, elixir-format
 msgid "Match"
 msgstr "Wedstrijd"
@@ -1770,7 +1770,7 @@ msgstr "Wedstrijdgeschiedenis van %{team}"
 msgid "Matches"
 msgstr "Wedstrijden"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1288
+#: lib/openresults_web/controllers/tournament_html.ex:1339
 #, elixir-autogen, elixir-format
 msgid "Matches, %{round}"
 msgstr "Wedstrijden, %{round}"
@@ -1790,7 +1790,7 @@ msgstr "Er zijn nog geen wedstrijden gepubliceerd."
 msgid "No players are on this team's roster yet."
 msgstr "Deze ploeg heeft nog geen spelers op de rol staan."
 
-#: lib/openresults_web/controllers/tournament_html.ex:476
+#: lib/openresults_web/controllers/tournament_html.ex:527
 #, elixir-autogen, elixir-format
 msgid "No team standings have been published for this tournament yet."
 msgstr "Voor dit toernooi is nog geen ploegenstand gepubliceerd."
@@ -1810,42 +1810,42 @@ msgstr "Opstelling"
 msgid "Roster of %{team}"
 msgstr "Opstelling van %{team}"
 
-#: lib/openresults_web/components/filter_bar.ex:200
-#: lib/openresults_web/components/filter_bar.ex:202
-#: lib/openresults_web/controllers/tournament_html.ex:490
-#: lib/openresults_web/controllers/tournament_html.ex:599
+#: lib/openresults_web/components/filter_bar.ex:205
+#: lib/openresults_web/components/filter_bar.ex:207
+#: lib/openresults_web/controllers/tournament_html.ex:541
+#: lib/openresults_web/controllers/tournament_html.ex:650
 #: lib/openresults_web/controllers/tournament_html/board_prizes.html.heex:23
 #, elixir-autogen, elixir-format
 msgid "Team"
 msgstr "Ploeg"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1293
+#: lib/openresults_web/controllers/tournament_html.ex:1344
 #, elixir-autogen, elixir-format
 msgid "Team A"
 msgstr "Ploeg A"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1295
+#: lib/openresults_web/controllers/tournament_html.ex:1346
 #, elixir-autogen, elixir-format
 msgid "Team B"
 msgstr "Ploeg B"
 
-#: lib/openresults_web/controllers/tournament_html.ex:592
-#: lib/openresults_web/controllers/tournament_html.ex:596
+#: lib/openresults_web/controllers/tournament_html.ex:643
+#: lib/openresults_web/controllers/tournament_html.ex:647
 #, elixir-autogen, elixir-format
 msgid "Team cross-table"
 msgstr "Ploegentabel"
 
-#: lib/openresults_web/controllers/tournament_html.ex:482
+#: lib/openresults_web/controllers/tournament_html.ex:533
 #, elixir-autogen, elixir-format
 msgid "Team standings after round %{round} of %{tournament}."
 msgstr "Ploegenstand na ronde %{round} van %{tournament}."
 
-#: lib/openresults_web/controllers/tournament_html.ex:1305
+#: lib/openresults_web/controllers/tournament_html.ex:1356
 #, elixir-autogen, elixir-format
 msgid "has the bye"
 msgstr "heeft bye"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1387
+#: lib/openresults_web/controllers/tournament_html.ex:1438
 #, elixir-autogen, elixir-format
 msgid "not yet published"
 msgstr "nog niet gepubliceerd"
@@ -1855,7 +1855,7 @@ msgstr "nog niet gepubliceerd"
 msgid "rank %{rank}, %{mp} MP, %{gp} GP"
 msgstr "plaats %{rank}, %{mp} MP, %{gp} GP"
 
-#: lib/openresults_web/controllers/tournament_html.ex:1424
+#: lib/openresults_web/controllers/tournament_html.ex:1475
 #, elixir-autogen, elixir-format
 msgid "Awarded to %{team} by the arbiter"
 msgstr "Door de arbiter toegekend aan %{team}"
@@ -1865,57 +1865,57 @@ msgstr "Door de arbiter toegekend aan %{team}"
 msgid "For a tournament published from a hosted OpenPairings account, that account's email address, kept as a moderation contact and shown only in this site's admin panel - never on any public page."
 msgstr "Voor een toernooi gepubliceerd vanuit een gehost OpenPairings-account, het e-mailadres van dat account, bewaard als moderatiecontact en enkel getoond in het beheerpaneel van deze site - nooit op een publieke pagina."
 
-#: lib/openresults_web/components/filter_bar.ex:323
+#: lib/openresults_web/components/filter_bar.ex:351
 #, elixir-autogen, elixir-format
 msgid "\"%{q}\""
 msgstr "\"%{q}\""
 
-#: lib/openresults_web/components/filter_bar.ex:392
+#: lib/openresults_web/components/filter_bar.ex:422
 #, elixir-autogen, elixir-format
 msgid "%{shown} of %{total} %{noun}"
 msgstr "%{shown} van %{total} %{noun}"
 
-#: lib/openresults_web/components/filter_bar.ex:390
+#: lib/openresults_web/components/filter_bar.ex:420
 #, elixir-autogen, elixir-format
 msgid "%{total} %{noun}"
 msgstr "%{total} %{noun}"
 
-#: lib/openresults_web/components/filter_bar.ex:248
+#: lib/openresults_web/components/filter_bar.ex:256
 #, elixir-autogen, elixir-format
 msgid "Clear all"
 msgstr "Alles wissen"
 
-#: lib/openresults_web/components/filter_bar.ex:156
+#: lib/openresults_web/components/filter_bar.ex:161
 #, elixir-autogen, elixir-format
 msgid "Filters"
 msgstr "Filters"
 
-#: lib/openresults_web/components/filter_bar.ex:366
+#: lib/openresults_web/components/filter_bar.ex:395
 #, elixir-autogen, elixir-format
 msgid "Remove filter: category %{value}"
 msgstr "Filter verwijderen: categorie %{value}"
 
-#: lib/openresults_web/components/filter_bar.ex:368
+#: lib/openresults_web/components/filter_bar.ex:398
 #, elixir-autogen, elixir-format
 msgid "Remove filter: club %{value}"
 msgstr "Filter verwijderen: club %{value}"
 
-#: lib/openresults_web/components/filter_bar.ex:367
+#: lib/openresults_web/components/filter_bar.ex:397
 #, elixir-autogen, elixir-format
 msgid "Remove filter: federation %{value}"
 msgstr "Filter verwijderen: federatie %{value}"
 
-#: lib/openresults_web/components/filter_bar.ex:369
+#: lib/openresults_web/components/filter_bar.ex:399
 #, elixir-autogen, elixir-format
 msgid "Remove filter: team %{value}"
 msgstr "Filter verwijderen: ploeg %{value}"
 
-#: lib/openresults_web/components/filter_bar.ex:370
+#: lib/openresults_web/components/filter_bar.ex:400
 #, elixir-autogen, elixir-format
 msgid "Remove search: %{value}"
 msgstr "Zoekopdracht verwijderen: %{value}"
 
-#: lib/openresults_web/components/filter_bar.ex:356
+#: lib/openresults_web/components/filter_bar.ex:384
 #, elixir-autogen, elixir-format
 msgid "Remove sort: %{sort}"
 msgstr "Sortering verwijderen: %{sort}"
@@ -1926,68 +1926,73 @@ msgstr "Sortering verwijderen: %{sort}"
 msgid "Search player"
 msgstr "Zoek speler"
 
-#: lib/openresults_web/components/filter_bar.ex:226
+#: lib/openresults_web/components/filter_bar.ex:234
 #, elixir-autogen, elixir-format
 msgid "Sort: Federation"
 msgstr "Sorteren: federatie"
 
-#: lib/openresults_web/components/filter_bar.ex:223
+#: lib/openresults_web/components/filter_bar.ex:231
 #, elixir-autogen, elixir-format
 msgid "Sort: Name"
 msgstr "Sorteren: naam"
 
-#: lib/openresults_web/components/filter_bar.ex:217
+#: lib/openresults_web/components/filter_bar.ex:225
 #, elixir-autogen, elixir-format
 msgid "Sort: Rank"
 msgstr "Sorteren: plaats"
 
-#: lib/openresults_web/components/filter_bar.ex:220
+#: lib/openresults_web/components/filter_bar.ex:228
 #, elixir-autogen, elixir-format
 msgid "Sort: Rating"
 msgstr "Sorteren: rating"
 
-#: lib/openresults_web/components/filter_bar.ex:354
+#: lib/openresults_web/components/filter_bar.ex:382
 #, elixir-autogen, elixir-format
 msgid "Sorted by %{sort}"
 msgstr "Gesorteerd op %{sort}"
 
-#: lib/openresults_web/components/filter_bar.ex:397
+#: lib/openresults_web/components/filter_bar.ex:427
 #, elixir-autogen, elixir-format
 msgid "board"
 msgid_plural "boards"
 msgstr[0] "bord"
 msgstr[1] "borden"
 
-#: lib/openresults_web/components/filter_bar.ex:363
+#: lib/openresults_web/components/filter_bar.ex:391
 #, elixir-autogen, elixir-format
 msgid "federation"
 msgstr "federatie"
 
-#: lib/openresults_web/components/filter_bar.ex:362
+#: lib/openresults_web/components/filter_bar.ex:390
 #, elixir-autogen, elixir-format
 msgid "name"
 msgstr "naam"
 
-#: lib/openresults_web/components/filter_bar.ex:396
+#: lib/openresults_web/components/filter_bar.ex:426
 #, elixir-autogen, elixir-format
 msgid "player"
 msgid_plural "players"
 msgstr[0] "speler"
 msgstr[1] "spelers"
 
-#: lib/openresults_web/components/filter_bar.ex:364
+#: lib/openresults_web/components/filter_bar.ex:392
 #, elixir-autogen, elixir-format
 msgid "rank"
 msgstr "plaats"
 
-#: lib/openresults_web/components/filter_bar.ex:361
+#: lib/openresults_web/components/filter_bar.ex:389
 #, elixir-autogen, elixir-format
 msgid "rating"
 msgstr "rating"
 
-#: lib/openresults_web/components/filter_bar.ex:398
+#: lib/openresults_web/components/filter_bar.ex:428
 #, elixir-autogen, elixir-format
 msgid "team"
 msgid_plural "teams"
 msgstr[0] "ploeg"
 msgstr[1] "ploegen"
+
+#: lib/openresults_web/controllers/tournament_html.ex:404
+#, elixir-autogen, elixir-format
+msgid "Fed"
+msgstr "Fed"

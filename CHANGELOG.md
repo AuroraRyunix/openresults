@@ -27,6 +27,19 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.3] - 2026-09-15
+
+- [Fix] **Sorting and filtering on the standings are visible again.** The new
+  toolbar folded its sort and filter controls into a "Filters" dropdown that
+  stayed closed on desktop too, so there was no visible way to sort by
+  federation, rating or name. The controls are now always shown on wide
+  screens (a phone still folds them away), and the standings' column headers
+  sort again: click "Player", "Fed" or "Rating", click again for rank order.
+- [Fix] **The player search no longer reloads the page while you type.** It
+  used to submit half a second after every pause, jumping the page mid-name.
+  Rows now filter instantly as you type, and Enter applies the search as a
+  link you can share.
+
 ## [0.16.2] - 2026-09-14
 
 - [Change] **The filter/sort bar on standings, round pairings and the
