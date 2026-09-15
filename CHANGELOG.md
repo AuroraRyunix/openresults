@@ -27,6 +27,13 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.5] - 2026-09-15
+
+- [Change] **On a wide screen a chosen filter no longer shows twice.** The
+  dropdown already shows "BEL"; the removable chip repeating it underneath is
+  now only shown on a phone, where the dropdowns are folded away. "Clear all"
+  stays on every screen.
+
 ## [0.16.4] - 2026-09-15
 
 - [Fix] **The filter toolbar looks like one set of controls.** The site's

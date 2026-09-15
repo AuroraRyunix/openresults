@@ -845,6 +845,14 @@ mark {
     display: none;
   }
 
+  /* On a wide screen every control is visible and already shows its value,
+     so a chip repeating "BEL" under the "BEL" dropdown is the same control
+     twice. Only "Clear all" stays. On a phone the controls are folded away
+     and the chips are the one visible record of what is filtered. */
+  .filter-chip:not(.filter-chip-clear) {
+    display: none;
+  }
+
 
   .filter-controls {
     margin-top: 0;
