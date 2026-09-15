@@ -400,11 +400,6 @@ defmodule OpenResultsWeb.TournamentHTML do
             </th>
             <th scope="col" aria-sort={aria_sort(@filters, "name")}>
               <.sort_link slug={@slug} filters={@filters} key="name">{gettext("Player")}</.sort_link>
-              <span :if={@show.federation} class="th-sub">
-                <.sort_link slug={@slug} filters={@filters} key="federation">
-                  {gettext("Fed")}
-                </.sort_link>
-              </span>
             </th>
             <th
               :if={@show.rating}

@@ -27,6 +27,16 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.4] - 2026-09-15
+
+- [Fix] **The filter toolbar looks like one set of controls.** The site's
+  general form styles were overriding it: square dropdowns without their
+  arrows, a larger font, and a search icon stuck to the top of its box. The
+  search, the filters and the sort are now matching rounded pills the height
+  of the navigation tabs, in that order with sort on the right, and the player
+  count sits right-aligned in small capitals. The cramped "Fed" link in the
+  Player column header is gone; sort by federation from the Sort control.
+
 ## [0.16.3] - 2026-09-15
 
 - [Fix] **Sorting and filtering on the standings are visible again.** The new

@@ -118,7 +118,7 @@ defmodule OpenResultsWeb.Components.FilterBar do
     ~H"""
     <div :if={@any_control? or @sort?} class="filter-bar">
       <form method="get" action={@action} class="filter-form" data-filter-form>
-        <fieldset class="field filter-toolbar">
+        <fieldset class="filter-toolbar">
           <legend class="visually-hidden">{gettext("Filter and sort")}</legend>
 
           <label class="filter-search">
