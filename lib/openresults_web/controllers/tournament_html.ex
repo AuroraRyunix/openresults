@@ -250,7 +250,8 @@ defmodule OpenResultsWeb.TournamentHTML do
     assigns =
       assign(assigns,
         href: ~p"/t/#{assigns.slug}?#{params}",
-        active?: assigns.filters.sort == assigns.key
+        # Rank is the default order, so it is never marked as a chosen sort.
+        active?: assigns.filters.sort == assigns.key and assigns.key != "rank"
       )
 
     ~H"""
