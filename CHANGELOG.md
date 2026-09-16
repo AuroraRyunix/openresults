@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.6] - 2026-09-16
+
 - [Fix] **The page no longer "updates" every 10 to 20 seconds when nothing
   changed.** The refresher compared the page's own markup, which the filter
   bar's script had already altered, so every poll replaced the table, said
