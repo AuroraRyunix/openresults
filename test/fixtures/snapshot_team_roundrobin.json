@@ -161,6 +161,17 @@
       "no": 8,
       "rating": 1750,
       "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Antwerp Knights 3",
+      "no": 9,
+      "rating": 1990,
+      "title": null
     }
   ],
   "published_at": "2026-08-29T00:00:00Z",
@@ -432,6 +443,25 @@
       },
       {
         "category": null,
+        "player": 9,
+        "points": 0.0,
+        "rank": 8,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
         "player": 7,
         "points": 0.0,
         "rank": 9,
@@ -602,7 +632,8 @@
       "no": 1,
       "players": [
         1,
-        2
+        2,
+        9
       ],
       "short_name": null
     },
