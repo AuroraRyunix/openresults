@@ -27,6 +27,14 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.7] - 2026-09-19
+
+- [Feature] **An attendance column on the standings.** A tournament whose
+  arbiter turned on OpenPairings' new "Rds" column now sends a per-player
+  count of the rounds that player was there for, and it shows beside the
+  rating - on a Swiss and on a Keizer ladder. Tournaments that do not send it
+  render exactly as before.
+
 ## [0.16.6] - 2026-09-16
 
 - [Fix] **The page no longer "updates" every 10 to 20 seconds when nothing

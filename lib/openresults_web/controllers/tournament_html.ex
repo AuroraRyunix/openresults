@@ -329,6 +329,11 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:manual_incomplete?, Tournament.manual_warning?(payload, :incomplete))
       |> assign(:show, show)
       |> assign(:categories?, categories?)
+      # The attendance column, only when the arbiter published it: an
+      # additive field on the rows (see docs/snapshot-schema.md). Asked of
+      # the rows rather than of a display tick, because a tournament that
+      # does not send it has no tick either.
+      |> assign(:rounds_played?, Enum.any?(all_rows, &Map.has_key?(&1, "rounds_played")))
       # A finer tick than `tiebreaks` itself: an arbiter can publish the
       # columns while keeping the per-round arithmetic behind them closed.
       # Absent means shown, like every other key `Tournament.show?/2` reads.
@@ -410,6 +415,14 @@ defmodule OpenResultsWeb.TournamentHTML do
               <.sort_link slug={@slug} filters={@filters} key="rating">{gettext("Rating")}</.sort_link>
             </th>
             <th :if={@categories? and @show.category} scope="col">{gettext("Cat")}</th>
+            <th
+              :if={@rounds_played?}
+              class="num"
+              scope="col"
+              title={gettext("Rounds this player was there for")}
+            >
+              {gettext("Rds")}
+            </th>
             <%= if @keizer? do %>
               <th class="num" scope="col">{gettext("Value")}</th>
               <th class="num" scope="col">{gettext("Keizer points")}</th>
@@ -456,6 +469,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             </th>
             <td :if={@show.rating} class="num">{dash(@players[row["player"]]["rating"])}</td>
             <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
+            <td :if={@rounds_played?} class="num">{dash(row["rounds_played"])}</td>
             <%= if @keizer? do %>
               <td class="num">{number(row["value"])}</td>
               <td class="num strong">{number(row["points"])}</td>

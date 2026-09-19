@@ -324,6 +324,16 @@ but worth knowing before adding more.
 columns ever showed, so it is not sent at all rather than sent and hidden -
 the same rule as a withheld round or board.
 
+**`rows[].rounds_played`** - how many rounds that player was there for, byes
+included. Optional, and sent only by a tournament whose arbiter turned the
+column on (OpenPairings' "Rds" setting, added 2026-09-19); absent means the
+column is not shown at all, which is what every tournament before it sends.
+
+It exists for club championships that give a prize for attending every round.
+The arbiter's app decides what counts - a game played (any result), a bye
+given because the field was odd, a win by forfeit - and this site prints the
+number it is handed, like every other computed column here.
+
 **`standings.manual_order`** - whether the arbiter set `rows[].rank` by hand
 instead of computing it from the tiebreaks. Added 2026-08-29. Absent means
 no.
