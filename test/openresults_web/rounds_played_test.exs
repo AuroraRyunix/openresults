@@ -18,15 +18,6 @@ defmodule OpenResultsWeb.RoundsPlayedTest do
     payload["tournament"]["slug"]
   end
 
-  # Every fixture now carries the count, because publishing it is on unless
-  # the arbiter unticks it - so "a tournament that does not send it" has to be
-  # built by taking it back out.
-  defp without_rounds_played(payload) do
-    update_in(payload, ["standings", "rows"], fn rows ->
-      Enum.map(rows, &Map.delete(&1, "rounds_played"))
-    end)
-  end
-
   defp with_rounds_played(payload) do
     update_in(payload, ["standings", "rows"], fn rows ->
       rows
@@ -46,7 +37,7 @@ defmodule OpenResultsWeb.RoundsPlayedTest do
   end
 
   test "a payload without the field renders exactly as before", %{conn: conn} do
-    slug = SnapshotPayloads.swiss() |> without_rounds_played() |> publish()
+    slug = publish(SnapshotPayloads.swiss())
 
     html = conn |> get(~p"/t/#{slug}") |> html_response(200)
 
@@ -78,7 +69,7 @@ defmodule OpenResultsWeb.RoundsPlayedTest do
   end
 
   test "a tournament without the column is offered no sort for it", %{conn: conn} do
-    slug = SnapshotPayloads.swiss() |> without_rounds_played() |> publish()
+    slug = publish(SnapshotPayloads.swiss())
 
     refute conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Sort: Rounds present"
   end

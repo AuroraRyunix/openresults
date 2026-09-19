@@ -335,9 +335,9 @@ given because the field was odd, a win by forfeit - and this site prints the
 number it is handed, like every other computed column here, and lets a reader
 sort on it.
 
-`display.rounds_played` decides whether it travels, like any other optional
-column, and it is on unless the arbiter turns it off - so most tournaments send
-it. Whether the arbiter shows the column on their OWN screen is a preference of
+`display.rounds_played` decides whether it travels, and unlike every other
+display key it starts OFF - the arbiter opts in, so most tournaments send
+nothing. Whether the arbiter shows the column on their OWN screen is a preference of
 their browser and has no bearing on this, in either direction. Withheld means
 absent, so a tournament that turns it off looks, from here, exactly like one
 that never had it.

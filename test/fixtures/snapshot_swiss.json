@@ -323,7 +323,6 @@
         "player": 9,
         "points": 2.0,
         "rank": 1,
-        "rounds_played": 2,
         "tiebreaks": [
           1.0,
           1.5,
@@ -384,7 +383,6 @@
         "player": 2,
         "points": 1.5,
         "rank": 2,
-        "rounds_played": 2,
         "tiebreaks": [
           1.5,
           2.5,
@@ -445,7 +443,6 @@
         "player": 1,
         "points": 1.5,
         "rank": 3,
-        "rounds_played": 2,
         "tiebreaks": [
           1.5,
           1.5,
@@ -506,7 +503,6 @@
         "player": 3,
         "points": 1.5,
         "rank": 4,
-        "rounds_played": 2,
         "tiebreaks": [
           0.5,
           0.5,
@@ -567,7 +563,6 @@
         "player": 4,
         "points": 1.0,
         "rank": 5,
-        "rounds_played": 1,
         "tiebreaks": [
           2.0,
           3.0,
@@ -627,7 +622,6 @@
         "player": 7,
         "points": 1.0,
         "rank": 6,
-        "rounds_played": 2,
         "tiebreaks": [
           1.5,
           2.5,
@@ -688,7 +682,6 @@
         "player": 5,
         "points": 1.0,
         "rank": 7,
-        "rounds_played": 1,
         "tiebreaks": [
           1.0,
           1.5,
@@ -749,7 +742,6 @@
         "player": 8,
         "points": 0.5,
         "rank": 8,
-        "rounds_played": 2,
         "tiebreaks": [
           2.0,
           3.5,
@@ -810,7 +802,6 @@
         "player": 6,
         "points": 0.0,
         "rank": 9,
-        "rounds_played": 2,
         "tiebreaks": [
           1.5,
           3.0,
@@ -871,7 +862,6 @@
         "player": 10,
         "points": 0.0,
         "rank": 10,
-        "rounds_played": 1,
         "tiebreaks": [
           1.0,
           1.0,
@@ -969,7 +959,7 @@
       "pairings": true,
       "player_cards": true,
       "rating": true,
-      "rounds_played": true,
+      "rounds_played": false,
       "standings": true,
       "tiebreak_working": true,
       "tiebreaks": true,

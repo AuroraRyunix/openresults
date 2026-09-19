@@ -90,7 +90,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # `> thead`: each tiebreak cell's working has a small table with its own
       # (visually hidden) headings inside it.
       assert texts(document, "table.standings > thead th") ==
-               ["#", "Player", "Rating", "Cat", "Rds", "Points"] ++
+               ["#", "Player", "Rating", "Cat", "Points"] ++
                  ["Buchholz Cut-1", "Buchholz", "Sonneborn-Berger", "Progressive score"]
     end
 
@@ -111,7 +111,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{rebuilt["tournament"]["slug"]}") |> doc()
 
       assert texts(document, "table.standings thead th") ==
-               ["#", "Player", "Rating", "Cat", "Rds", "Points", "Average rating"]
+               ["#", "Player", "Rating", "Cat", "Points", "Average rating"]
 
       assert texts(document, "table.standings > tbody > tr:first-child > td:last-child") ==
                ["1997"]
@@ -132,7 +132,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # title, so the name renders alone. `> *`: the name is the row's header
       # cell, a `th`.
       assert cell_values(document, "table.standings > tbody > tr:first-child > *") ==
-               ["1", "De Smet, Jean-Baptiste", "1742", "B", "2", "2", "1", "1.5", "", ""]
+               ["1", "De Smet, Jean-Baptiste", "1742", "B", "2", "1", "1.5", "", ""]
     end
 
     test "rows render in the order they arrived, not in the order this app would sort them", %{
@@ -153,10 +153,10 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       document = conn |> get(~p"/t/#{keizer["tournament"]["slug"]}") |> doc()
 
       assert texts(document, "table.standings thead th") ==
-               ["#", "Player", "Rating", "Rds", "Value", "Keizer points", "Score"]
+               ["#", "Player", "Rating", "Value", "Keizer points", "Score"]
 
       assert texts(document, "table.standings > tbody > tr:first-child > *") ==
-               ["1", "Ó Braonáin, Cillian", "1690", "1", "12", "8", "1"]
+               ["1", "Ó Braonáin, Cillian", "1690", "12", "8", "1"]
     end
 
     test "a player with no rating, title or club renders cleanly", %{conn: conn, slug: slug} do
@@ -170,7 +170,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       # than they used to. Nothing here changed - the numbers it is given
       # did.
       assert cell_values(document, "table.standings > tbody > tr:last-child > *") ==
-               ["10", "Nguyễn, Thị Hà", "-", "B", "1", "0", "1", "1", "0", "0"]
+               ["10", "Nguyễn, Thị Hà", "-", "B", "0", "1", "1", "0", "0"]
     end
 
     test "a tournament with nothing published at all still says so plainly", %{conn: conn} do

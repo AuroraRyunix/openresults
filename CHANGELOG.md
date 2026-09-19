@@ -27,12 +27,13 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
-## [0.16.9] - 2026-09-19
+## [0.16.10] - 2026-09-19
 
-- [Change] **The rounds-present column now arrives for ordinary tournaments**,
-  because the arbiter's app sends it unless the arbiter turns it off. Nothing
-  changed here: the column and its sort already appeared whenever the field
-  was sent.
+- [Change] **The rounds-present column is opt-in again** on the arbiter's
+  side, so it arrives only for tournaments that asked to publish it. Nothing
+  changed here either way: the column and its sort appear whenever the field
+  is sent, and 0.16.9's note that it would arrive for everyone was true for a
+  few hours only.
 
 ## [0.16.8] - 2026-09-19
 
