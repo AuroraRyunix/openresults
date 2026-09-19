@@ -27,6 +27,14 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.16.8] - 2026-09-19
+
+- [Feature] **Sort the standings by rounds present.** Where a tournament
+  publishes the "Rds" count, the column header sorts on it and the filter bar
+  offers "Sort: Rounds present" - fullest card first, and players whose count
+  was not published last rather than as a nought. Tournaments without the
+  column are offered neither.
+
 ## [0.16.7] - 2026-09-19
 
 - [Feature] **An attendance column on the standings.** A tournament whose

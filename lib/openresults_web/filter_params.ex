@@ -50,7 +50,7 @@ defmodule OpenResultsWeb.FilterParams do
   # arbiter-supplied strings.
   @max_length 100
 
-  @sort_keys ~w(rank rating name federation)
+  @sort_keys ~w(rank rating name federation rounds_played)
 
   @doc """
   Reads the five filter/sort keys out of `params` (a controller's

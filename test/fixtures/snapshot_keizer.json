@@ -206,6 +206,7 @@
       "pairings": true,
       "player_cards": true,
       "rating": true,
+      "rounds_played": true,
       "standings": true,
       "tiebreak_working": true,
       "tiebreaks": true,

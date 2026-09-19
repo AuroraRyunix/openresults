@@ -44,6 +44,36 @@ defmodule OpenResultsWeb.RoundsPlayedTest do
     refute html =~ "Rounds this player was there for"
   end
 
+  test "the bar offers sorting by it", %{conn: conn} do
+    slug = SnapshotPayloads.swiss() |> with_rounds_played() |> publish()
+
+    assert conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Sort: Rounds present"
+  end
+
+  test "the sort puts the fullest card first, and rows without the count last" do
+    payload = SnapshotPayloads.swiss() |> with_rounds_played()
+
+    # One row that never carried the count - an older publisher, or a player
+    # the arbiter's app had nothing to say about.
+    payload =
+      update_in(payload, ["standings", "rows"], fn [first | rest] ->
+        rest ++ [Map.delete(first, "rounds_played")]
+      end)
+
+    filters = %OpenResultsWeb.FilterParams{sort: "rounds_played"}
+    rows = OpenResultsWeb.Tournament.Filter.standings(payload, filters).rows
+
+    counted = rows |> Enum.map(& &1["rounds_played"]) |> Enum.reject(&is_nil/1)
+    assert counted == Enum.sort(counted, :desc)
+    refute Map.has_key?(List.last(rows), "rounds_played")
+  end
+
+  test "a tournament without the column is offered no sort for it", %{conn: conn} do
+    slug = publish(SnapshotPayloads.swiss())
+
+    refute conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Sort: Rounds present"
+  end
+
   test "a Keizer ladder carries it too", %{conn: conn} do
     slug = SnapshotPayloads.keizer() |> with_rounds_played() |> publish()
 

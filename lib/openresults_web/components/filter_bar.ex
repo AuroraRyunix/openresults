@@ -86,6 +86,11 @@ defmodule OpenResultsWeb.Components.FilterBar do
   attr :clubs, :list, default: []
   attr :teams, :list, default: []
   attr :sort?, :boolean, default: true
+
+  # Whether this tournament publishes the rounds-present count, which decides
+  # whether the bar offers sorting by it. Offering a sort for a column that is
+  # not on the page would reorder the table by a number nobody can see.
+  attr :rounds_played?, :boolean, default: false
   attr :empty?, :boolean, default: false
   attr :total, :integer, default: nil
   attr :shown, :integer, default: nil
@@ -240,6 +245,13 @@ defmodule OpenResultsWeb.Components.FilterBar do
                   </option>
                   <option value="federation" selected={@filters.sort == "federation"}>
                     {gettext("Sort: Federation")}
+                  </option>
+                  <option
+                    :if={@rounds_played?}
+                    value="rounds_played"
+                    selected={@filters.sort == "rounds_played"}
+                  >
+                    {gettext("Sort: Rounds present")}
                   </option>
                 </select>
               </label>

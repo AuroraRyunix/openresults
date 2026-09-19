@@ -393,6 +393,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       total={@total_players}
       shown={length(@rows)}
       unit={:players}
+      rounds_played?={@rounds_played?}
     />
 
     <div :if={@rows != []} class="scroller">
@@ -420,8 +421,11 @@ defmodule OpenResultsWeb.TournamentHTML do
               class="num"
               scope="col"
               title={gettext("Rounds this player was there for")}
+              aria-sort={aria_sort(@filters, "rounds_played")}
             >
-              {gettext("Rds")}
+              <.sort_link slug={@slug} filters={@filters} key="rounds_played">
+                {gettext("Rds")}
+              </.sort_link>
             </th>
             <%= if @keizer? do %>
               <th class="num" scope="col">{gettext("Value")}</th>

@@ -252,6 +252,19 @@ defmodule OpenResultsWeb.Tournament.Filter do
     end)
   end
 
+  # Most rounds first: the reader picking this sort is looking for who turned
+  # up most, and a prize list reads from the top. Rows from a tournament that
+  # does not publish the count have no key at all, so they sort last rather
+  # than as zero - "not published" is not "was never there".
+  defp sort_rows(rows, "rounds_played", _players) do
+    Enum.sort_by(rows, fn row ->
+      case row["rounds_played"] do
+        n when is_number(n) -> {0, -n}
+        _absent -> {1, 0}
+      end
+    end)
+  end
+
   defp sort_rows(rows, "federation", players) do
     Enum.sort_by(rows, fn row ->
       federation = get_in(players, [row["player"], "federation"])
