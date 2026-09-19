@@ -335,11 +335,12 @@ given because the field was odd, a win by forfeit - and this site prints the
 number it is handed, like every other computed column here, and lets a reader
 sort on it.
 
-Two separate decisions on the arbiter's side produce it: the column has to be
-switched on for the tournament at all, and `display.rounds_played` has to be
-on. Either off and the field simply does not travel - so a tournament that
-shows the column on its own printed standings while withholding it here looks,
-from here, exactly like one that never had it.
+`display.rounds_played` decides whether it travels, like any other optional
+column, and it is on unless the arbiter turns it off - so most tournaments send
+it. Whether the arbiter shows the column on their OWN screen is a preference of
+their browser and has no bearing on this, in either direction. Withheld means
+absent, so a tournament that turns it off looks, from here, exactly like one
+that never had it.
 
 **`standings.manual_order`** - whether the arbiter set `rows[].rank` by hand
 instead of computing it from the tiebreaks. Added 2026-08-29. Absent means

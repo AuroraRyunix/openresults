@@ -141,6 +141,7 @@
         "player": 6,
         "points": 8.0,
         "rank": 1,
+        "rounds_played": 1,
         "score": 1.0,
         "value": 12
       },
@@ -149,6 +150,7 @@
         "player": 1,
         "points": 7.0,
         "rank": 2,
+        "rounds_played": 1,
         "score": 1.0,
         "value": 11
       },
@@ -157,6 +159,7 @@
         "player": 2,
         "points": 4.5,
         "rank": 3,
+        "rounds_played": 1,
         "score": 0.5,
         "value": 10
       },
@@ -165,6 +168,7 @@
         "player": 5,
         "points": 5.0,
         "rank": 4,
+        "rounds_played": 1,
         "score": 0.5,
         "value": 9
       },
@@ -173,6 +177,7 @@
         "player": 3,
         "points": 0.0,
         "rank": 5,
+        "rounds_played": 1,
         "score": 0.0,
         "value": 8
       },
@@ -181,6 +186,7 @@
         "player": 4,
         "points": 0.0,
         "rank": 6,
+        "rounds_played": 1,
         "score": 0.0,
         "value": 7
       }
