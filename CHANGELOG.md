@@ -35,6 +35,13 @@ Each entry is tagged so a version can be skimmed:
   is sent, and 0.16.9's note that it would arrive for everyone was true for a
   few hours only.
 
+## [0.16.9] - 2026-09-19
+
+- [Change] **The rounds-present column now arrives for ordinary tournaments**,
+  because the arbiter's app sends it unless the arbiter turns it off. Nothing
+  changed here: the column and its sort already appeared whenever the field
+  was sent. (Reversed a few hours later - see 0.16.10.)
+
 ## [0.16.8] - 2026-09-19
 
 - [Feature] **Sort the standings by rounds present.** Where a tournament
