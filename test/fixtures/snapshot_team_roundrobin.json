@@ -455,7 +455,13 @@
         ],
         "working": {
           "SB": {
-            "parts": [],
+            "parts": [
+              {
+                "kind": "excluded",
+                "round": 1,
+                "value": 0.0
+              }
+            ],
             "total": 0.0
           }
         }
