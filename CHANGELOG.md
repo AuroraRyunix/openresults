@@ -27,6 +27,30 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Print a page and get a sheet for the noticeboard.** Standings,
+  rounds and the cross-table print black on white whatever theme is chosen,
+  without the site bar, pickers, filters or footer links, with each table's
+  header repeated on every sheet and no board split across two.
+- [Feature] **Follow a tournament with a feed reader.** Every tournament has
+  an Atom feed at `/t/<slug>/feed.xml`, linked from the footer and from the
+  page head. A new item appears when a round's pairings are out, when every
+  board of a round has a result, and when the standings move to a new round -
+  and never for anything the arbiter does not publish.
+- [Feature] **A link to a player's current board.** `/t/<slug>/player/<no>/board`
+  always leads to the latest published round, scrolled to that player's
+  board, so it can be bookmarked once for the whole tournament. The player's
+  card links to it.
+- [Feature] **Round links say who is on board 1.** A shared round link's
+  preview now names the board 1 players and, once it is public, the result.
+- [Feature] **An embed view.** Add `?embed=1` to any tournament page for a
+  version without the site's own header, notice, filter bar or footer, for a
+  club's iframe. Links followed inside it open in the whole tab, and one link
+  at the bottom leads to the full page.
+- [Feature] **A sitemap and a year filter.** `/sitemap.xml` lists the
+  standings, cross-table and rounds of every tournament on the front page
+  (never player cards). The front page offers a year filter once
+  tournaments span more than one year.
+
 ## [0.16.10] - 2026-09-19
 
 - [Change] **The rounds-present column is opt-in again** on the arbiter's

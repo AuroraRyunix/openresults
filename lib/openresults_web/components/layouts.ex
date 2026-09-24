@@ -115,6 +115,48 @@ defmodule OpenResultsWeb.Layouts do
     _ -> nil
   end
 
+  @doc """
+  Whether this page was asked for as an embed, with `?embed=1`.
+
+  The same document with the site's own chrome taken off - no masthead, no
+  language or theme picker, no filter bar, no footer beyond one link back -
+  so a club can put its standings or the current round in an iframe on its
+  own site and have it read as part of that site. Picky about the value for
+  the reason `?display=1` is: `?embed=` left blank is the ordinary page.
+
+  Read from the query string, which is part of the page cache's key and the
+  ETag (see `OpenResultsWeb.Plugs.Revalidate`), so an embed and the full
+  page are cached as the two different documents they are.
+  """
+  def embed?(assigns) do
+    case assigns[:conn] do
+      %Plug.Conn{query_params: %{"embed" => value}} -> value in ["1", "true"]
+      _other -> false
+    end
+  end
+
+  @doc "The page wrapper's classes: the projector view and the embed each restyle it."
+  def page_class(assigns) do
+    ["page", assigns[:display?] && "projector-mode", embed?(assigns) && "embed-mode"]
+  end
+
+  @doc """
+  This page's address without `embed`, for the one link an embed keeps: the
+  way out to the full page.
+  """
+  def full_page_path(assigns) do
+    case assigns[:conn] do
+      %Plug.Conn{request_path: path, query_params: params} when not is_struct(params) ->
+        case Map.delete(params, "embed") do
+          empty when map_size(empty) == 0 -> path
+          rest -> path <> "?" <> URI.encode_query(rest)
+        end
+
+      _no_conn ->
+        "/"
+    end
+  end
+
   @doc "The locale this page rendered in, for `<html lang>` and `og:locale`."
   def locale(assigns) do
     case assigns[:locale] do

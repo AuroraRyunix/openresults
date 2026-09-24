@@ -1075,7 +1075,8 @@ mark {
 
 /* Quiet on purpose: it is for the rare reader who needs it, not a call to
    action on every page. */
-.site-foot .report-link {
+.site-foot .report-link,
+.site-foot .feed-link {
   color: var(--quiet);
 }
 
@@ -2770,4 +2771,122 @@ a.xt-opp:hover {
 
 .admin-notice-preview .public-notice {
   margin-bottom: 0;
+}
+
+/* ---- Embed: `?embed=1` ----------------------------------------------------
+   The page inside a club's iframe - see `OpenResultsWeb.Layouts.embed?/1`.
+   The layout already leaves out the site's masthead, notice and footer; what
+   is left here is to stop the page padding itself like a whole site, and to
+   drop the filter bar, whose form would navigate the club's whole tab away
+   (an embed's links open at the top - see the `<base>` in the root layout). */
+.embed-mode {
+  max-width: none;
+  padding: 0.5rem 0.75rem 1rem;
+}
+
+.embed-mode .filter-bar {
+  display: none;
+}
+
+.embed-foot {
+  margin-top: 1rem;
+}
+
+/* ---- Print ----------------------------------------------------------------
+   What a pairing list pinned to a hall's noticeboard needs: black on white,
+   the tables whole, and nothing that only works on a screen. Every page's
+   content is already the whole document - no script is needed to print it -
+   so this only takes things away.
+
+   The theme is forced to paper-white through the same custom properties
+   every rule already reads, so a reader printing from the night theme does
+   not spend a cartridge on a black page. */
+@media print {
+  :root,
+  :root[data-theme] {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --ink: #000000;
+    --quiet: #333333;
+    --rule: #999999;
+    --accent: #000000;
+    --withheld: #555555;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+    font-size: 10pt;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  /* Screen furniture: the site bar, the pickers, the filters and search, the
+     refresher's status, the overlay card, the skip link, the operator's
+     notice and the footer's links. The tournament's own masthead - its name,
+     details and round strip - stays, because a printed sheet without a
+     heading is a sheet nobody can place. */
+  .masthead-bar,
+  .skip-link,
+  .public-notice,
+  .filter-bar,
+  .index-controls,
+  .card-overlay,
+  .live-status,
+  .site-foot .report-link,
+  .site-foot .feed-link,
+  .site-foot .terms-link,
+  .site-foot .build-id,
+  .card-more {
+    display: none !important;
+  }
+
+  .rounds .chip:not(.current) {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Wide tables print whole rather than clipped at the scroller's edge. */
+  .scroller {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100%;
+    font-size: 9pt;
+  }
+
+  /* A header row repeated on every sheet, and no board split across two. */
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  th,
+  td {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  details > *:not(summary) {
+    display: none;
+  }
 }

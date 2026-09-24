@@ -30,6 +30,21 @@
           see `OpenResultsWeb.Plugs.Visibility`, which sends the same thing as
           `X-Robots-Tag`. --%>
     <meta :if={assigns[:noindex]} name="robots" content="noindex" />
+    <%!-- Lets a browser or a feed reader find the tournament's Atom feed from
+          any of its pages - see `OpenResultsWeb.FeedController`. Set by the
+          controller only once the tournament has been found. --%>
+    <link
+      :if={assigns[:feed_path]}
+      rel="alternate"
+      type="application/atom+xml"
+      href={assigns[:feed_path]}
+      title={assigns[:page_title]}
+    />
+    <%!-- An embed is a window onto this site, not a copy of it: a link
+          followed inside a club's iframe opens the page in the club's whole
+          tab rather than stacking this site's chrome inside theirs. A target
+          only, no `href`, so `base-uri 'self'` is untouched. --%>
+    <base :if={embed?(assigns)} target="_top" />
     <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
     <link rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!--
@@ -132,7 +147,7 @@
           node every time, and a new node is not announced. Always present and
           never `hidden` for the same reason. --%>
     <div id="announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
-    <div class={["page", assigns[:display?] && "projector-mode"]}>
+    <div class={page_class(assigns)}>
       <%!-- The picker lives up here, not in the footer where it started.
             A popover anchored to the last element on the page can only open
             upwards, and an absolutely positioned panel does not grow the
@@ -140,7 +155,7 @@
             outside the viewport with no way to scroll to it. Up here it opens
             downwards into a page that already has room, which is also where
             the arbiter's app keeps its own. --%>
-      <header class="masthead-bar">
+      <header :if={!embed?(assigns)} class="masthead-bar">
         <a class="brand" href={~p"/"}>
           <.logo /> OpenResults
         </a>
@@ -213,7 +228,7 @@
             not where "maintenance tonight" belongs. Its version is in this
             page's ETag - see `OpenResultsWeb.Plugs.Revalidate`. --%>
       <.public_notice
-        :if={assigns[:public_notice] && !assigns[:display?]}
+        :if={assigns[:public_notice] && !assigns[:display?] && !embed?(assigns)}
         notice={@public_notice}
       />
       <main id="main" tabindex="-1">
@@ -222,7 +237,13 @@
         </div>
       </main>
 
-      <footer class="site-foot">
+      <%!-- The one thing an embed keeps from the footer: where it came from,
+            and the way to the full page with everything the embed left out. --%>
+      <footer :if={embed?(assigns)} class="site-foot embed-foot">
+        <a href={full_page_path(assigns)}>{gettext("Full results on OpenResults")}</a>
+      </footer>
+
+      <footer :if={!embed?(assigns)} class="site-foot">
         <span>{gettext("Published by the arbiter. Results are theirs, not this site's.")}</span>
         <%!-- The two things the refresher can say, carried as attributes
               because the script writes them and a string built in JavaScript
@@ -238,6 +259,11 @@
           hidden
         ></span>
         <span class="spacer"></span>
+        <%!-- The tournament's feed, for following it without an account -
+              see `OpenResultsWeb.FeedController`. --%>
+        <a :if={assigns[:feed_path]} class="feed-link" href={assigns[:feed_path]}>
+          {gettext("Follow (feed)")}
+        </a>
         <%!-- Only on a tournament page the public can see - the controller
               sets it after finding the tournament, so a 404 never carries
               one. See `OpenResultsWeb.ReportController`. --%>

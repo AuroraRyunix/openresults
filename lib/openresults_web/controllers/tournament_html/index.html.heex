@@ -4,6 +4,26 @@
 </header>
 
 <section>
+  <%!-- The archive by year - see `TournamentController.index/2`. Chips, like
+        the round strip, and plain links, so it works with no script. --%>
+  <nav :if={@years != []} class="rounds" aria-label={gettext("Year")}>
+    <a
+      href={~p"/"}
+      class={["chip", is_nil(@year) && "current"]}
+      aria-current={is_nil(@year) && "page"}
+    >
+      {gettext("All years")}
+    </a>
+    <a
+      :for={year <- @years}
+      href={~p"/?#{[year: year]}"}
+      class={["chip", @year == year && "current"]}
+      aria-current={@year == year && "page"}
+    >
+      {year}
+    </a>
+  </nav>
+
   <p :if={@snapshots == []} class="empty">
     {gettext("Nothing has been published yet.")}
   </p>

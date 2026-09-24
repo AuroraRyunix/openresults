@@ -1275,7 +1275,12 @@ defmodule OpenResultsWeb.TournamentHTML do
           </tr>
         </thead>
         <tbody>
-          <tr :for={{board, tag} <- @tagged}>
+          <%!-- The anchor `/t/:slug/player/:no/board` lands on - see
+                `TournamentController.board/2`. --%>
+          <tr
+            :for={{board, tag} <- @tagged}
+            id={is_integer(board["board"]) && "board-#{board["board"]}"}
+          >
             <th scope="row" class="num row-head">{Tournament.board_label(board)}</th>
             <td :if={@show.rating} class="num">{dash(@players[board["white"]]["rating"])}</td>
             <td :if={@show.pairing_scores} class="num">
