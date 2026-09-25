@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-25
+
 - [Feature] **Print a page and get a sheet for the noticeboard.** Standings,
   rounds and the cross-table print black on white whatever theme is chosen,
   without the site bar, pickers, filters or footer links, with each table's
