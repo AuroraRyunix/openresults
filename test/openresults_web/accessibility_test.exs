@@ -28,7 +28,7 @@ defmodule OpenResultsWeb.AccessibilityTest do
 
   # The one browser GET route that answers JSON, for the entry form's
   # script. Not a page.
-  @not_pages ["/t/:slug/fide"]
+  @not_pages ["/t/:slug/fide", "/t/:slug/player/:no/board", "/t/:slug/feed.xml", "/sitemap.xml"]
 
   setup do
     RateLimit.reset()

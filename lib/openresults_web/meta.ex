@@ -100,6 +100,62 @@ defmodule OpenResultsWeb.Meta do
   end
 
   @doc """
+  One round's page as it is shared: `round/2`, then who is on board 1 and,
+  when the arbiter has made the round's results public, how that game ended.
+
+  Board 1 because it is the one a share is usually about, and because it is
+  on the page the link opens - nothing here is not already in the table.
+  Names only, the rule this module keeps everywhere else.
+  """
+  def round_page(payload, number) do
+    case board_one(payload, number) do
+      nil -> round(payload, number)
+      line -> round(payload, number) <> " " <> line
+    end
+  end
+
+  @doc """
+  The feed entry for a round whose every board has a result - see
+  `OpenResultsWeb.FeedController`.
+  """
+  def round_results(payload, number) do
+    gettext("Results - %{round}, %{tournament}.",
+      round: Tournament.round_heading(payload, number),
+      tournament: Tournament.name(payload)
+    )
+  end
+
+  defp board_one(payload, number) do
+    with round when is_map(round) <- Tournament.round(payload, number),
+         %{} = board <- Enum.find(Tournament.boards(round), &(Map.get(&1, "board") == 1)),
+         white when is_binary(white) <- player_name(payload, board["white"]),
+         black when is_binary(black) <- player_name(payload, board["black"]) do
+      result = Tournament.results_public?(round) && board["result"]
+
+      if is_binary(result) do
+        gettext("Board 1: %{white} - %{black}, %{result}.",
+          white: white,
+          black: black,
+          result: result
+        )
+      else
+        gettext("Board 1: %{white} - %{black}.", white: white, black: black)
+      end
+    else
+      _no_board_one -> nil
+    end
+  end
+
+  defp player_name(payload, no) when is_integer(no) do
+    case Tournament.player(payload, no) do
+      %{"name" => name} when is_binary(name) and name != "" -> name
+      _unnamed -> nil
+    end
+  end
+
+  defp player_name(_payload, _not_a_player), do: nil
+
+  @doc """
   One player's card.
 
   Their placing when the standings carry one, their name and the tournament

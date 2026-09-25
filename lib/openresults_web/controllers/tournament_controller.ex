@@ -32,7 +32,7 @@ defmodule OpenResultsWeb.TournamentController do
   filter are: the server renders one page regardless of what a reader later
   types into it.
   """
-  def index(conn, _params) do
+  def index(conn, params) do
     # Filtered here rather than in `Snapshots.list_current/0`: which
     # tournaments exist is a storage question and which ones are advertised is
     # a presentation one. A storage function that silently omits rows is a
@@ -50,17 +50,45 @@ defmodule OpenResultsWeb.TournamentController do
     listed =
       Enum.filter(Snapshots.list_current(visible_only: true), &Tournament.listed?(&1.payload))
 
-    grouped = Enum.group_by(listed, &Tournament.status(&1.payload))
+    # The archive: a tournament's year is its start date's, and only where
+    # the arbiter shows dates at all - a tournament with the dates tick off
+    # is under "all years" and no year, rather than filed by a date the page
+    # itself would not print. Plain links, no script: `?year=` is the whole
+    # state, so a filtered front page is a URL somebody can pass on.
+    years =
+      listed
+      |> Enum.map(&year(&1.payload))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> Enum.sort(:desc)
+
+    year = if params["year"] in years, do: params["year"]
+    shown = if year, do: Enum.filter(listed, &(year(&1.payload) == year)), else: listed
+
+    grouped = Enum.group_by(shown, &Tournament.status(&1.payload))
 
     render(conn, :index,
       page_title: gettext("Tournaments"),
       page_description: Meta.index(),
-      snapshots: listed,
+      snapshots: shown,
+      # Only worth offering once there is more than one year to choose from.
+      years: if(length(years) > 1, do: years, else: []),
+      year: year,
       # Live first (the most immediately relevant), then upcoming, then
       # finished - and in that fixed order regardless of how many of each
       # there are, so the page's shape does not shuffle between visits.
       groups: for(kind <- [:live, :upcoming, :finished], do: {kind, Map.get(grouped, kind, [])})
     )
+  end
+
+  defp year(payload) do
+    with true <- Tournament.show?(payload, "dates"),
+         <<year::binary-size(4), "-", _rest::binary>> <- Tournament.info(payload)["start_date"],
+         {_number, ""} <- Integer.parse(year) do
+      year
+    else
+      _no_year -> nil
+    end
   end
 
   @doc """
@@ -151,7 +179,7 @@ defmodule OpenResultsWeb.TournamentController do
         render(conn, :round,
           page_title:
             "#{Tournament.name(payload)} - #{Tournament.round_heading(payload, number)}",
-          page_description: Meta.round(payload, number),
+          page_description: Meta.round_page(payload, number),
           payload: payload,
           slug: slug,
           round: round,
@@ -253,6 +281,62 @@ defmodule OpenResultsWeb.TournamentController do
     end)
   end
 
+  @doc """
+  `GET /t/:slug/player/:no/board` - wherever this player sits now.
+
+  A link a player can bookmark, or an arbiter can print beside a name, that
+  keeps working all tournament: it redirects to the latest published round,
+  scrolled to the player's board. Nothing is worked out - the latest round is
+  the highest-numbered one in the payload, and the board is the one that
+  names this player. A player not on a board that round (a bye, a late entry)
+  still lands on the round, where the byes table says why.
+
+  Behind the pairings switch, because it is a way into the pairings. Not in
+  the revalidated scope: a redirect is not a document and its answer moves
+  with every round.
+  """
+  def board(conn, %{"slug" => slug, "no" => no}) do
+    with_payload(conn, slug, fn conn, payload ->
+      number = integer(no)
+
+      cond do
+        not Tournament.show?(payload, "pairings") ->
+          withheld(conn, payload, slug, :pairings)
+
+        is_nil(number) or is_nil(Tournament.player(payload, number)) ->
+          not_found(
+            conn,
+            gettext("%{tournament} has no player %{number}.",
+              tournament: Tournament.name(payload),
+              number: no
+            ),
+            back: ~p"/t/#{slug}"
+          )
+
+        true ->
+          conn
+          |> put_resp_header("cache-control", "private, no-cache")
+          |> redirect(to: current_board_path(payload, slug, number))
+      end
+    end)
+  end
+
+  defp current_board_path(payload, slug, number) do
+    case List.last(Tournament.rounds(payload)) do
+      %{"number" => n} = round when is_integer(n) ->
+        case Enum.find(Tournament.boards(round), &(number in [&1["white"], &1["black"]])) do
+          %{"board" => board} when is_integer(board) ->
+            ~p"/t/#{slug}/round/#{n}" <> "#board-#{board}"
+
+          _not_on_a_board ->
+            ~p"/t/#{slug}/round/#{n}"
+        end
+
+      _no_rounds_yet ->
+        ~p"/t/#{slug}"
+    end
+  end
+
   # Not a 404: the tournament is right there, and telling somebody it does not
   # exist sends them hunting for a link that was never broken. The arbiter has
   # chosen not to publish this part of it, which is a different thing and worth
@@ -323,6 +407,7 @@ defmodule OpenResultsWeb.TournamentController do
       snapshot ->
         conn
         |> assign(:report_path, ~p"/t/#{slug}/report")
+        |> assign(:feed_path, ~p"/t/#{slug}/feed.xml")
         |> render_fun.(snapshot.payload)
     end
   end

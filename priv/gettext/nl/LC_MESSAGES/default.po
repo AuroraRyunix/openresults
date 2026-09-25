@@ -2011,3 +2011,43 @@ msgstr "Rondes waarvoor deze speler aanwezig was"
 #, elixir-autogen, elixir-format
 msgid "Sort: Rounds present"
 msgstr "Sorteer: aanwezige rondes"
+
+#: lib/openresults_web/meta.ex:122
+#, elixir-autogen, elixir-format
+msgid "Results - %{round}, %{tournament}."
+msgstr "Uitslagen - %{round}, %{tournament}."
+
+#: lib/openresults_web/meta.ex:136
+#, elixir-autogen, elixir-format
+msgid "Board 1: %{white} - %{black}, %{result}."
+msgstr "Bord 1: %{white} - %{black}, %{result}."
+
+#: lib/openresults_web/meta.ex:142
+#, elixir-autogen, elixir-format
+msgid "Board 1: %{white} - %{black}."
+msgstr "Bord 1: %{white} - %{black}."
+
+#: lib/openresults_web/controllers/tournament_html/player.html.heex:58
+#, elixir-autogen, elixir-format
+msgid "Their board in the latest round"
+msgstr "Bord in de laatste ronde"
+
+#: lib/openresults_web/components/layouts/root.html.heex:243
+#, elixir-autogen, elixir-format
+msgid "Full results on OpenResults"
+msgstr "Alle uitslagen op OpenResults"
+
+#: lib/openresults_web/components/layouts/root.html.heex:268
+#, elixir-autogen, elixir-format
+msgid "Follow (feed)"
+msgstr "Volgen (feed)"
+
+#: lib/openresults_web/controllers/tournament_html/index.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Year"
+msgstr "Jaar"
+
+#: lib/openresults_web/controllers/tournament_html/index.html.heex:15
+#, elixir-autogen, elixir-format
+msgid "All years"
+msgstr "Alle jaren"

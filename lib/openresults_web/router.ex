@@ -134,6 +134,10 @@ defmodule OpenResultsWeb.Router do
     # `OpenResultsWeb.TermsController`.
     get "/terms", TermsController, :show
 
+    # Follows a player from round to round - a redirect, so not in the
+    # revalidated scope above. See `TournamentController.board/2`.
+    get "/t/:slug/player/:no/board", TournamentController, :board
+
     # Entry. Under the tournament, beside `round` and `player`, because an
     # entry is for one event and the slug is the only handle there is - and
     # because a tournament that has not published here then 404s from the same
@@ -168,6 +172,19 @@ defmodule OpenResultsWeb.Router do
     # address. See `OpenResultsWeb.ReportController`.
     get "/t/:slug/report", ReportController, :new
     post "/t/:slug/report", ReportController, :create
+  end
+
+  # The two public documents that are XML, not HTML: a tournament's Atom feed
+  # and the sitemap. Off `:browser` because a feed reader asks for
+  # `application/atom+xml` and `accepts ["html"]` would turn it away with a
+  # 406. The locale is still read, so a feed's titles are in the language
+  # its reader's client asks for, and `Visibility` still runs, so a hidden
+  # tournament's feed is the same 404 as a slug that never published.
+  scope "/", OpenResultsWeb do
+    pipe_through [OpenResultsWeb.Plugs.Locale, OpenResultsWeb.Plugs.Visibility]
+
+    get "/t/:slug/feed.xml", FeedController, :show
+    get "/sitemap.xml", SitemapController, :show
   end
 
   # Public publishing, the open half: an OpenPairings installation asking for

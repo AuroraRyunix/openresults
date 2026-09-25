@@ -47,6 +47,18 @@
         `OpenResultsWeb.PlayerHistory` for why matching on a name would
         silently merge two different people. A player with no FIDE id gets no
         cross-link at all, here or anywhere else. --%>
+  <%!-- A link that follows the player from round to round - see
+        `TournamentController.board/2`. Worth bookmarking, so it says what it
+        will keep doing rather than which round it points at today. --%>
+  <p
+    :if={Tournament.show?(@payload, "pairings") and Tournament.rounds(@payload) != []}
+    class="card-more"
+  >
+    <a href={~p"/t/#{@slug}/player/#{@player["no"]}/board"}>
+      {gettext("Their board in the latest round")}
+    </a>
+  </p>
+
   <p :if={@player["fide_id"]} class="card-more">
     <a href={~p"/players/#{@player["fide_id"]}"}>
       {gettext("This player's history across tournaments")}
