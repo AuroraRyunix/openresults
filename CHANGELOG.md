@@ -27,6 +27,14 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Security] **Two dependency advisories closed.** mint 1.10.0 -> 1.10.1
+  fixes EEF-CVE-2026-82672 (MEDIUM): its HTTP/1 client did not validate the
+  tail of a chunk-size line, allowing response smuggling on pooled
+  connections. lazy_html 0.1.12 -> 0.1.13 (test-only) fixes
+  EEF-CVE-2026-92106 (LOW): SVG and MathML style/script text serialised
+  unescaped. websock 0.5.3 and websock_adapter 0.6.0
+  were checked too: `mix hex.audit` and osv.dev list no advisory for them.
+
 ## [0.17.0] - 2026-09-25
 
 - [Feature] **Print a page and get a sheet for the noticeboard.** Standings,
