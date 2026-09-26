@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-09-26
+
 - [Security] **Two dependency advisories closed.** mint 1.10.0 -> 1.10.1
   fixes EEF-CVE-2026-82672 (MEDIUM): its HTTP/1 client did not validate the
   tail of a chunk-size line, allowing response smuggling on pooled
