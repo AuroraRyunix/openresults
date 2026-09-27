@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-09-27
+
 - [Feature] **Postponed games say so.** A game the arbiter has postponed now
   reads "Postponed" where its result would go, or "Postponed, to be played"
   and the date when the players have agreed one, written the way the site
