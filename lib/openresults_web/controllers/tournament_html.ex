@@ -1298,7 +1298,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               {gettext("Pts")}
             </th>
             <th scope="col">{gettext("White")}</th>
-            <th :if={@results?} class="num" scope="col">{gettext("Result")}</th>
+            <th class="num" scope="col">{gettext("Result")}</th>
             <th scope="col">{gettext("Black")}</th>
             <th
               :if={@show.pairing_scores}
@@ -1335,9 +1335,9 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
               <span :if={tag.white?} class="visually-hidden">{gettext("matches your filter")}</span>
             </td>
-            <td :if={@results?} class="num">
+            <td class="num">
               <.result
-                token={board["result"]}
+                token={@results? && board["result"]}
                 postponed={Tournament.postponed?(board)}
                 postponed_date={postponed_date(@show, board)}
               />
@@ -1404,16 +1404,24 @@ defmodule OpenResultsWeb.TournamentHTML do
           <tr>
             <th scope="col">{gettext("Match")}</th>
             <th scope="col">{gettext("Team A")}</th>
-            <th :if={@results?} class="num" scope="col">{gettext("Score")}</th>
+            <th class="num" scope="col">{gettext("Score")}</th>
             <th scope="col">{gettext("Team B")}</th>
           </tr>
         </thead>
         <tbody>
           <%= for match <- @matches do %>
+            <%!-- Redacted rather than gated: while a round's results are
+                  withheld, `match_score/1` and `forfeit_decision/1` must
+                  never see the real numbers, because the column that used to
+                  hide is now always on the page. --%>
+            <% visible_match =
+              if @results?,
+                do: match,
+                else: Map.drop(match, ~w(game_points match_points forfeit_decision)) %>
             <tr>
               <th scope="row" class="num row-head">{match["number"]}</th>
               <%= if match["bye"] do %>
-                <td colspan={if @results?, do: "3", else: "2"}>
+                <td colspan="3">
                   <.team_link slug={@slug} teams={@teams} no={match["team_a"]} />
                   {gettext("has the bye")}
                 </td>
@@ -1421,9 +1429,9 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <td class={match_white?(match, :a) && "pairing-match"}>
                   <.team_link slug={@slug} teams={@teams} no={match["team_a"]} />
                 </td>
-                <td :if={@results?} class="num">
-                  <.match_score match={match} />
-                  <.forfeit_decision match={match} teams={@teams} />
+                <td class="num">
+                  <.match_score match={visible_match} />
+                  <.forfeit_decision match={visible_match} teams={@teams} />
                 </td>
                 <td class={match_white?(match, :b) && "pairing-match"}>
                   <.team_link slug={@slug} teams={@teams} no={match["team_b"]} />
@@ -1442,7 +1450,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                       <tr>
                         <th class="num" scope="col">{gettext("Bd")}</th>
                         <th scope="col">{gettext("White")}</th>
-                        <th :if={@results?} class="num" scope="col">{gettext("Result")}</th>
+                        <th class="num" scope="col">{gettext("Result")}</th>
                         <th scope="col">{gettext("Black")}</th>
                       </tr>
                     </thead>
@@ -1459,9 +1467,9 @@ defmodule OpenResultsWeb.TournamentHTML do
                             detail
                           />
                         </td>
-                        <td :if={@results?} class="num">
+                        <td class="num">
                           <.result
-                            token={board["result"]}
+                            token={@results? && board["result"]}
                             postponed={Tournament.postponed?(board)}
                             postponed_date={postponed_date(@show, board)}
                           />
@@ -1600,7 +1608,9 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   @doc """
   One line per round whose results the arbiter has not published, said once
-  on the page rather than as a column of unreported games.
+  on the page rather than repeated in every row of the result column - which
+  stays on the page regardless, its cells all reading as unreported (see
+  `pairings_table/1`).
   """
   attr :rounds, :list, required: true, doc: "round numbers"
   attr :payload, :map, required: true
@@ -1811,7 +1821,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             <tr>
               <th class="num" scope="col">{gettext("Bd")}</th>
               <th scope="col">{gettext("White")}</th>
-              <th :if={@results?} class="num" scope="col">{gettext("Result")}</th>
+              <th class="num" scope="col">{gettext("Result")}</th>
               <th scope="col">{gettext("Black")}</th>
             </tr>
           </thead>
@@ -1828,9 +1838,9 @@ defmodule OpenResultsWeb.TournamentHTML do
                   detail
                 />
               </td>
-              <td :if={@results?} class="num">
+              <td class="num">
                 <.result
-                  token={board["result"]}
+                  token={@results? && board["result"]}
                   postponed={Tournament.postponed?(board)}
                   postponed_date={postponed_date(@show, board)}
                 />

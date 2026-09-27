@@ -27,6 +27,16 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **The result column no longer disappears.** A round's pairings
+  table, a team match's own table and its per-board list, and the projector
+  view used to drop the Result/Score column entirely whenever no result was
+  in yet, or the arbiter had withheld the round's results - leaving a table
+  that looked lopsided until the first result arrived. The column now
+  always stays, with the same "not yet reported" hyphen an ordinary pending
+  game already showed, and a postponed game's own hourglass still where it
+  was. A withheld round still gets its column, and only its placeholders -
+  the real result never reaches the page.
+
 ## [0.18.0] - 2026-09-27
 
 - [Feature] **Postponed games say so.** A game the arbiter has postponed now

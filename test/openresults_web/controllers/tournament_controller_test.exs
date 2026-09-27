@@ -314,6 +314,56 @@ defmodule OpenResultsWeb.TournamentControllerTest do
              ]
     end
 
+    # Round 3, with two boards already decided: the Result column is a mix
+    # of real tokens and the hyphen placeholder side by side, not one or the
+    # other for the whole table.
+    test "some results in: reported boards keep their score, the rest get the placeholder", %{
+      conn: conn,
+      slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}/round/3") |> doc()
+
+      assert texts(document, "table.pairings tbody td.num .result") == [
+               "1-0",
+               "1/2-0",
+               "- not yet reported"
+             ]
+    end
+
+    # The bug this guards: pairings published, not one result typed in yet.
+    # The Result column used to vanish entirely in this state, rather than
+    # showing every board as unreported like an ordinary pending game.
+    test "no results published at all yet: the column is there, every cell a placeholder", %{
+      conn: conn,
+      swiss: swiss,
+      slug: slug
+    } do
+      cleared =
+        update_in(swiss, ["rounds"], fn rounds ->
+          Enum.map(rounds, fn
+            %{"number" => 5} = round ->
+              Map.update!(round, "boards", fn boards ->
+                Enum.map(boards, &Map.put(&1, "result", nil))
+              end)
+
+            round ->
+              round
+          end)
+        end)
+
+      publish(cleared)
+      document = conn |> get(~p"/t/#{slug}/round/5") |> doc()
+
+      assert "Result" in texts(document, "table.pairings thead th")
+
+      assert texts(document, "table.pairings tbody td.num .result") ==
+               List.duplicate("- not yet reported", 5)
+
+      # Nothing withheld here - "results_public" was left at its default -
+      # so there is no note and the round can still go live.
+      assert texts(document, ".results-withheld") == []
+    end
+
     test "a result token this server has never seen is shown as it arrived", %{
       conn: conn,
       swiss: swiss
@@ -438,6 +488,21 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       end)
     end
 
+    # Unlike `withhold/2`, this leaves every board's own "result" exactly as
+    # the fixture has it - round 5 is complete - and only flips the switch.
+    # OpenPairings does not strip a board's result when it withholds a
+    # round's results (see `OpenResultsWeb.Meta`'s own comment on the same
+    # field), so the page has to do the hiding itself; this is what proves
+    # it does, rather than merely proving the column is there.
+    defp withhold_keeping_results(payload, number) do
+      update_in(payload, ["rounds"], fn rounds ->
+        Enum.map(rounds, fn
+          %{"number" => ^number} = round -> Map.put(round, "results_public", false)
+          round -> round
+        end)
+      end)
+    end
+
     # The element, not the attribute name: the layout's own script mentions it.
     defp live_marker?(conn, slug) do
       conn |> get(~p"/t/#{slug}") |> doc() |> LazyHTML.query("[data-results-live]") |> Enum.any?()
@@ -449,39 +514,71 @@ defmodule OpenResultsWeb.TournamentControllerTest do
       end)
     end
 
-    test "false: the round page says so once, with no result column and no live label", %{
+    test "false: the round page says so once, and the result column stays with placeholders", %{
       conn: conn,
       swiss: swiss,
       slug: slug
     } do
       publish(withhold(swiss, 5))
       document = conn |> get(~p"/t/#{slug}/round/5") |> doc()
-      html = conn |> get(~p"/t/#{slug}/round/5") |> html_response(200)
 
       assert texts(document, ".results-withheld") == [
                "Results for round 5 are not published yet."
              ]
 
-      # The pairings are still there - only the results are withheld.
+      # The pairings are still there, and so is the Result column - every
+      # cell in it reads exactly as an ordinary unreported game, the same
+      # hyphen and title as a game nobody has typed a result in for yet.
       assert length(texts(document, "table.pairings tbody tr")) == 5
-      refute "Result" in texts(document, "table.pairings thead th")
-      refute html =~ "not yet reported"
+      assert "Result" in texts(document, "table.pairings thead th")
+
+      assert texts(document, "table.pairings tbody td.num .result") ==
+               List.duplicate("- not yet reported", 5)
+
       assert texts(document, ".live-marker") == []
     end
 
-    test "false: the projector view says so and drops the result column", %{
+    test "false: a board that still carries its real result never shows it", %{
       conn: conn,
       swiss: swiss,
       slug: slug
     } do
-      publish(withhold(swiss, 5))
+      # Round 5's boards keep their actual "1-0"/"0-1"/"1/2-1/2" results in
+      # the payload - only "results_public" is false - so this fails the
+      # moment a real score reaches the page, rather than only checking
+      # that the column exists.
+      publish(withhold_keeping_results(swiss, 5))
+      document = conn |> get(~p"/t/#{slug}/round/5") |> doc()
+
+      assert texts(document, "table.pairings tbody td.num .result") ==
+               List.duplicate("- not yet reported", 5)
+
+      assert texts(document, "table.pairings .token") == []
+
+      for token <- ["1-0", "0-1", "1/2-1/2"] do
+        refute texts(document, "table.pairings") |> Enum.join(" ") =~ token
+      end
+    end
+
+    test "false: the projector view keeps the result column too, redacted the same way", %{
+      conn: conn,
+      swiss: swiss,
+      slug: slug
+    } do
+      publish(withhold_keeping_results(swiss, 5))
       document = conn |> get(~p"/t/#{slug}/round/5?display=1") |> doc()
 
       assert texts(document, ".results-withheld") == [
                "Results for round 5 are not published yet."
              ]
 
-      assert texts(document, "table.projector-pairings thead th") == ["Bd", "White", "Black"]
+      assert texts(document, "table.projector-pairings thead th") ==
+               ["Bd", "White", "Result", "Black"]
+
+      assert texts(document, "table.projector-pairings tbody td.num .result") ==
+               List.duplicate("- not yet reported", 5)
+
+      assert texts(document, "table.projector-pairings .token") == []
     end
 
     test "false: the cross-table and a player's card say so once", %{
