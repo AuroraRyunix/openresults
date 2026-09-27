@@ -219,6 +219,28 @@ data for the single-sided forfeits. **The publish path normalises them to
 `1-0FF` and `0-1FF`** rather than pushing both spellings across, so this
 server only ever sees one vocabulary.
 
+**`boards[].postponed`** - `true` on a board that is a postponed game still
+to be played: the arbiter paired it and the two players will play it later.
+**Absent means not postponed** - the key is only ever sent as `true`, never
+as `false`. Its `result` is `null` while it is postponed, and OpenPairings
+counts the game as a draw in the standings until it is played (see
+`standings.provisional` below). Withheld (absent) when the round's results
+are not public, like the result itself. Once the game is played the next
+snapshot carries its real result and no flag, so a reader never has to clear
+anything. A board carrying both a result token and the flag is read by its
+result. OpenResults shows "Postponed" where the result goes instead of the
+"not yet reported" hyphen, and does not count the board as one the round is
+waiting on - a round whose only missing results are postponed games is not
+shown as live.
+
+**`boards[].postponed_date`** - `"YYYY-MM-DD"`, the date the two players
+agreed to play a postponed game. Present only when `postponed` is `true` AND
+the arbiter entered an agreed date; **absent means no agreed date**, not "no
+date needed". It is not a deadline. OpenResults shows it as "Postponed, to
+be played <date>" in the reader's locale, and only when the arbiter's
+`display.dates` tick is on - the same tick that hides a round's own date,
+since both say when games are played.
+
 **`byes[].kind`** - `"pairing-allocated"`, `"half-point"`, `"zero-point"`,
 `"full-point"`, `"absent"`, `"vacated-seat"`. The kind and its point value are
 both carried because the value is configurable and the kind is what an arbiter
@@ -357,6 +379,19 @@ that a person chose it did not.
 necessarily the highest published round: an arbiter may publish pairings for
 round 6 while standings still stand after 5.
 
+**`standings.provisional`** and **`standings.postponed_games`** -
+`provisional: true` and a count, present only while a postponed game
+(`boards[].postponed`) in the rounds the standings cover is still to be
+played. **Absent means the standings are not provisional.** The placings
+count each such game as a draw until it is played, so the table is correct
+for now and will move when the game is in. OpenResults prints one line above
+the standings saying so, with the count when it is a positive integer, and
+never recomputes anything.
+
+```json
+"standings": { "after_round": 5, "provisional": true, "postponed_games": 2, "rows": [] }
+```
+
 **`system`** - `"swiss"`, `"roundrobin"` or `"keizer"`. Keizer standings
 carry different columns (value, Keizer points, score), so the renderer keys
 off this. The alternative - a generic column list - was considered and
@@ -471,8 +506,27 @@ match is on the pairing sheet before it is a result, the same reason
 `boards[].white`/`black` still travel with a `null` result. `match_points` is
 additionally `null` until every board in the match has a result - a
 half-reported match has game points and no match points yet, exactly as
-`PairingsEngine.TeamStandings` computes it. Never recomputed here: both
-numbers are OpenPairings' own arithmetic.
+`PairingsEngine.TeamStandings` computes it - except for a postponed board
+(`boards[].postponed`), which counts as a draw, so a match whose only
+missing results are postponed games does carry `match_points` (see
+`matches[].postponed_boards` below). Never recomputed here: both numbers are
+OpenPairings' own arithmetic.
+
+**`matches[].postponed_boards`** - how many of the match's boards are
+postponed games still to be played. Present only when it is above zero and
+the round's results are public; **absent means none**. While it is present,
+`game_points` and `match_points` are PROVISIONAL: each postponed board is
+counted as a draw. `match_points` is still sent, because the team standings
+count that provisional score and the next round is paired with it.
+OpenResults shows the score as it arrived with "1 board pending" (or "N
+boards pending") beside it, so it does not read as final.
+
+```json
+{ "number": 1, "team_a": 1, "team_b": 4, "bye": false, "board1_white_team": 1,
+  "boards": [1, 2], "game_points": { "a": 1.5, "b": 0.5 },
+  "match_points": { "a": 2.0, "b": 0.0 }, "forfeit_decision": null,
+  "postponed_boards": 1 }
+```
 
 **`matches[].forfeit_decision`** - added with match forfeits by decision.
 `{ "to": <team no> }` when the arbiter forfeited the match as a whole to one

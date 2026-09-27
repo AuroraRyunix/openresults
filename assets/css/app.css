@@ -445,6 +445,29 @@ h2 .title {
   color: var(--withheld);
 }
 
+/* A postponed game: words where the result goes, quiet like the hyphen it
+   replaces, and allowed to wrap - "Postponed, to be played 12 oktober 2026"
+   is a phrase in a column sized for "1/2-1/2", and a nowrap cell would push
+   the whole table sideways on a phone. Sized in em so the projector's larger
+   type carries it too. */
+.result .postponed {
+  display: inline-block;
+  max-width: 11em;
+  font-size: 0.875em;
+  line-height: 1.25;
+  color: var(--quiet);
+  font-style: italic;
+  white-space: normal;
+}
+
+/* "1 board pending" beside a team match score whose postponed boards are
+   still to be played: the score is provisional and says so, quietly. */
+.match-pending {
+  color: var(--quiet);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
 tr.withheld td,
 tr.withheld th {
   color: var(--withheld);
@@ -1701,6 +1724,21 @@ a.xt-opp:hover {
 .xt-token {
   font-weight: 400;
   color: var(--quiet);
+}
+
+/* A postponed game still to be played, in the same bordered-abbr shape as
+   `.xt-colour` so the two read as one family of marks, but set apart in
+   colour: this one is not a fact about the game played, it is a game not
+   played yet. */
+.xt-postponed {
+  padding: 0 0.15rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  margin-left: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--withheld);
+  text-decoration: none;
+  cursor: help;
 }
 
 /* Why this cell is not an ordinary result: a forfeit, an unrated game, or

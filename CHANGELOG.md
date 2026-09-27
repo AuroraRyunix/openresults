@@ -27,6 +27,38 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Postponed games say so.** A game the arbiter has postponed now
+  reads "Postponed" where its result would go, or "Postponed, to be played"
+  and the date when the players have agreed one, written the way the site
+  writes every other date (the date is left out when the arbiter hides
+  dates). This shows on the round page, the projector
+  view, a team match's board list and the player's round-by-round card. When
+  the game is played, its result simply takes the label's place.
+- [Feature] **Provisional scores are marked.** A team match with a postponed
+  board shows its score with "1 board pending" beside it, on the round page
+  and the team page, so it does not read as final. While a postponed game is
+  still to be played, the standings page says the standings are provisional,
+  how many games are postponed, and that those count as draws until they are
+  played.
+- [Change] **A round waiting only on postponed games is no longer "Live".**
+  It used to stay live, and keep the page refreshing quickly, until the
+  postponed game was played, which could be weeks later.
+- [Feature] **The cross-table marks a postponed game too.** A cell that used
+  to read as a plain "not yet reported" hyphen now shows an hourglass, with
+  the same "Postponed" or "Postponed, to be played <date>" behind it a
+  round's own page already says - explained in the grid's own legend beneath
+  it. A team match with a postponed board carries the same mark in its own
+  cross-table cell, beside the score it belongs to, rather than only in the
+  page-level "board(s) pending" line.
+- [Fix] **A pairing list's "points before this round" no longer goes dark
+  forever over a postponed game.** It used to stop at the first postponed
+  board it crossed and stay stopped for every later round, the same way an
+  unresolved game does - but a postponed game is priced everywhere else on
+  the site as its provisional draw, so this column now counts it the same
+  way and keeps moving. A player's own card is unaffected: its round-by-round
+  score still stops at a postponed game, on purpose, since that page already
+  says why beside it.
+
 ## [0.17.1] - 2026-09-26
 
 - [Security] **Two dependency advisories closed.** mint 1.10.0 -> 1.10.1

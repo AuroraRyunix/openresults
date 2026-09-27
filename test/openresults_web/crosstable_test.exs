@@ -345,6 +345,57 @@ defmodule OpenResultsWeb.CrosstableTest do
       assert cell(document, 1, 1) == "6 w 1-0ADJ"
       assert cell(document, 6, 1) == "1 b 1-0ADJ"
     end
+
+    test "a postponed game is a mark of its own, not the ordinary hyphen", %{
+      conn: conn,
+      slug: slug,
+      swiss: swiss
+    } do
+      # Round 2, board 2: 6 (White) v 3 (Black), agreed to be played later.
+      postponed =
+        update_in(swiss, ["rounds", Access.at(1), "boards", Access.at(1)], fn board ->
+          Map.merge(board, %{
+            "result" => nil,
+            "postponed" => true,
+            "postponed_date" => "2026-03-20"
+          })
+        end)
+
+      publish(postponed)
+      document = grid(conn, slug)
+
+      assert cell(document, 6, 2) == "3 w ⏳ Postponed, to be played 2026-03-20"
+      assert cell(document, 3, 2) == "6 b ⏳ Postponed, to be played 2026-03-20"
+
+      # Not also the "not yet reported" hyphen - the mark replaces it.
+      assert document
+             |> LazyHTML.query("table.crosstable tbody tr:nth-child(6) .unreported")
+             |> Enum.empty?()
+
+      assert attributes(document, "table.crosstable tbody tr:nth-child(6) .xt-postponed", "title") ==
+               ["Postponed, to be played 2026-03-20"]
+    end
+
+    test "a postponed game with no agreed date yet says only that, and hides the date the arbiter hid",
+         %{conn: conn, slug: slug, swiss: swiss} do
+      postponed =
+        update_in(swiss, ["rounds", Access.at(1), "boards", Access.at(1)], fn board ->
+          Map.merge(board, %{"result" => nil, "postponed" => true})
+        end)
+
+      publish(postponed)
+      assert cell(grid(conn, slug), 3, 2) == "6 b ⏳ Postponed"
+
+      dated =
+        update_in(postponed, ["rounds", Access.at(1), "boards", Access.at(1)], fn board ->
+          Map.put(board, "postponed_date", "2026-03-20")
+        end)
+
+      hidden_dates = put_in(dated, ["tournament", "display", "dates"], false)
+      publish(hidden_dates)
+
+      assert cell(grid(conn, slug), 3, 2) == "6 b ⏳ Postponed"
+    end
   end
 
   describe "the placings beside the grid" do
