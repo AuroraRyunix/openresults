@@ -91,6 +91,10 @@ defmodule OpenResultsWeb.PostponedGamesTest do
     |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim() |> String.replace(~r/\s+/, " ")))
   end
 
+  defp attributes(document, selector, name) do
+    document |> LazyHTML.query(selector) |> LazyHTML.attribute(name)
+  end
+
   defp without_dates(payload), do: put_in(payload, ["tournament", "display", "dates"], false)
 
   describe "a round page" do
@@ -162,6 +166,23 @@ defmodule OpenResultsWeb.PostponedGamesTest do
 
       assert texts(document, "#board-2 .result .token") == ["0-1"]
       assert texts(document, "#board-2 .result .postponed") == []
+    end
+
+    test "a later round's 'points before this round' column counts a postponed game as its draw",
+         %{conn: conn} do
+      # Round 3, board 1: player 3 was one seat of round 2's postponed board
+      # 2. Their points before round 3 must count that game's provisional
+      # 0.5, not stop dead at it the way a player's own running score does
+      # (see "the running score stops there" below) - a pairing list that
+      # went dark for every player ever paired into a postponed game would
+      # be a worse answer than a number that moves once the game is in.
+      document = conn |> get(~p"/t/#{@slug}/round/3") |> doc()
+
+      assert texts(document, "#board-1 td:nth-child(7)") == ["1"]
+      assert texts(document, "#board-1 td:nth-child(7) .unreported") == []
+
+      # Board 3: player 8 was the other postponed board's White.
+      assert texts(document, "#board-3 td:nth-child(3)") == ["1"]
     end
   end
 
@@ -239,6 +260,28 @@ defmodule OpenResultsWeb.PostponedGamesTest do
 
       assert texts(document, ".match-pending") == []
     end
+
+    test "the team cross-table marks the same match, in the cell rather than a page-level line",
+         %{conn: conn} do
+      document = conn |> get(~p"/t/#{@team_slug}") |> doc()
+
+      # Team 1 v team 4 (match 1) is the postponed one; team 2 v team 3
+      # (match 2) has nothing pending. Both sides of the postponed match
+      # carry the mark - the row a reader is on decides which score it sits
+      # beside, exactly as `crosstable_cell/1` decides which seat's score a
+      # game belongs to.
+      assert length(texts(document, "table.crosstable tbody .xt-postponed")) == 2
+
+      assert texts(document, "table.crosstable tbody tr:first-child .xt-postponed") == [
+               "⏳ 1 board pending"
+             ]
+
+      assert attributes(
+               document,
+               "table.crosstable tbody tr:first-child .xt-postponed",
+               "title"
+             ) == ["1 board pending"]
+    end
   end
 
   describe "Tournament" do
@@ -276,6 +319,26 @@ defmodule OpenResultsWeb.PostponedGamesTest do
 
       assert Tournament.standings_provisional(swiss) == {true, 2}
       assert Tournament.standings_provisional(SnapshotPayloads.swiss()) == {false, nil}
+    end
+
+    test "scores_before/2 counts a postponed game as its provisional draw", %{swiss: swiss} do
+      # Round 2's board 2 (6 v 3) and board 4 (8 v 9) are both postponed.
+      # Round 1 gave player 3 a draw (0.5) and player 8 a draw (0.5); the
+      # postponed game adds 0.5 more to each, same as OpenPairings' own
+      # provisional standings. Player 6 lost round 1 (0) and player 9 won by
+      # forfeit (1), so their totals before round 3 are 0.5 and 1.5.
+      before_round_3 = Tournament.scores_before(swiss, 3)
+
+      assert before_round_3[3] == 1.0
+      assert before_round_3[6] == 0.5
+      assert before_round_3[8] == 1.0
+      assert before_round_3[9] == 1.5
+
+      # A player's own card is not this - it stops at the postponed game
+      # exactly as it does at any unresolved one, deliberately, per the
+      # test above.
+      [_round1, round2] = Tournament.card(swiss, 6)
+      assert is_nil(round2.score)
     end
   end
 end

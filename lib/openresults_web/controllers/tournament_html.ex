@@ -678,8 +678,23 @@ defmodule OpenResultsWeb.TournamentHTML do
               <% else %>
                 <%= for %{match: m} <- Map.get(row.cells, opp.no, []) do %>
                   <% {gp, _mp} = Tournament.match_points_for(m, row.no) %>
+                  <% pending = Tournament.match_postponed_boards(m) %>
                   <span :if={gp}>{number(gp)}</span>
                   <span :if={is_nil(gp)} class="quiet">{gettext("?")}</span>
+                  <%!-- The match's score is provisional while any of its
+                        boards is a postponed game still to be played - see
+                        `match_score/1`'s own moduledoc, which says the same
+                        thing beside a round's own pairing list. That line
+                        stays page-level there; here, where a whole team's
+                        row of results has to fit one screen, the mark sits
+                        in the one cell it is actually about. --%>
+                  <abbr
+                    :if={pending > 0}
+                    class="xt-postponed"
+                    title={ngettext("1 board pending", "%{count} boards pending", pending)}
+                  ><.said_as words={ngettext("1 board pending", "%{count} boards pending", pending)}>
+                    ⏳
+                  </.said_as></abbr>
                 <% end %>
               <% end %>
             </td>
@@ -1053,6 +1068,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       {gettext(
         "A bye or a forfeit is named under the score, because neither is an ordinary result. An empty cell is a round this player is not listed in."
       )}
+      {gettext("An hourglass (⏳) marks a postponed game still to be played, in place of a score.")}
     </p>
     """
   end
@@ -1086,6 +1102,10 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:token, token)
       |> assign(:note, note_label(note))
       |> assign(:cards?, shown?(assigns.show, :player_cards))
+      |> assign(
+        :postponed_title,
+        postponed_title(assigns.cell.postponed_date, shown?(assigns.show, :dates))
+      )
 
     ~H"""
     <td
@@ -1113,9 +1133,26 @@ defmodule OpenResultsWeb.TournamentHTML do
                   `1-0ADJ` belongs to whom would be inventing a result, and
                   printing the whole token in both rows would tell the loser
                   they won. --%>
-            <span :if={is_nil(@cell.points) and @token} class="xt-score xt-token">{@token}</span>
             <span
-              :if={is_nil(@cell.points) and is_nil(@token)}
+              :if={not @cell.postponed and is_nil(@cell.points) and @token}
+              class="xt-score xt-token"
+            >{@token}</span>
+            <%!-- A postponed game still to be played: the same fact a
+                  round's own page and a player's card already say in words,
+                  here as the compact mark this grid's cells are written in -
+                  the hourglass reads the same in every language, unlike a
+                  letter drawn from the translated word. The full sentence,
+                  with the agreed date when the arbiter's "dates" tick allows
+                  it, is on the mark for a mouse and said in words for a
+                  screen reader - never only in the title, which a touch
+                  screen cannot open. --%>
+            <abbr
+              :if={is_nil(@cell.points) and @cell.postponed}
+              class="xt-postponed"
+              title={@postponed_title}
+            ><.said_as words={@postponed_title}>⏳</.said_as></abbr>
+            <span
+              :if={is_nil(@cell.points) and is_nil(@token) and not @cell.postponed}
               class="unreported"
               title={gettext("not yet reported")}
             ><.said_as words={gettext("not yet reported")}>-</.said_as></span>
@@ -2735,6 +2772,19 @@ defmodule OpenResultsWeb.TournamentHTML do
   # date that tick already hides, and a hidden date must not come back one
   # board at a time.
   defp postponed_date(show, board), do: if(show.dates, do: Tournament.postponed_date(board))
+
+  # The same sentence `result/1` prints in full, for a marker that only has
+  # room for the mark itself - reused rather than reworded, so a cross-table
+  # cell and a round's own page never say this two different ways. The date
+  # is gated on the arbiter's "dates" tick here too, exactly as `postponed_date/2`
+  # gates it for that page.
+  defp postponed_title(iso_date, dates_shown?) do
+    if iso_date && dates_shown? do
+      gettext("Postponed, to be played %{date}", date: date(iso_date))
+    else
+      gettext("Postponed")
+    end
+  end
 
   # `Tournament.result_parts/1` names the marker; the wording is this
   # module's, the same division of labour the moduledoc sets out. A marker

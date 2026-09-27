@@ -43,6 +43,21 @@ Each entry is tagged so a version can be skimmed:
 - [Change] **A round waiting only on postponed games is no longer "Live".**
   It used to stay live, and keep the page refreshing quickly, until the
   postponed game was played, which could be weeks later.
+- [Feature] **The cross-table marks a postponed game too.** A cell that used
+  to read as a plain "not yet reported" hyphen now shows an hourglass, with
+  the same "Postponed" or "Postponed, to be played <date>" behind it a
+  round's own page already says - explained in the grid's own legend beneath
+  it. A team match with a postponed board carries the same mark in its own
+  cross-table cell, beside the score it belongs to, rather than only in the
+  page-level "board(s) pending" line.
+- [Fix] **A pairing list's "points before this round" no longer goes dark
+  forever over a postponed game.** It used to stop at the first postponed
+  board it crossed and stay stopped for every later round, the same way an
+  unresolved game does - but a postponed game is priced everywhere else on
+  the site as its provisional draw, so this column now counts it the same
+  way and keeps moving. A player's own card is unaffected: its round-by-round
+  score still stops at a postponed game, on purpose, since that page already
+  says why beside it.
 
 ## [0.17.1] - 2026-09-26
 

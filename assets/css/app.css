@@ -1726,6 +1726,21 @@ a.xt-opp:hover {
   color: var(--quiet);
 }
 
+/* A postponed game still to be played, in the same bordered-abbr shape as
+   `.xt-colour` so the two read as one family of marks, but set apart in
+   colour: this one is not a fact about the game played, it is a game not
+   played yet. */
+.xt-postponed {
+  padding: 0 0.15rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  margin-left: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--withheld);
+  text-decoration: none;
+  cursor: help;
+}
+
 /* Why this cell is not an ordinary result: a forfeit, an unrated game, or
    the arbiter's own word for a bye. Under the score and never instead of it
    - a forfeit is still worth its point. Wrapping, because "pairing-allocated

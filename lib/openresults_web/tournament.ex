@@ -994,7 +994,9 @@ defmodule OpenResultsWeb.Tournament do
     opponent_no: nil,
     result: nil,
     bye: nil,
-    points: nil
+    points: nil,
+    postponed: false,
+    postponed_date: nil
   }
 
   @doc """
@@ -1142,6 +1144,8 @@ defmodule OpenResultsWeb.Tournament do
     white = Map.get(board, "white")
     black = Map.get(board, "black")
     result = Map.get(board, "result")
+    postponed = postponed?(board)
+    postponed_date = postponed_date(board)
 
     # A token this server cannot read leaves BOTH seats without a score
     # rather than one of them with a guess. The renderer shows the token as
@@ -1149,12 +1153,12 @@ defmodule OpenResultsWeb.Tournament do
     {white_points, black_points} = result_points(result) || {nil, nil}
 
     [
-      {white, game_cell(number, :white, black, result, white_points)},
-      {black, game_cell(number, :black, white, result, black_points)}
+      {white, game_cell(number, :white, black, result, white_points, postponed, postponed_date)},
+      {black, game_cell(number, :black, white, result, black_points, postponed, postponed_date)}
     ]
   end
 
-  defp game_cell(number, colour, opponent_no, result, points) do
+  defp game_cell(number, colour, opponent_no, result, points, postponed, postponed_date) do
     %{
       @empty_cell
       | round: number,
@@ -1162,7 +1166,13 @@ defmodule OpenResultsWeb.Tournament do
         colour: colour,
         opponent_no: opponent_no,
         result: result,
-        points: points
+        points: points,
+        # Same flag and date as `card_entry/4`'s own cell, ungated here too -
+        # the view gates the date on `display.dates`, exactly as it does for
+        # a round and a player's card, so this is not a second answer to the
+        # same question.
+        postponed: postponed,
+        postponed_date: postponed_date
     }
   end
 
@@ -1211,6 +1221,18 @@ defmodule OpenResultsWeb.Tournament do
   would be this site contradicting itself, and the contract carries no
   per-game points precisely so that nobody has to guess which is right.
 
+  **One deliberate difference:** a postponed board (`postponed?/1`) counts as
+  its provisional draw here, the same 0.5 apiece `standings.provisional`
+  already prices it at, rather than as an unknown. Without that, every player
+  who was ever paired into a postponed game would carry a "-" on every later
+  round's pairing list forever, not only the round the game was postponed
+  in - a running total that goes dark permanently over a game still to be
+  played is a worse answer than a provisional number that moves once it is.
+  `card/2` does not make this exception: its running score is read one round
+  at a time on that one player's own page, where "postponed, not counted yet"
+  is a sentence the page already prints beside it, and stopping there is the
+  more honest reading for that view.
+
   One pass over the earlier rounds rather than `card/2` per player, which
   would re-walk every round's boards once per seat on the page.
   """
@@ -1257,11 +1279,21 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   defp board_contributions(board) do
-    case result_points(Map.get(board, "result")) do
-      {white, black} -> [{Map.get(board, "white"), white}, {Map.get(board, "black"), black}]
-      # A board with no result yet contributes an unknown to BOTH seats,
-      # rather than nothing - a game in progress is not a game worth zero.
-      nil -> [{Map.get(board, "white"), :unknown}, {Map.get(board, "black"), :unknown}]
+    cond do
+      # A postponed game is still to be played, but OpenPairings already
+      # prices it as a draw everywhere it shows a provisional number - see
+      # `standings.provisional` in the schema and this function's own
+      # moduledoc. Both seats get that same 0.5 here, not an unknown.
+      postponed?(board) ->
+        [{Map.get(board, "white"), 0.5}, {Map.get(board, "black"), 0.5}]
+
+      true ->
+        case result_points(Map.get(board, "result")) do
+          {white, black} -> [{Map.get(board, "white"), white}, {Map.get(board, "black"), black}]
+          # A board with no result yet contributes an unknown to BOTH seats,
+          # rather than nothing - a game in progress is not a game worth zero.
+          nil -> [{Map.get(board, "white"), :unknown}, {Map.get(board, "black"), :unknown}]
+        end
     end
   end
 
