@@ -17,14 +17,22 @@ permissions:
 jobs:
   build:
     name: Build and test
-    runs-on: ubuntu-latest
+    # Pinned rather than `ubuntu-latest`: GitHub has announced that label
+    # moving to Ubuntu 26.04 in November 2026, and 26.04 is still a public
+    # preview today (2026-09-27), not something to land on by surprise.
+    runs-on: ubuntu-24.04
 
     steps:
     # Actions are pinned to a commit, not to a tag. A tag is mutable, and
     # whoever can move it runs their code in this workflow with this
     # repository checked out. The trailing comment is the human-readable
-    # version.
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+    # version; .github/dependabot.yml is what keeps the pair current for
+    # patch/minor bumps, but ignores majors on purpose - checkout v4->v7 and
+    # cache v4->v6 below were raised by hand on 2026-09-27, for the Node 20
+    # Actions runtime deprecation
+    # (https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/):
+    # the old pins were being silently forced onto Node 24 already.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Set up Elixir
       uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
@@ -33,7 +41,7 @@ jobs:
         otp-version: '29.0'    # [Required] Define the Erlang/OTP version
 
     - name: Restore dependencies and build cache
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           deps
