@@ -403,12 +403,74 @@ defmodule OpenResultsWeb.Tournament do
 
   @doc """
   Whether a round is live: its results are public and at least one of its
-  boards has no result yet. A withheld round is never live - nothing about
-  its results is public, including how many are in.
+  boards has no result yet and is not postponed. A withheld round is never
+  live - nothing about its results is public, including how many are in.
+
+  A postponed game (`postponed?/1`) is left out on purpose. It has no
+  result and will not have one for days or weeks, and counting it would
+  keep its round "Live" - and the page polling fast for it - until the two
+  players finally sit down, long after everything else in the round is in.
   """
   def live_round?(round) do
-    {reported, total} = results_progress(round)
-    results_public?(round) and reported < total
+    results_public?(round) and
+      Enum.any?(boards(round), &(not is_binary(Map.get(&1, "result")) and not postponed?(&1)))
+  end
+
+  @doc """
+  Whether a board is a postponed game still to be played -
+  `boards[].postponed` in `docs/snapshot-schema.md`.
+
+  Only a literal `true` counts, and only on a board with no result: the
+  flag is present exactly while the game is still to be played, so a board
+  that somehow carries both is read by its result, which is the thing that
+  actually happened.
+  """
+  def postponed?(board) when is_map(board),
+    do: Map.get(board, "postponed") == true and not is_binary(Map.get(board, "result"))
+
+  def postponed?(_not_a_board), do: false
+
+  @doc """
+  The date the two players agreed to play a postponed game, as the ISO string
+  it arrived as, or `nil` - absent, not postponed, or not a string. Not a
+  deadline: the arbiter enters it when the players have fixed one.
+  """
+  def postponed_date(board) do
+    if postponed?(board), do: string(board, "postponed_date")
+  end
+
+  @doc """
+  How many of a team match's boards are postponed games still to be played -
+  `matches[].postponed_boards`. `0` when absent or not a positive integer.
+  While it is above zero the match's `game_points` and `match_points` are
+  provisional: OpenPairings counts each postponed board as a draw until it is
+  played. Neither is recomputed here.
+  """
+  def match_postponed_boards(match) when is_map(match) do
+    case Map.get(match, "postponed_boards") do
+      n when is_integer(n) and n > 0 -> n
+      _absent_or_junk -> 0
+    end
+  end
+
+  def match_postponed_boards(_not_a_match), do: 0
+
+  @doc """
+  Whether the published standings are provisional because a postponed game
+  in the rounds they cover is still to be played, as `{provisional?, count}` -
+  `standings.provisional` and `standings.postponed_games`. `count` is `nil`
+  when the flag arrives without a usable number.
+  """
+  def standings_provisional(payload) do
+    standings = standings(payload)
+
+    count =
+      case Map.get(standings, "postponed_games") do
+        n when is_integer(n) and n > 0 -> n
+        _absent_or_junk -> nil
+      end
+
+    {Map.get(standings, "provisional") == true, count}
   end
 
   @doc """
@@ -855,6 +917,8 @@ defmodule OpenResultsWeb.Tournament do
       opponent: nil,
       opponent_no: nil,
       result: nil,
+      postponed: false,
+      postponed_date: nil,
       bye: nil,
       points: nil
     }
@@ -897,6 +961,10 @@ defmodule OpenResultsWeb.Tournament do
         opponent: Map.get(index, opponent_no),
         opponent_no: opponent_no,
         result: result,
+        # A postponed game has no result and so no points yet, and the running
+        # score stops at it exactly as it stops at any game with no result.
+        postponed: postponed?(board),
+        postponed_date: postponed_date(board),
         points: points
     }
   end

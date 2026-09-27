@@ -1298,7 +1298,13 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
               <span :if={tag.white?} class="visually-hidden">{gettext("matches your filter")}</span>
             </td>
-            <td :if={@results?} class="num"><.result token={board["result"]} /></td>
+            <td :if={@results?} class="num">
+              <.result
+                token={board["result"]}
+                postponed={Tournament.postponed?(board)}
+                postponed_date={postponed_date(@show, board)}
+              />
+            </td>
             <td class={tag.black? && "pairing-match"} aria-current={tag.black? && "true"}>
               <.player_link
                 slug={@slug}
@@ -1416,7 +1422,13 @@ defmodule OpenResultsWeb.TournamentHTML do
                             detail
                           />
                         </td>
-                        <td :if={@results?} class="num"><.result token={board["result"]} /></td>
+                        <td :if={@results?} class="num">
+                          <.result
+                            token={board["result"]}
+                            postponed={Tournament.postponed?(board)}
+                            postponed_date={postponed_date(@show, board)}
+                          />
+                        </td>
                         <td>
                           <.player_link
                             slug={@slug}
@@ -1448,15 +1460,30 @@ defmodule OpenResultsWeb.TournamentHTML do
     round |> Tournament.boards() |> Enum.filter(&(&1["board"] in numbers))
   end
 
+  @doc """
+  A match's game points, and its match points when there are any.
+
+  While any of the match's boards is a postponed game still to be played
+  (`matches[].postponed_boards`), both numbers are OpenPairings' provisional
+  ones - each postponed board counted as a draw - and the score says how many
+  boards are still pending rather than reading as final. Nothing is
+  recomputed: the numbers shown are the ones that arrived.
+  """
   attr :match, :map, required: true
 
   def match_score(assigns) do
+    assigns = assign(assigns, :pending, Tournament.match_postponed_boards(assigns.match))
+
     ~H"""
     <%= case {@match["game_points"], @match["match_points"]} do %>
       <% {nil, _} -> %>
         <span class="quiet">{gettext("not yet published")}</span>
       <% {%{"a" => a, "b" => b}, mp} -> %>
-        {number(a)} - {number(b)}
+        {number(a)} - {number(b)}<span :if={@pending > 0} class="match-pending">, {ngettext(
+          "1 board pending",
+          "%{count} boards pending",
+          @pending
+        )}</span>
         <span :if={mp} class="quiet">
           ({number(mp["a"])}-{number(mp["b"])} {gettext("MP")})
         </span>
@@ -1547,6 +1574,36 @@ defmodule OpenResultsWeb.TournamentHTML do
       {gettext("Results for round %{round} are not published yet.",
         round: Tournament.round_label(@payload, n)
       )}
+    </p>
+    """
+  end
+
+  @doc """
+  One line saying the standings are provisional, when a postponed game in the
+  rounds they cover is still to be played - `standings.provisional` and
+  `standings.postponed_games`. OpenPairings counts each such game as a draw
+  until it is played, so the table is right for now and will move; the line
+  says both. Nothing when the standings are final.
+  """
+  attr :payload, :map, required: true
+
+  def provisional_standings_note(assigns) do
+    {provisional?, count} = Tournament.standings_provisional(assigns.payload)
+    assigns = assign(assigns, provisional?: provisional?, count: count)
+
+    ~H"""
+    <p :if={@provisional?} id="standings-provisional" class="footnote standings-provisional">
+      <%= if @count do %>
+        {ngettext(
+          "Provisional: 1 postponed game is still to be played and counts as a draw until it is.",
+          "Provisional: %{count} postponed games are still to be played and count as draws until they are.",
+          @count
+        )}
+      <% else %>
+        {gettext(
+          "Provisional: postponed games are still to be played and count as draws until they are."
+        )}
+      <% end %>
     </p>
     """
   end
@@ -1734,7 +1791,13 @@ defmodule OpenResultsWeb.TournamentHTML do
                   detail
                 />
               </td>
-              <td :if={@results?} class="num"><.result token={board["result"]} /></td>
+              <td :if={@results?} class="num">
+                <.result
+                  token={board["result"]}
+                  postponed={Tournament.postponed?(board)}
+                  postponed_date={postponed_date(@show, board)}
+                />
+              </td>
               <td>
                 <.player_link
                   slug={@slug}
@@ -2070,7 +2133,13 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <td :if={@show.standings} class="num">
                   <.score points={@totals[entry.opponent_no]} />
                 </td>
-                <td class="num"><.result token={entry.result} /></td>
+                <td class="num">
+                  <.result
+                    token={entry.result}
+                    postponed={entry.postponed}
+                    postponed_date={if(@show.dates, do: entry.postponed_date)}
+                  />
+                </td>
               <% :bye -> %>
                 <%!-- The bye's label sits where the opponent's NAME sits, under
                       "Opponent", with the cells before it left blank - the way
@@ -2619,23 +2688,53 @@ defmodule OpenResultsWeb.TournamentHTML do
   A game with no result yet is a hyphen rather than a blank, because a blank
   cell in a pairing list reads as a board nobody has typed in, which is a
   different thing from a game still in progress.
+
+  A postponed game - one the arbiter paired and the players will play later,
+  `boards[].postponed` - says so in words instead, with the date the players
+  agreed when there is one. The caller passes the date only where the
+  arbiter's "dates" tick allows it (see `postponed_date/2`), because it is the
+  same kind of fact as a round's date, which that tick already hides. Once
+  the game is played the next snapshot carries its result and no flag, and
+  the token simply takes the label's place.
   """
   attr :token, :any, required: true
+  attr :postponed, :boolean, default: false, doc: "`Tournament.postponed?/1` for the board"
+  attr :postponed_date, :string, default: nil, doc: "the agreed date, already gated"
 
   def result(assigns) do
     {base, note} = Tournament.result_parts(assigns.token)
-    assigns = assigns |> assign(:base, base) |> assign(:note, note_label(note))
+
+    assigns =
+      assigns
+      |> assign(:base, base)
+      |> assign(:note, note_label(note))
+      |> assign(:postponed, is_nil(base) and assigns.postponed)
 
     ~H"""
     <span class="result">
       <span :if={@base} class="token">{@base}</span>
-      <span :if={is_nil(@base)} class="unreported" title={gettext("not yet reported")}>
+      <span :if={@postponed} class="postponed">
+        {if @postponed_date,
+          do: gettext("Postponed, to be played %{date}", date: date(@postponed_date)),
+          else: gettext("Postponed")}
+      </span>
+      <span
+        :if={is_nil(@base) and not @postponed}
+        class="unreported"
+        title={gettext("not yet reported")}
+      >
         <.said_as words={gettext("not yet reported")}>-</.said_as>
       </span>
       <span :if={@note} class="note">{@note}</span>
     </span>
     """
   end
+
+  # The agreed date of a postponed board, or `nil` where the arbiter's "dates"
+  # tick is off: when a game is played is the same kind of fact as the round
+  # date that tick already hides, and a hidden date must not come back one
+  # board at a time.
+  defp postponed_date(show, board), do: if(show.dates, do: Tournament.postponed_date(board))
 
   # `Tournament.result_parts/1` names the marker; the wording is this
   # module's, the same division of labour the moduledoc sets out. A marker

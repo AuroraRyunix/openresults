@@ -39,6 +39,8 @@
     </span>
   </h2>
 
+  <.provisional_standings_note :if={not starting_rank?} payload={@payload} />
+
   <p :for={round <- live_rounds} class="live-line">
     <a href={~p"/t/#{@slug}/round/#{round["number"]}"}>
       {Tournament.round_heading(@payload, round["number"])}

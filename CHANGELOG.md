@@ -27,6 +27,23 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Postponed games say so.** A game the arbiter has postponed now
+  reads "Postponed" where its result would go, or "Postponed, to be played"
+  and the date when the players have agreed one, written the way the site
+  writes every other date (the date is left out when the arbiter hides
+  dates). This shows on the round page, the projector
+  view, a team match's board list and the player's round-by-round card. When
+  the game is played, its result simply takes the label's place.
+- [Feature] **Provisional scores are marked.** A team match with a postponed
+  board shows its score with "1 board pending" beside it, on the round page
+  and the team page, so it does not read as final. While a postponed game is
+  still to be played, the standings page says the standings are provisional,
+  how many games are postponed, and that those count as draws until they are
+  played.
+- [Change] **A round waiting only on postponed games is no longer "Live".**
+  It used to stay live, and keep the page refreshing quickly, until the
+  postponed game was played, which could be weeks later.
+
 ## [0.17.1] - 2026-09-26
 
 - [Security] **Two dependency advisories closed.** mint 1.10.0 -> 1.10.1
