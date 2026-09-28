@@ -27,6 +27,11 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-09-28
+
+- [Security] **Mint 1.11.0**, fixing three advisories in the HTTP client
+  (EEF-CVE-2026-91043, -92103, -94194).
+
 - [Fix] **The result column no longer disappears.** A round's pairings
   table, a team match's own table and its per-board list, and the projector
   view used to drop the Result/Score column entirely whenever no result was
