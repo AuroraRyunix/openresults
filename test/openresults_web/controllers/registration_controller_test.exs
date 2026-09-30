@@ -112,7 +112,11 @@ defmodule OpenResultsWeb.RegistrationControllerTest do
                "registration[club]",
                "registration[title]",
                "registration[birth_year]",
-               "registration[requested_byes][]"
+               "registration[national_id]",
+               "registration[requested_byes][]",
+               # The honeypot - named, so a bot fills it, and never stored:
+               # `Entry` does not cast it, and a filled one refuses the post.
+               "registration[website]"
              ]
     end
 
@@ -161,18 +165,14 @@ defmodule OpenResultsWeb.RegistrationControllerTest do
       assert LazyHTML.query(document, "form#registration-form") |> Enum.count() == 1
     end
 
-    test "is deliberately not linked from the tournament's own pages", %{conn: conn, slug: slug} do
-      # It was, and the link came down on 2026-08-29 while the form is
-      # unfinished: a link on a public page is a promise, and somebody
-      # following it would fill the form in and believe they had entered.
-      #
-      # The route, the gate and the queue behind them are untouched, so an
-      # arbiter who shares the address directly still gets a working form -
-      # which is the difference between "not advertised" and "switched off".
+    test "is linked from the tournament's own pages", %{conn: conn, slug: slug} do
+      # The link came down on 2026-08-29 while the form was unfinished and
+      # went back up on 2026-09-30 with the rest of the workflow. Every page
+      # of the tournament carries it, because the masthead does.
       for path <- [~p"/t/#{slug}", ~p"/t/#{slug}/round/1", ~p"/t/#{slug}/player/1"] do
         html = conn |> get(path) |> html_response(200)
 
-        refute html =~ ~s|href="/t/#{slug}/register"|, "#{path} still links to the form"
+        assert html =~ ~s|href="/t/#{slug}/register"|, "#{path} does not link to the form"
       end
 
       assert conn |> get(~p"/t/#{slug}/register") |> html_response(200) =~ "registration-form"

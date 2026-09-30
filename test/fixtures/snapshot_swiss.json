@@ -973,6 +973,10 @@
     "listed": true,
     "match_format": false,
     "name": "Gent Spring Open 2026",
+    "registration": {
+      "list_public": false,
+      "taken": 10
+    },
     "registration_open": true,
     "rounds_count": 5,
     "slug": "gent-spring-open-2026",

@@ -120,6 +120,22 @@ defmodule OpenResults.Registrations do
   end
 
   @doc """
+  How many entries arrived for `slug` after `since` - by this server's own
+  clock, which stamped both the entries and the snapshot.
+
+  What the form adds to a snapshot's `taken` before deciding a capped field
+  is full: entries that arrived after the arbiter's machine last published
+  are not in its count yet. See `OpenResultsWeb.Tournament.registration_state/3`.
+  """
+  @spec count_since(String.t(), DateTime.t()) :: non_neg_integer()
+  def count_since(slug, %DateTime{} = since) when is_binary(slug) do
+    Repo.aggregate(
+      from(r in Registration, where: r.tournament_slug == ^slug and r.received_at > ^since),
+      :count
+    )
+  end
+
+  @doc """
   Deletes every registration held for a tournament, returning how many went.
 
   Part of a takedown, and the part that actually removes personal data: a

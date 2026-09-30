@@ -274,6 +274,10 @@ that should not have been taken lands in a queue an arbiter reads and
 rejects, while a form that is shut when it should be open turns a real person
 away and tells nobody.
 
+**`tournament.registration`** - the form's window, the size of the field and
+whether the entry list is shown on the form. Added 2026-09-30; see "The entry
+form's own settings" under "Registration, the other direction".
+
 **`standings.tiebreaks`** - declared once, ordered, with a human label.
 `rows[].tiebreaks` is positional against it. This is what lets the renderer
 stay dumb: it does not know what BH means, how many there are, or what order
@@ -792,6 +796,9 @@ decides. The server never writes to a tournament.
     "fide_id": 2503014,
     "club": "KGSRL",
     "email": "...",
+    "title": "WFM",
+    "birth_year": 1994,
+    "national_id": "12345",
     "requested_byes": [3, 4]
   }
 }
@@ -800,3 +807,55 @@ decides. The server never writes to a tournament.
 `email` is the one piece of personal data the server holds, because the
 arbiter needs to reach the player. It is not part of any snapshot and is
 never rendered.
+
+`title` and `birth_year` travel too (added 2026-08-29), and so does
+**`national_id`** (added 2026-09-30): the member number at the player's
+national federation - in Belgium the KBSB/FRBE number. A **string**, not a
+number, because a national id is an identifier rather than a quantity:
+KBSB's "G licences" are negative numbers that are different people from the
+positive number with the same digits, and other federations use letters. The
+arbiter's machine looks it up in its own national list when the entry is
+accepted, exactly as it looks up `fide_id` in the FIDE list.
+
+### The entry form's own settings: `tournament.registration`
+
+Added 2026-09-30. An object in the snapshot's `tournament`, beside
+`registration_open`, carrying what the arbiter decided about the form. Every
+key is optional. For the four that restrict the form **an absent key means no
+restriction** - the same reading `registration_open` gives silence, for the
+same reason: a snapshot published before the key existed took entries without
+it. `list_public` is the exception and reads the other way, below.
+
+```json
+"registration": {
+  "opens_at": "2026-02-01T08:00:00Z",
+  "closes_at": "2026-02-28T22:00:00Z",
+  "max_players": 60,
+  "taken": 42,
+  "list_public": true
+}
+```
+
+- `opens_at`, `closes_at` - an ISO 8601 instant in UTC. The form takes
+  entries from `opens_at` (inclusive) until `closes_at` (exclusive). Judged
+  by the server's clock at the moment of the request, so the form opens and
+  closes on time without the arbiter's machine being online to republish.
+- `max_players` - the size of the field. The form stops taking entries once
+  `taken` plus the entries this server received after the snapshot reaches
+  it. Counting what arrived since is what keeps the cap honest while the
+  arbiter's laptop is closed: those entries are not in `taken` yet.
+- `taken` - players already on the entry list **plus** entries waiting on
+  the arbiter's machine for a decision. A count and nothing more; no name
+  of an undecided entry ever travels in a snapshot.
+- `list_public` - whether the form page may list who has entered so far.
+  The list is `players[]`, which the snapshot already publishes, rendered
+  with the same `display` switches as every other page. Undecided entries
+  appear only as a count, never by name: a name typed into a public form is
+  not something anybody has checked yet. **Absent means not listed**: this key
+  decides whether a page shows names in a place the arbiter never chose to
+  put them, and the arbiter's app sends it `false` unless they switch it on.
+
+`registration_open: false` still closes the form outright, whatever this
+object says. None of it is enforced anywhere but on this server's form, and
+none of it changes what the pull returns: an entry that is already in the
+queue is the arbiter's to decide.

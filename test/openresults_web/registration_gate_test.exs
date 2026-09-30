@@ -57,8 +57,6 @@ defmodule OpenResultsWeb.RegistrationGateTest do
     test "and the tournament page shows no way in", %{conn: conn, slug: slug} do
       html = conn |> get(~p"/t/#{slug}") |> html_response(200)
 
-      # True of an open tournament too since the link came down - kept because
-      # it is the assertion that will matter again the day it goes back.
       refute html =~ "Enter this tournament"
       # The tournament itself is still perfectly readable - closing entries is
       # not taking the event down.
@@ -81,12 +79,12 @@ defmodule OpenResultsWeb.RegistrationGateTest do
       assert conn |> get(~p"/t/#{slug}/register") |> html_response(200) =~ "registration-form"
     end
 
-    test "but the tournament page does not advertise it", %{conn: conn, slug: slug} do
-      # The link came down on 2026-08-29: the form is not finished, and a link
-      # on a public page is a promise - somebody follows it, fills it in, and
-      # believes they have entered. The gate below it is unchanged, so this is
-      # about what is offered rather than about what is allowed.
-      refute conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Enter this tournament"
+    test "and the tournament page links to it", %{conn: conn, slug: slug} do
+      # Down from 2026-08-29 while the form was unfinished, back on
+      # 2026-09-30. Gated on the switch alone - the window and the cap are
+      # the form page's to explain, because this header is cached per
+      # snapshot and a clock-dependent link would go stale in the cache.
+      assert conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Enter this tournament"
     end
   end
 
@@ -100,6 +98,11 @@ defmodule OpenResultsWeb.RegistrationGateTest do
       # tournament's form the moment this deployed, with nothing in either
       # app to explain why.
       assert conn |> get(~p"/t/#{slug}/register") |> html_response(200) =~ "registration-form"
+
+      # But not advertised: an arbiter whose last snapshot is that old never
+      # saw an entry-form switch, and a link would invite entries into a
+      # queue nobody knows to read. See `Tournament.entry_link?/1`.
+      refute conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Enter this tournament"
     end
 
     test "and an explicit true is still open, not merely 'not false'", %{conn: conn} do

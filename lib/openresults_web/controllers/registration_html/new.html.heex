@@ -15,12 +15,18 @@
     )}
   </p>
 
+  <.entry_facts payload={@payload} places={@places} />
+
   <.entry_form
     form={@form}
     slug={@slug}
     rounds={@rounds}
     alarm={@alarm}
+    trap={@trap}
+    trap_name={@trap_name}
     fide_search?={@fide_search?}
     fide_url={~p"/t/#{@slug}/fide"}
   />
 </section>
+
+<.entry_list :if={Tournament.entry_list_public?(@payload)} payload={@payload} places={@places} />

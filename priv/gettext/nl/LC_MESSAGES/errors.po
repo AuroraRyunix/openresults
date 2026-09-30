@@ -56,6 +56,9 @@ msgstr "een FIDE-ID is het nummer op uw FIDE-profiel - alleen cijfers"
 msgid "a club name is at most 100 characters"
 msgstr "een clubnaam telt hoogstens 100 tekens"
 
+msgid "a national ID is the member number your federation gave you - digits only"
+msgstr "een nationaal ID is het lidnummer dat uw federatie u gaf - alleen cijfers"
+
 msgid "this tournament is not taking bye requests"
 msgstr "dit toernooi neemt geen byeverzoeken aan"
 
