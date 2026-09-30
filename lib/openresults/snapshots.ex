@@ -101,10 +101,19 @@ defmodule OpenResults.Snapshots do
       received_at = Keyword.get_lazy(opts, :received_at, &DateTime.utc_now/0)
       key = Keyword.get(opts, :key)
 
-      case Keyword.get(opts, :installation) do
-        nil -> ingest_as_operator(slug, payload, key, received_at)
-        installation -> ingest_as_installation(slug, payload, key, received_at, installation)
-      end
+      result =
+        case Keyword.get(opts, :installation) do
+          nil -> ingest_as_operator(slug, payload, key, received_at)
+          installation -> ingest_as_installation(slug, payload, key, received_at, installation)
+        end
+
+      # After the commit and after `LatestIdCache` has the new id, so a hall
+      # display re-reading on this message finds the document it announces.
+      # An unchanged repeat is announced too: it costs a listener one cache
+      # hit, and deciding "unchanged" here would be a second copy of the rule.
+      with {:ok, _snapshot} <- result, do: OpenResults.TournamentEvents.changed(slug)
+
+      result
     end
   end
 

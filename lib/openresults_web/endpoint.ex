@@ -1,19 +1,16 @@
 defmodule OpenResultsWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :openresults
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
-  @session_options [
-    store: :cookie,
-    key: "_openresults_key",
-    signing_salt: "c8U4zoRG",
-    same_site: "Lax"
-  ]
-
+  # The hall display's socket (`OpenResultsWeb.HallLive`), the one public
+  # page with a connection. Declared WITHOUT the session connect-info on
+  # purpose: that option makes LiveView check a CSRF token against a session
+  # cookie, and the public side has neither - so every connection would be
+  # refused as stale and the page would reload itself forever. Nothing on a
+  # public LiveView acts for anyone, so there is nothing for a CSRF check to
+  # protect; `check_origin` still keeps other sites' pages off the socket.
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options]],
-    longpoll: [connect_info: [session: @session_options]]
+    websocket: true,
+    longpoll: true
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -65,7 +62,7 @@ defmodule OpenResultsWeb.Endpoint do
   # and is plugged in that pipeline alone - see
   # `OpenResultsWeb.Plugs.AdminSession` - so a public route that tried to
   # use a session would now fail loudly instead of quietly setting a cookie.
-  # (`@session_options` above stays for the LiveView socket's declaration,
-  # which nothing on this site connects to.)
+  # (The public session options that used to sit at the top of this file
+  # went with the hall display's socket, which is declared without them.)
   plug OpenResultsWeb.Router
 end

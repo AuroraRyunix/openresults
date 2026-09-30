@@ -11,8 +11,8 @@ defmodule OpenResultsWeb.VisibilityTest do
 
   The surfaces, found by reading the router: the four tournament pages
   (standings, cross-table, round, player card), the entry form and its FIDE
-  search, the report form, the open JSON read, the front page and the
-  cross-tournament player page. There is no sitemap, feed or other listing.
+  search, the report form, the hall display, the open JSON read, the front
+  page and the cross-tournament player page. There is no sitemap, feed or other listing.
   """
 
   use OpenResultsWeb.ConnCase, async: false
@@ -57,6 +57,7 @@ defmodule OpenResultsWeb.VisibilityTest do
     {:get, "/t/SLUG/register"},
     {:get, "/t/SLUG/fide?q=mu"},
     {:get, "/t/SLUG/report"},
+    {:get, "/t/SLUG/hall"},
     {:get, "/api/tournaments/SLUG"}
   ]
 
