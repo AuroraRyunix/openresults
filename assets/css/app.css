@@ -934,6 +934,42 @@ mark {
   margin-top: 1.25rem;
 }
 
+/* The window and the size of the field, above the form: what somebody wants
+   to know before they start typing. */
+.entry-facts {
+  margin: 0.75rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--quiet);
+  font-size: 0.875rem;
+}
+
+.entry-facts li + li {
+  margin-top: 0.2rem;
+}
+
+/* The honeypot. Off-screen rather than `display: none`, which the bots worth
+   stopping check for; `aria-hidden` and `tabindex="-1"` keep it away from a
+   keyboard and a screen reader. Shown - this class removed - only when it
+   came back filled, so a person can see what to clear. */
+.trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.entry-list {
+  margin-top: 0.5rem;
+}
+
+.entry-list .title {
+  margin-right: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .field {
   margin: 0 0 1.25rem;
   border: 0;

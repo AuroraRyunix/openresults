@@ -45,6 +45,36 @@ Each entry is tagged so a version can be skimmed:
   (`tournament.hall`); a tournament published by an older OpenPairings gets
   the defaults. Everything the arbiter hides from spectators stays hidden
   here, and a tournament hidden by moderation leaves the screen.
+- [Feature] **The entry form is back on the tournament's pages.** "Enter
+  this tournament" shows in the header of every page of a tournament whose
+  arbiter has opened entries. It came down on 2026-08-29 while the workflow
+  was unfinished; the arbiter's side now has a review queue on the Players
+  page to match.
+- [Feature] **Entries can open and close on time, and a field can be
+  capped.** When the arbiter sets an opening time, a closing time or a
+  maximum number of players, the form says so: when entries close and how
+  many places are taken, or - once shut - that entries are not open yet,
+  closed on a given date, or that the field is full. The window is judged
+  by this site's clock, so it opens and closes on time even while the
+  arbiter's computer is off. A full field counts entries that arrived after
+  the arbiter last published, so it cannot be oversubscribed while their
+  laptop is closed.
+- [Feature] **Who has entered so far**, on the entry form and the closed
+  page, when the arbiter allows it: the players already on the entry list,
+  with the columns the arbiter shows everywhere else. Entries still waiting
+  for a decision are never listed by name, and no email address is ever
+  shown.
+- [Feature] **National ID on the entry form** - the member number at the
+  player's own federation (in Belgium the KBSB/FRBE number), which the
+  arbiter's app looks up in its national list when it accepts the entry.
+  Picking yourself in the FIDE search now also fills it in, with the club,
+  where the arbiter's computer knows them.
+- [Security] **A honeypot on the entry form, and one that cannot lose an
+  entry quietly.** A hidden field that bots fill in; when it arrives
+  filled, nothing is stored and the form comes back with everything that
+  was typed, the field visible and a sentence saying to empty it - so a
+  person whose browser filled it by itself can still send their entry. The
+  per-address rate limit is unchanged.
 
 ## [0.18.1] - 2026-09-28
 

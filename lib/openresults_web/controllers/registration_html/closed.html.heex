@@ -1,19 +1,61 @@
 <header class="masthead">
-  <h1>{gettext("Entries are closed")}</h1>
+  <h1>{@page_title}</h1>
 </header>
 
-<section>
-  <p class="empty">
-    {gettext(
-      "The organisers have closed entries for this tournament, so this form is no longer taking them. Nothing you typed has been stored."
-    )}
-  </p>
-
-  <p class="footnote">
-    {gettext(
-      "If you were told to enter here, contact the organisers directly - they can still add you by hand, and they are the only ones who can. Entries sometimes close for a while and open again, so it is worth checking back."
-    )}
-  </p>
+<section id="entries-closed" data-reason={@reason}>
+  <%= case @reason do %>
+    <% :not_yet -> %>
+      <p class="empty">
+        {gettext(
+          "The organisers of %{tournament} have not opened entries yet. Nothing you typed has been stored.",
+          tournament: Tournament.name(@payload)
+        )}
+      </p>
+      <p :if={Tournament.registration_opens_at(@payload)} class="footnote">
+        {gettext("Entries open on %{when}.",
+          when: instant(Tournament.registration_opens_at(@payload))
+        )}
+      </p>
+    <% :ended -> %>
+      <p class="empty">
+        {gettext(
+          "Entries for %{tournament} closed on %{when}, so this form is no longer taking them. Nothing you typed has been stored.",
+          tournament: Tournament.name(@payload),
+          when: instant(Tournament.registration_closes_at(@payload))
+        )}
+      </p>
+      <p class="footnote">
+        {gettext(
+          "If you were told to enter here, contact the organisers directly - they can still add you by hand, and they are the only ones who can."
+        )}
+      </p>
+    <% :full -> %>
+      <p class="empty">
+        {gettext(
+          "All %{max} places in %{tournament} are taken or waiting for the arbiter, so this form is not taking more entries. Nothing you typed has been stored.",
+          max: Tournament.max_players(@payload),
+          tournament: Tournament.name(@payload)
+        )}
+      </p>
+      <p class="footnote">
+        {gettext(
+          "Places can come free: the arbiter turns some entries down, and the form opens again by itself when they do. The organisers can also tell you whether there is a waiting list."
+        )}
+      </p>
+    <% _closed -> %>
+      <p class="empty">
+        {gettext(
+          "The organisers have closed entries for this tournament, so this form is no longer taking them. Nothing you typed has been stored."
+        )}
+      </p>
+      <p class="footnote">
+        {gettext(
+          "If you were told to enter here, contact the organisers directly - they can still add you by hand, and they are the only ones who can. Entries sometimes close for a while and open again, so it is worth checking back."
+        )}
+      </p>
+  <% end %>
 
   <p><a href={@back}>{gettext("Back to the tournament")}</a></p>
 </section>
+
+<.entry_list :if={Tournament.entry_list_public?(@payload)} payload={@payload} places={@places} />

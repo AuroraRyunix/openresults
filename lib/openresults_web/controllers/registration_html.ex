@@ -41,6 +41,8 @@ defmodule OpenResultsWeb.RegistrationHTML do
   attr :fide_url, :string, default: nil
   attr :rounds, :list, required: true, doc: "the rounds a bye may be requested for"
   attr :alarm, :string, default: nil, doc: "a failure that is not about one field"
+  attr :trap, :string, default: nil, doc: "what the honeypot held, when it came back filled"
+  attr :trap_name, :string, default: "website"
 
   def entry_form(assigns) do
     ~H"""
@@ -181,7 +183,40 @@ defmodule OpenResultsWeb.RegistrationHTML do
         autocomplete="bday-year"
       />
 
+      <.field
+        field={@form[:national_id]}
+        type="text"
+        label={gettext("National ID")}
+        hint={
+          gettext(
+            "Your member number at your national federation, if you have one - in Belgium, your KBSB/FRBE number."
+          )
+        }
+        maxlength="21"
+      />
+
       <.byes_field :if={@rounds != []} field={@form[:requested_byes]} rounds={@rounds} />
+
+      <%!-- The honeypot - see `RegistrationController`'s `@trap`. Hidden from
+            people by `.trap` (off-screen, not `display: none`, which some
+            bots check for) and from assistive technology by `aria-hidden`
+            and `tabindex="-1"`. When it comes back filled it is shown, with
+            its own label, because a person whose browser filled it has to be
+            able to see what to clear. --%>
+      <div
+        class={["field", is_nil(@trap) && "trap", @trap && "field-wrong"]}
+        aria-hidden={is_nil(@trap) && "true"}
+      >
+        <label for="registration_trap">{gettext("Leave this empty")}</label>
+        <input
+          type="text"
+          id="registration_trap"
+          name={"registration[#{@trap_name}]"}
+          value={@trap || ""}
+          autocomplete="off"
+          tabindex={is_nil(@trap) && "-1"}
+        />
+      </div>
 
       <div class="actions">
         <button type="submit" id="registration-submit">{gettext("Send to the arbiter")}</button>
@@ -196,6 +231,133 @@ defmodule OpenResultsWeb.RegistrationHTML do
     </.form>
     """
   end
+
+  @doc """
+  What a person should know before filling the form in: when entries close,
+  and how full the field is. Nothing when the arbiter set neither.
+  """
+  attr :payload, :map, required: true
+  attr :places, :map, default: nil, doc: "%{taken: n, max: n}, or nil when uncapped"
+
+  def entry_facts(assigns) do
+    assigns = assign(assigns, :closes_at, Tournament.registration_closes_at(assigns.payload))
+
+    ~H"""
+    <ul :if={@closes_at || @places} class="entry-facts" id="entry-facts">
+      <li :if={@closes_at}>
+        {gettext("Entries close on %{when}.", when: instant(@closes_at))}
+      </li>
+      <li :if={@places} id="entry-places">
+        {gettext("%{taken} of %{max} places taken, counting entries the arbiter has not decided yet.",
+          taken: @places.taken,
+          max: @places.max
+        )}
+      </li>
+    </ul>
+    """
+  end
+
+  @doc """
+  Who has entered so far, when the arbiter allows it.
+
+  Built from `players[]` - the entry list the snapshot already publishes -
+  with the same `display` switches as the standings, so a column the arbiter
+  hid there is hidden here. Entries still waiting for the arbiter are a
+  count and never a name: a name typed into a public form is not something
+  anybody has checked yet. And no email, ever - `players[]` has none.
+  """
+  attr :payload, :map, required: true
+  attr :places, :map, default: nil
+
+  def entry_list(assigns) do
+    payload = assigns.payload
+
+    assigns =
+      assigns
+      |> assign(:players, entrants(payload))
+      |> assign(:rating?, Tournament.show?(payload, "rating"))
+      |> assign(:title?, Tournament.show?(payload, "title"))
+      |> assign(:federation?, Tournament.show?(payload, "federation"))
+      |> assign(:club?, Tournament.show?(payload, "club"))
+
+    ~H"""
+    <section id="entry-list" aria-labelledby="entry-list-heading">
+      <h2 id="entry-list-heading">
+        {gettext("Entered so far")}
+        <span class="quiet">{length(@players)}</span>
+      </h2>
+
+      <p :if={@players == []} class="empty">
+        {gettext("Nobody is on the entry list yet.")}
+      </p>
+
+      <table :if={@players != []} class="standings entry-list">
+        <thead>
+          <tr>
+            <th scope="col" class="num">#</th>
+            <th scope="col">{gettext("Name")}</th>
+            <th :if={@rating?} scope="col" class="num">{gettext("Rating")}</th>
+            <th :if={@federation?} scope="col">{gettext("Federation")}</th>
+            <th :if={@club?} scope="col">{gettext("Club")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={{player, index} <- Enum.with_index(@players, 1)}>
+            <td class="num">{index}</td>
+            <td>
+              <span :if={@title? and is_binary(player["title"])} class="title">
+                {player["title"]}
+              </span>
+              {player["name"]}
+            </td>
+            <td :if={@rating?} class="num">{rating(player["rating"])}</td>
+            <td :if={@federation?}>{player["federation"]}</td>
+            <td :if={@club?}>{player["club"]}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="footnote">
+        {gettext(
+          "Players the arbiter has entered. Entries still waiting for a decision are not listed by name."
+        )}
+      </p>
+    </section>
+    """
+  end
+
+  # Strongest first, the way an entry list is usually read, then by name.
+  # A hidden rating still sorts: the order says no more than the pairing
+  # numbers on the round pages already do.
+  defp entrants(payload) do
+    payload
+    |> Tournament.players()
+    |> Enum.filter(&is_binary(&1["name"]))
+    |> Enum.sort_by(fn player ->
+      rating = if is_integer(player["rating"]), do: player["rating"], else: 0
+      {-rating, player["name"]}
+    end)
+  end
+
+  defp rating(value) when is_integer(value) and value > 0, do: value
+  defp rating(_unrated), do: nil
+
+  @doc """
+  An instant from the snapshot, as a date and a time in UTC.
+
+  UTC and said so: the arbiter set it on a machine this server knows nothing
+  about, and a time with no zone beside it is a time somebody reads wrong.
+  """
+  def instant(%DateTime{} = at) do
+    # `Tournament` parses these with `DateTime.from_iso8601/1`, which always
+    # answers in UTC whatever offset the string carried.
+    gettext("%{date}, %{time} UTC",
+      date: date(Date.to_iso8601(DateTime.to_date(at))),
+      time: Calendar.strftime(at, "%H:%M")
+    )
+  end
+
+  def instant(_absent), do: nil
 
   @doc """
   One labelled field, with its hint and whatever went wrong with it.

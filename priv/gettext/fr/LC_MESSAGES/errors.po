@@ -56,6 +56,9 @@ msgstr "un ID FIDE est le numéro figurant sur votre profil FIDE - chiffres uniq
 msgid "a club name is at most 100 characters"
 msgstr "un nom de club compte au maximum 100 caractères"
 
+msgid "a national ID is the member number your federation gave you - digits only"
+msgstr "un ID national est le numéro de membre que votre fédération vous a attribué - chiffres uniquement"
+
 msgid "this tournament is not taking bye requests"
 msgstr "ce tournoi n'accepte pas de demandes de bye"
 

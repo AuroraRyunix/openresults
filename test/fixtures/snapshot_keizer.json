@@ -228,6 +228,10 @@
     "listed": false,
     "match_format": false,
     "name": "Cercle d'Échecs Gent - Winteravond 2026",
+    "registration": {
+      "list_public": false,
+      "taken": 6
+    },
     "registration_open": false,
     "rounds_count": 3,
     "slug": "cercle-gent-winteravond-2026",

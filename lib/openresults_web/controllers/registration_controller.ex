@@ -36,18 +36,26 @@ defmodule OpenResultsWeb.RegistrationController do
   # phone - while making a script's thousandth POST cost ten minutes instead
   # of a millisecond.
   #
-  # A honeypot field was considered and rejected: it catches a naive bot, but
-  # it fails SILENTLY, and a password manager or an over-eager autofill
-  # filling the hidden box would throw away a real person's only attempt with
-  # no error. This form is one shot. It must never lose an entry quietly.
+  # A honeypot was first rejected because the usual kind fails SILENTLY: a
+  # password manager or an over-eager autofill filling the hidden box throws
+  # away a real person's only attempt with no error. This one does not fail
+  # silently - see `@trap` - so it is on.
   @rate_limit 5
   @rate_window_ms :timer.minutes(10)
+
+  # The honeypot: a field the page hides from people and a naive bot fills
+  # in. When it arrives filled, nothing is stored and the form comes back
+  # WITH EVERYTHING THE PERSON TYPED, the trap now visible and labelled
+  # "leave this empty", and a sentence saying so. A bot is stopped; a person
+  # whose browser autofilled it clears one box and sends again. It never
+  # loses an entry quietly, which was the objection to the usual kind.
+  @trap "website"
 
   @doc """
   `GET /t/:slug/register` - the entry form for a tournament that exists here.
   """
   def new(conn, %{"slug" => slug}) do
-    with_tournament(conn, slug, fn payload ->
+    with_tournament(conn, slug, fn conn, payload ->
       render_form(conn, slug, payload, Entry.new())
     end)
   end
@@ -93,7 +101,7 @@ defmodule OpenResultsWeb.RegistrationController do
         conn |> put_status(:not_found) |> json(%{"players" => []})
 
       snapshot ->
-        if Tournament.registration_open?(snapshot.payload) do
+        if registration_state(slug, snapshot) == :open do
           query = params |> Map.get("q", "") |> to_string()
           tempo = Tournament.info(snapshot.payload)["tempo"]
 
@@ -105,53 +113,87 @@ defmodule OpenResultsWeb.RegistrationController do
   end
 
   defp store(conn, slug, attrs) do
-    with_tournament(conn, slug, fn payload ->
+    with_tournament(conn, slug, fn conn, payload ->
       rounds = Tournament.round_slots(payload)
 
-      case attrs |> Entry.changeset(rounds) |> Ecto.Changeset.apply_action(:insert) do
-        {:ok, entry} ->
-          received_at = DateTime.utc_now()
-
-          case Registrations.ingest(Entry.to_payload(entry, slug, received_at),
-                 received_at: received_at
-               ) do
-            {:ok, _registration} ->
-              render(conn, :received,
-                page_title:
-                  gettext("Entry sent - %{tournament}", tournament: Tournament.name(payload)),
-                page_description: Meta.received(payload),
-                payload: payload,
-                slug: slug,
-                # The name only. The email is the one thing this server holds
-                # that a snapshot never carries, and a confirmation page is
-                # still a rendered page.
-                name: entry.name
-              )
-
-            {:error, :queue_full} ->
-              queue_full(conn, slug)
-
-            {:error, _unstorable} ->
-              # Unreachable in practice - the payload was built from the
-              # contract two lines ago - but a person who has just typed their
-              # details deserves a page that says what happened rather than a
-              # stack trace.
-              conn
-              |> put_status(:internal_server_error)
-              |> render_form(slug, payload, Entry.changeset(attrs, rounds),
-                alarm:
-                  gettext(
-                    "Something went wrong at our end and your entry was not stored. Your answers are still below - please send it again."
-                  )
-              )
-          end
-
-        {:error, changeset} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> render_form(slug, payload, changeset)
+      if trap_tripped?(attrs) do
+        # Nothing stored, everything kept, and said - see `@trap`.
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render_form(slug, payload, Entry.changeset(attrs, rounds),
+          trap: trap_value(attrs),
+          alarm:
+            gettext(
+              "Nothing has been sent. The box marked \"Leave this empty\" below has something in it - usually your browser filling it in by itself. Empty it and send the form again."
+            )
+        )
+      else
+        validate_and_store(conn, slug, payload, rounds, attrs)
       end
     end)
+  end
+
+  defp trap_tripped?(attrs) do
+    case Map.get(attrs, @trap) do
+      nil -> false
+      value when is_binary(value) -> String.trim(value) != ""
+      _something_else -> true
+    end
+  end
+
+  # What the trap held, to show back. Only ever a string: a crafted post can
+  # send a map here, and the page must still render.
+  defp trap_value(attrs) do
+    case Map.get(attrs, @trap) do
+      value when is_binary(value) -> value
+      _not_a_string -> ""
+    end
+  end
+
+  defp validate_and_store(conn, slug, payload, rounds, attrs) do
+    case attrs |> Entry.changeset(rounds) |> Ecto.Changeset.apply_action(:insert) do
+      {:ok, entry} ->
+        received_at = DateTime.utc_now()
+
+        case Registrations.ingest(Entry.to_payload(entry, slug, received_at),
+               received_at: received_at
+             ) do
+          {:ok, _registration} ->
+            render(conn, :received,
+              page_title:
+                gettext("Entry sent - %{tournament}", tournament: Tournament.name(payload)),
+              page_description: Meta.received(payload),
+              payload: payload,
+              slug: slug,
+              # The name only. The email is the one thing this server holds
+              # that a snapshot never carries, and a confirmation page is
+              # still a rendered page.
+              name: entry.name
+            )
+
+          {:error, :queue_full} ->
+            queue_full(conn, slug)
+
+          {:error, _unstorable} ->
+            # Unreachable in practice - the payload was built from the
+            # contract two lines ago - but a person who has just typed their
+            # details deserves a page that says what happened rather than a
+            # stack trace.
+            conn
+            |> put_status(:internal_server_error)
+            |> render_form(slug, payload, Entry.changeset(attrs, rounds),
+              alarm:
+                gettext(
+                  "Something went wrong at our end and your entry was not stored. Your answers are still below - please send it again."
+                )
+            )
+        end
+
+      {:error, changeset} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render_form(slug, payload, changeset)
+    end
   end
 
   # The form's own params, or nothing. A caller who posts `?registration=x`
@@ -172,6 +214,10 @@ defmodule OpenResultsWeb.RegistrationController do
       slug: slug,
       rounds: Tournament.round_slots(payload),
       alarm: Keyword.get(opts, :alarm),
+      # `nil` - the trap stays hidden - unless it came back filled, when it is
+      # shown with what was in it so the person can see what to clear.
+      trap: Keyword.get(opts, :trap),
+      trap_name: @trap,
       # Offered only where this deployment can actually reach an arbiter's
       # FIDE list. A search box that cannot search is worse than none: it
       # invites a click and answers nothing.
@@ -194,11 +240,40 @@ defmodule OpenResultsWeb.RegistrationController do
         )
 
       snapshot ->
-        if Tournament.registration_open?(snapshot.payload) do
-          render_fun.(snapshot.payload)
-        else
-          closed(conn, slug)
+        queued = queued_since(slug, snapshot)
+        conn = assign(conn, :places, places(snapshot.payload, queued))
+
+        case Tournament.registration_state(snapshot.payload, DateTime.utc_now(), queued) do
+          :open -> render_fun.(conn, snapshot.payload)
+          reason -> closed(conn, slug, snapshot.payload, reason)
         end
+    end
+  end
+
+  # The arbiter's switch, the window and the cap, judged now - see
+  # `Tournament.registration_state/3`.
+  defp registration_state(slug, snapshot) do
+    Tournament.registration_state(
+      snapshot.payload,
+      DateTime.utc_now(),
+      queued_since(slug, snapshot)
+    )
+  end
+
+  # Entries that arrived after the snapshot was stored, which its `taken`
+  # cannot include yet. Counted only when there is a cap to count them
+  # against, so an uncapped form costs no query.
+  defp queued_since(slug, snapshot) do
+    if Tournament.max_players(snapshot.payload),
+      do: Registrations.count_since(slug, snapshot.received_at),
+      else: 0
+  end
+
+  # "12 of 60 places taken", or nil when the field is not capped.
+  defp places(payload, queued) do
+    case Tournament.max_players(payload) do
+      nil -> nil
+      max -> %{taken: min(Tournament.places_taken(payload, queued), max), max: max}
     end
   end
 
@@ -209,15 +284,26 @@ defmodule OpenResultsWeb.RegistrationController do
   #
   # `403` rather than `200`, so a crawler or a script does not record a
   # closed form as a working one.
-  defp closed(conn, slug) do
+  #
+  # Four reasons, one page: the arbiter closed it, it has not opened yet, its
+  # closing time has passed, or the field is full. Each says which, because
+  # "closed" said to somebody who is merely early sends them away for good.
+  defp closed(conn, slug, payload, reason) do
     conn
     |> put_status(:forbidden)
     |> render(:closed,
-      page_title: gettext("Entries are closed"),
+      page_title: closed_title(reason),
       page_description: Meta.entries_closed(),
+      payload: payload,
+      slug: slug,
+      reason: reason,
       back: ~p"/t/#{slug}"
     )
   end
+
+  defp closed_title(:not_yet), do: gettext("Entries are not open yet")
+  defp closed_title(:full), do: gettext("The field is full")
+  defp closed_title(_closed_or_ended), do: gettext("Entries are closed")
 
   # The tournament's queue is full - see `OpenResults.Registrations` for what
   # it is bounded at and why per tournament. Nothing to do with this person:

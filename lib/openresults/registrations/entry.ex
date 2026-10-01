@@ -55,10 +55,11 @@ defmodule OpenResults.Registrations.Entry do
     field :club, :string
     field :title, :string
     field :birth_year, :integer
+    field :national_id, :string
     field :requested_byes, {:array, :integer}
   end
 
-  @fields ~w(name email rating federation fide_id club title birth_year requested_byes)a
+  @fields ~w(name email rating federation fide_id club title birth_year national_id requested_byes)a
 
   # The FIDE titles, as FIDE spells them. Free text would collect "gm",
   # "Grandmaster", "GM (inactive)" and a dozen other things the arbiter would
@@ -143,6 +144,14 @@ defmodule OpenResults.Registrations.Entry do
       max: 100,
       message: "a club name is at most 100 characters"
     )
+    # A string, not a number: KBSB's "G licences" are negative numbers that
+    # name different people from the positive number with the same digits,
+    # and other federations use letters. Digits, letters and a leading minus
+    # cover every list the arbiter's app reads; anything else is a typo.
+    |> update_change(:national_id, &String.trim/1)
+    |> validate_format(:national_id, ~r/^-?[A-Za-z0-9]{1,20}$/,
+      message: "a national ID is the member number your federation gave you - digits only"
+    )
     |> validate_subset(:requested_byes, rounds, message: bye_message(rounds))
   end
 
@@ -187,6 +196,9 @@ defmodule OpenResults.Registrations.Entry do
       # does not know a field ignores it.
       "title" => entry.title,
       "birth_year" => entry.birth_year,
+      # Added 2026-09-30. The arbiter's machine looks it up in its national
+      # list on accept, the way it looks up `fide_id` in the FIDE list.
+      "national_id" => entry.national_id,
       "requested_byes" => entry.requested_byes
     }
     |> Enum.reject(fn {_key, value} -> value in [nil, []] end)

@@ -152,6 +152,121 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  Whether the tournament's pages advertise the entry form.
+
+  Only on an explicit `registration_open: true`. `registration_open?/1` reads
+  silence as open, and that is right for the form itself - a snapshot
+  published before the field existed took entries, and shutting it silently
+  would turn people away. It is wrong for a link: a tournament whose last
+  snapshot predates the field was published by an arbiter who never saw an
+  entry-form switch, and a link would invite entries into a queue nobody
+  knows to read. Every arbiter's app since 2026-08-29 sends the field, so an
+  arbiter who wants entries has said so.
+  """
+  def entry_link?(payload), do: Map.get(info(payload), "registration_open") == true
+
+  @doc """
+  The `tournament.registration` object - the form's window, the size of the
+  field and whether the entry list is public - or an empty one.
+
+  Added to the contract on 2026-09-30; see `docs/snapshot-schema.md`, "The
+  entry form's own settings". Every key is optional and absent means no
+  restriction, the same reading `registration_open?/1` gives silence.
+  """
+  def registration(payload), do: object(info(payload), "registration")
+
+  @doc """
+  Whether the entry form takes an entry right now, and if not, why not.
+
+  `:open`, or the first reason it is shut, in the order a person at the form
+  would want to hear them: the arbiter closed it (`:closed`), it has not
+  opened yet (`:not_yet`), its closing time has passed (`:ended`), or the
+  field is full (`:full`).
+
+  `now` is the server's clock, so the window opens and shuts on time whether
+  or not the arbiter's machine is online to republish. `queued_since` is the
+  number of entries this server received after the snapshot was stored:
+  they are not in the snapshot's `taken` yet, and leaving them out would let
+  a laptop that is closed for the evening be oversubscribed by the morning.
+  """
+  @spec registration_state(map(), DateTime.t(), non_neg_integer()) ::
+          :open | :closed | :not_yet | :ended | :full
+  def registration_state(payload, %DateTime{} = now, queued_since \\ 0) do
+    settings = registration(payload)
+    opens_at = instant(settings, "opens_at")
+    closes_at = instant(settings, "closes_at")
+
+    cond do
+      not registration_open?(payload) -> :closed
+      opens_at && DateTime.compare(now, opens_at) == :lt -> :not_yet
+      closes_at && DateTime.compare(now, closes_at) != :lt -> :ended
+      full?(payload, queued_since) -> :full
+      true -> :open
+    end
+  end
+
+  @doc "When the form opens, if the arbiter set a time."
+  def registration_opens_at(payload), do: instant(registration(payload), "opens_at")
+
+  @doc "When the form closes, if the arbiter set a time."
+  def registration_closes_at(payload), do: instant(registration(payload), "closes_at")
+
+  @doc """
+  The size of the field, if the arbiter capped it.
+
+  A value that is not a positive whole number is read as no cap: an arbiter's
+  app that sent `0` or `"60"` has said nothing this server can act on, and
+  closing a form over a malformed number would turn people away for a typo.
+  """
+  def max_players(payload) do
+    case Map.get(registration(payload), "max_players") do
+      max when is_integer(max) and max > 0 -> max
+      _absent_or_malformed -> nil
+    end
+  end
+
+  @doc """
+  Places taken: the entry list plus the entries waiting for the arbiter, as
+  the arbiter's machine counted them, plus `queued_since`.
+
+  Falls back to the number of published players when the snapshot does not
+  say - a count it certainly has.
+  """
+  def places_taken(payload, queued_since \\ 0) do
+    base =
+      case Map.get(registration(payload), "taken") do
+        taken when is_integer(taken) and taken >= 0 -> taken
+        _absent_or_malformed -> length(players(payload))
+      end
+
+    base + queued_since
+  end
+
+  @doc """
+  Whether the form page may list who has entered. **Absent means no** - the
+  one key in this object read that way, because it decides whether a page
+  shows names the arbiter never chose to put there; see
+  `docs/snapshot-schema.md`.
+  """
+  def entry_list_public?(payload), do: Map.get(registration(payload), "list_public") == true
+
+  defp full?(payload, queued_since) do
+    case max_players(payload) do
+      nil -> false
+      max -> places_taken(payload, queued_since) >= max
+    end
+  end
+
+  defp instant(map, key) do
+    with value when is_binary(value) <- Map.get(map, key),
+         {:ok, datetime, _offset} <- DateTime.from_iso8601(value) do
+      datetime
+    else
+      _absent_or_unparseable -> nil
+    end
+  end
+
+  @doc """
   The tournament's display name, falling back to its slug.
   """
   def name(payload) do

@@ -328,7 +328,8 @@ defmodule OpenResultsWeb.CatalogueTest do
       "rating" => -1,
       "title" => "XX",
       "federation" => "BELGIUM",
-      "fide_id" => 0
+      "fide_id" => 0,
+      "national_id" => "12 34"
     })
   end
 

@@ -748,6 +748,12 @@
             set("fide_id", player.fide_id);
             set("title", player.title);
             set("birth_year", player.birth_year);
+            // Since 2026-09-30 the arbiter's machine also answers from its
+            // national list (the KBSB/FRBE one in Belgium): a member number
+            // and a club. Absent from a plain FIDE match with no national row,
+            // and then left alone like every other blank above.
+            set("national_id", player.national_id);
+            set("club", player.club);
 
             list.hidden = true;
             none.hidden = true;
@@ -784,7 +790,7 @@
 
               const about = document.createElement("span");
               about.className = "about";
-              about.textContent = [player.federation, player.rating, player.birth_year]
+              about.textContent = [player.federation, player.rating, player.birth_year, player.club]
                 .filter(Boolean)
                 .join(" \u00b7 ");
 

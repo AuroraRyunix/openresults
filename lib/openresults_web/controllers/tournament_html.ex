@@ -142,16 +142,32 @@ defmodule OpenResultsWeb.TournamentHTML do
       </nav>
 
       <%!--
-        The "Enter this tournament" link was here, gated on
-        `registration_open`. Taken down on 2026-08-29 because the entry form
-        is not finished, and a link on a public page is a promise: somebody
-        follows it, fills it in, and believes they have entered.
+        Outside the round strip, which is about rounds. Taken down on
+        2026-08-29 while the form was unfinished and put back on 2026-09-30
+        with the rest of the workflow: the review queue on the arbiter's
+        Players page, the window, the cap and the entry list.
 
-        Only the link is gone. The form, its gate and the whole registration
-        queue behind it are untouched, so this is one element to put back -
-        `<p :if={Tournament.registration_open?(@payload)} class="entry">` with
-        a chip linking to ~p"/t/\#{@slug}/register" - and nothing to rebuild.
+        Gated on the arbiter's switch alone, not on the window or the cap,
+        and that is deliberate: this header is part of pages cached per
+        snapshot, and a link that depended on the clock would be stale in the
+        cache the moment the window opened. The form page itself says
+        "opens on ..." or "the field is full" - and it enforces all of it,
+        because a link is a courtesy and a bookmarked URL is not.
+
+        And on an EXPLICIT `true` - see `Tournament.entry_link?/1` for why
+        this is the one reader of the switch that does not read silence as
+        open.
       --%>
+      <p :if={Tournament.entry_link?(@payload)} class="entry">
+        <a
+          href={~p"/t/#{@slug}/register"}
+          id="enter-tournament"
+          class={["chip", @current == :register && "current"]}
+          aria-current={@current == :register && "page"}
+        >
+          {gettext("Enter this tournament")}
+        </a>
+      </p>
     </header>
     """
   end

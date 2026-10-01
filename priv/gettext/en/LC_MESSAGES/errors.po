@@ -56,6 +56,9 @@ msgstr ""
 msgid "a club name is at most 100 characters"
 msgstr ""
 
+msgid "a national ID is the member number your federation gave you - digits only"
+msgstr ""
+
 msgid "this tournament is not taking bye requests"
 msgstr ""
 

@@ -715,6 +715,10 @@
     "listed": false,
     "match_format": false,
     "name": "Team RR",
+    "registration": {
+      "list_public": false,
+      "taken": 9
+    },
     "registration_open": false,
     "rounds_count": 3,
     "slug": "team-roundrobin-fixture",
