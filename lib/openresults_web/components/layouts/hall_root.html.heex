@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang={locale(assigns)} data-theme={assigns[:theme] || "night"} data-theme-source="user">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <.live_title default="OpenResults" suffix=" - OpenResults">
+      {assigns[:page_title]}
+    </.live_title>
+    <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!-- The one page on this site that loads the script bundle: the hall
+          display's LiveView socket and its clock hook. Every other page is
+          still a document with no bundle at all - see the root layout. The
+          theme is decided on the server from the URL (`?theme=light`), so
+          there is no bootstrap script here and no flash of the wrong one. --%>
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+  </head>
+  <body class="hall-body">
+    {@inner_content}
+  </body>
+</html>

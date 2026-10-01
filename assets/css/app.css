@@ -2111,6 +2111,392 @@ a.xt-opp:hover {
 }
 
 /* ---------------------------------------------------------------------------
+   Hall display
+
+   `OpenResultsWeb.HallLive`, full screen on a television or a projector.
+   Every size below is in `--u`, one hundredth of the screen's height on a
+   16:9 screen - `min(1vh, 0.5625vw)`, so a screen that is not 16:9 shrinks
+   the type to fit rather than clipping it. That is what lets the server
+   decide how many rows a page holds (`OpenResultsWeb.Hall`): twelve boards
+   fill a 1080p television and a 4K one alike, and nothing is measured on
+   the glass.
+
+   The theme comes from the URL - `night` by default, `contrast` with
+   `?theme=light` - set on <html> by the server, and uses the same seven
+   tokens as every other page, so `contrast_test.exs` covers it too.
+   --------------------------------------------------------------------------- */
+
+.hall-body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.hall {
+  --u: min(1vh, 0.5625vw);
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: calc(1.5 * var(--u));
+  height: 100vh;
+  padding: calc(2.5 * var(--u)) calc(4 * var(--u));
+  font-size: calc(3.2 * var(--u));
+  line-height: 1.2;
+  cursor: default;
+  user-select: none;
+}
+
+.hall-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(3 * var(--u));
+  padding-bottom: calc(1.2 * var(--u));
+  border-bottom: calc(0.3 * var(--u)) solid var(--rule);
+}
+
+.hall-title {
+  min-width: 0;
+}
+
+.hall-title h1 {
+  margin: 0;
+  font-size: calc(5.2 * var(--u));
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hall-round {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 calc(2 * var(--u));
+  margin: calc(0.6 * var(--u)) 0 0;
+  font-size: calc(3.4 * var(--u));
+  font-weight: 600;
+}
+
+.hall-final {
+  padding: calc(0.3 * var(--u)) calc(1.4 * var(--u));
+  border-radius: calc(0.8 * var(--u));
+  background: var(--accent);
+  color: var(--bg);
+  font-size: calc(2.6 * var(--u));
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hall-clock {
+  margin: 0;
+  font-size: calc(6 * var(--u));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hall-quiet {
+  color: var(--quiet);
+}
+
+.hall-stage {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hall-view {
+  height: 100%;
+  animation: hall-in 400ms ease-out;
+}
+
+@keyframes hall-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--u));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hall-empty {
+  margin: calc(20 * var(--u)) auto 0;
+  max-width: 70%;
+  text-align: center;
+  font-size: calc(4 * var(--u));
+  color: var(--quiet);
+}
+
+.hall-note,
+.hall-range {
+  display: flex;
+  gap: calc(2 * var(--u));
+  margin: 0 0 var(--u);
+  font-size: calc(2.6 * var(--u));
+  font-weight: 600;
+  color: var(--quiet);
+}
+
+.hall-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.hall-table th,
+.hall-table td {
+  padding: calc(1.1 * var(--u)) calc(1.2 * var(--u));
+  border-bottom: calc(0.15 * var(--u)) solid var(--rule);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hall-table thead th {
+  padding-top: 0;
+  font-size: calc(2 * var(--u));
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.hall-table .num {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Board, the two players, the result: the board number and the result are
+   what a player looks for first, so they get room of their own rather than
+   being squeezed into the gutters. */
+.hall-table thead th:first-child {
+  width: 9%;
+}
+
+.hall-boards thead th:nth-child(3),
+.hall-matches thead th:nth-child(3) {
+  width: 17%;
+}
+
+.hall-standings thead th:nth-child(n + 3) {
+  width: 14%;
+}
+
+.hall-board {
+  font-weight: 800;
+}
+
+.hall-result {
+  font-weight: 700;
+}
+
+.hall-result .result .note {
+  font-size: calc(1.6 * var(--u));
+}
+
+.hall-result .result .postponed {
+  max-width: none;
+  font-size: calc(2.2 * var(--u));
+}
+
+.hall-person-title {
+  margin-right: 0.35em;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.hall-person-name {
+  font-weight: 600;
+}
+
+.hall-person-meta {
+  margin-left: 0.6em;
+  font-size: 0.72em;
+  color: var(--quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.hall-points {
+  font-weight: 800;
+}
+
+/* The name list: two columns read down, then across - the order a printed
+   list pinned by the door is read in. Fourteen rows a column is
+   `OpenResultsWeb.Hall.names_per_page/0` halved. */
+.hall-names {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(14, auto);
+  column-gap: calc(5 * var(--u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hall-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(2 * var(--u));
+  padding: calc(0.75 * var(--u)) 0;
+  border-bottom: calc(0.15 * var(--u)) solid var(--rule);
+  min-width: 0;
+}
+
+.hall-name-who {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hall-name-seat {
+  flex: none;
+  white-space: nowrap;
+}
+
+.hall-name-board {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.hall-colour {
+  margin-left: 0.5em;
+  font-size: 0.72em;
+  font-weight: 700;
+  color: var(--quiet);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hall-progress {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--u));
+  margin: 0 0 calc(1.5 * var(--u));
+}
+
+.hall-progress-count {
+  font-size: calc(3.2 * var(--u));
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.hall-progress-bar {
+  flex: 1 1 auto;
+  height: calc(1.2 * var(--u));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--quiet) 30%, transparent);
+  overflow: hidden;
+}
+
+.hall-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transition: transform 600ms ease-out;
+}
+
+/* A result that came in while the screen was on. Marked with the accent
+   down its edge rather than a fill, so every theme's text stays on the
+   background it was checked against. */
+.hall-table tr.is-fresh th:first-child {
+  box-shadow: inset calc(0.8 * var(--u)) 0 0 var(--accent);
+}
+
+.hall-table tr.is-fresh .hall-result {
+  color: var(--accent);
+}
+
+.hall-announcement {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hall-announcement p {
+  margin: 0;
+  max-width: 85%;
+  font-size: calc(5.5 * var(--u));
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.hall-foot {
+  display: flex;
+  align-items: center;
+  gap: calc(2.5 * var(--u));
+  min-height: calc(4 * var(--u));
+  font-size: calc(2.2 * var(--u));
+  font-weight: 700;
+  color: var(--quiet);
+}
+
+.hall-view-name {
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hall-page {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hall-paused,
+.hall-offline {
+  color: var(--accent);
+}
+
+.hall-offline[hidden] {
+  display: none;
+}
+
+/* The same sweep the projector view draws (`projector-sweep`), restarted by
+   the server giving the fill a new id each page rather than by a script. */
+.hall-bar {
+  flex: 1 1 auto;
+  height: calc(0.6 * var(--u));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--quiet) 30%, transparent);
+  overflow: hidden;
+}
+
+.hall-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation-name: projector-sweep;
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-view {
+    animation: none;
+  }
+
+  .hall-bar {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Changelog
 
    `OpenResultsWeb.ChangelogController` - CHANGELOG.md, rendered to HTML at

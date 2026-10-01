@@ -274,6 +274,34 @@ that should not have been taken lands in a queue an arbiter reads and
 rejects, while a form that is shut when it should be open turns a real person
 away and tells nobody.
 
+**`tournament.hall`** - the arbiter's settings for the hall display
+(`/t/<slug>/hall`, see `docs/public-extras.md`). Added 2026-09-30. **Absent
+means the defaults**, and so does any key that is absent, out of range or of
+the wrong shape - a tournament published before the display existed gets a
+display, not an empty screen.
+
+```json
+"hall": {
+  "pairings": true, "names": true, "results": true, "standings": true,
+  "standings_top": 10, "page_seconds": 15, "hold_new_round": true,
+  "announcement": "Round 6 starts at 14:00."
+}
+```
+
+| key | meaning | default |
+|---|---|---|
+| `pairings`, `names`, `results`, `standings` | whether the cycle includes that view | `true` |
+| `standings_top` | how many standings rows, 3-50 | `10` |
+| `page_seconds` | how long each page stays up, 5-120 | `15` |
+| `hold_new_round` | while the newest round has no result in, cycle only the pairings, the names and the announcement | `true` |
+| `announcement` | the arbiter's text, shown as a page of its own; absent when blank | none |
+
+Sent resolved like `display` - every key, except `announcement`, which is
+left out when there is none. These choose among things the public may
+already see and never widen it: `display` and the round levels still decide
+what exists, and the display reads them exactly as the pages do. The
+announcement is prose the arbiter chose to publish, like `arbiter`.
+
 **`standings.tiebreaks`** - declared once, ordered, with a human label.
 `rows[].tiebreaks` is positional against it. This is what lets the renderer
 stay dumb: it does not know what BH means, how many there are, or what order

@@ -25,10 +25,17 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/openresults"
 import topbar from "../vendor/topbar"
 
-const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+// Loaded by one page only: the hall display (`OpenResultsWeb.HallLive`, root
+// layout `hall_root.html.heex`). Every other public page ships no bundle.
+//
+// No CSRF token: the public side has no session for one to be checked
+// against, and the socket is declared without session connect-info for
+// exactly that reason (see `OpenResultsWeb.Endpoint`). A page that does carry
+// the meta tag still sends it.
+const csrfMeta = document.querySelector("meta[name='csrf-token']")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
+  params: csrfMeta ? {_csrf_token: csrfMeta.getAttribute("content")} : {},
   hooks: {...colocatedHooks},
 })
 

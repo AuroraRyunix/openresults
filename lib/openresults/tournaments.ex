@@ -458,7 +458,8 @@ defmodule OpenResults.Tournaments do
 
   # The one place a write tells the read path. The cache gets what the
   # database now says - including "no row", which reads as listed - and every
-  # rendered page of this tournament goes, in every language.
+  # rendered page of this tournament goes, in every language - and a hall
+  # display showing it re-reads, so a hidden tournament leaves the screen too.
   defp changed(slug) do
     case from(t in Tournament, where: t.slug == ^slug, select: t.status) |> Repo.one() do
       nil -> StatusCache.delete(slug)
@@ -466,5 +467,6 @@ defmodule OpenResults.Tournaments do
     end
 
     Page.forget(slug)
+    OpenResults.TournamentEvents.changed(slug)
   end
 end

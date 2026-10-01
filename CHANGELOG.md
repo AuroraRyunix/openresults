@@ -27,6 +27,25 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Hall display: a full-screen page for the television in the
+  playing hall.** `/t/<slug>/hall`, linked from every round page, no login.
+  It cycles through the current round's pairings in big type, an
+  alphabetical "find your board" list split over pages, the results as they
+  come in (the newest first, marked when they arrived while the screen was
+  on), the top of the standings and the arbiter's announcement. A result the
+  arbiter publishes appears within a second: this page, alone on the site,
+  keeps a connection open and is told about every publish. While a new round
+  has no result in yet it holds on the pairings and the name list, and a
+  newly published round jumps straight to its pairings. Round, date,
+  "Final round" and a clock in the header; a tap or the space bar pauses.
+  Dark by default, `?theme=light` for a high-contrast light screen,
+  `?views=names` to give a second screen only some views. The views, the
+  seconds per page, the number of standings rows, the hold and the
+  announcement are set in OpenPairings and travel in the snapshot
+  (`tournament.hall`); a tournament published by an older OpenPairings gets
+  the defaults. Everything the arbiter hides from spectators stays hidden
+  here, and a tournament hidden by moderation leaves the screen.
+
 ## [0.18.1] - 2026-09-28
 
 - [Security] **Mint 1.11.0**, fixing three advisories in the HTTP client

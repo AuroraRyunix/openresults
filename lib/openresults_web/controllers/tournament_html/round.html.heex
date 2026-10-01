@@ -47,9 +47,20 @@
     <%!-- The projector view was reachable only by knowing to add ?display=1,
           which is no way to find a feature. A plain link: whoever is setting
           up the screen in the hall is on this page already. --%>
+    <%!-- Two screens for the hall. The projector view is this round and
+          nothing else, a plain document that keeps going with no
+          connection; the hall display follows the tournament - the newest
+          round, the names, the results as they arrive, the standings, the
+          arbiter's announcement - and needs one. --%>
     <p class="quiet">
       <a href={~p"/t/#{@slug}/round/#{@round["number"]}?display=1"}>
         {gettext("Projector view - large boards, cycling automatically")}
+      </a>
+      <span aria-hidden="true">·</span>
+      <a id="hall-display-link" href={~p"/t/#{@slug}/hall"}>
+        {gettext(
+          "Hall display - pairings, results and standings in turn, always the newest round"
+        )}
       </a>
     </p>
   </section>

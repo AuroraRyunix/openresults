@@ -109,6 +109,21 @@ defmodule OpenResultsWeb.AccessibilityTest do
           "/t/#{world.team_swiss}/round/1"
         ]
 
+      # The static render of each state; the views the cycle turns to are
+      # the same markup, and `HallLiveTest` walks them.
+      "/t/:slug/hall" ->
+        [
+          "/t/#{world.swiss}/hall",
+          "/t/#{world.swiss}/hall?lang=nl&theme=light",
+          "/t/#{world.swiss}/hall?views=names&lang=fr",
+          "/t/#{world.swiss}/hall?views=standings",
+          "/t/#{world.keizer}/hall?views=standings",
+          "/t/#{world.before_round_one}/hall",
+          "/t/#{world.team_rr}/hall",
+          "/t/#{world.team_rr}/hall?views=standings",
+          "/t/no-such-tournament/hall"
+        ]
+
       "/t/:slug/player/:no" ->
         [
           "/t/#{world.swiss}/player/1",

@@ -970,6 +970,15 @@
     "end_date": "2026-03-05",
     "federation": "BEL",
     "fide_rated": true,
+    "hall": {
+      "hold_new_round": true,
+      "names": true,
+      "page_seconds": 15,
+      "pairings": true,
+      "results": true,
+      "standings": true,
+      "standings_top": 10
+    },
     "listed": true,
     "match_format": false,
     "name": "Gent Spring Open 2026",

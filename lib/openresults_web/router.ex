@@ -106,6 +106,27 @@ defmodule OpenResultsWeb.Router do
     get "/t/:slug/board-prizes", TournamentController, :board_prizes
   end
 
+  # The hall display - the one public page that keeps a connection open, for
+  # the reasons in `OpenResultsWeb.HallLive`. Its own scope and its own
+  # `live_session`, and deliberately not behind `Revalidate`: the socket
+  # re-reads the snapshot on every publish, so an ETag or a cached render
+  # would only ever be a stale copy of what the socket is about to replace.
+  #
+  # Still no session and no CSRF token, for the router's reason at the top:
+  # nothing here acts for anyone. The locale travels in the page's signed
+  # LiveView session (`HallLive.session/1`), not a cookie. `HallGate` answers
+  # a hidden or unknown slug with the standings page's own 404 before the
+  # LiveView renders.
+  scope "/", OpenResultsWeb do
+    pipe_through [:browser, OpenResultsWeb.Plugs.Visibility, OpenResultsWeb.Plugs.HallGate]
+
+    live_session :hall,
+      root_layout: {OpenResultsWeb.Layouts, :hall_root},
+      session: {OpenResultsWeb.HallLive, :session, []} do
+      live "/t/:slug/hall", HallLive
+    end
+  end
+
   scope "/", OpenResultsWeb do
     # `Visibility` does nothing on the three routes here without a slug.
     pipe_through [:browser, OpenResultsWeb.Plugs.Visibility]
