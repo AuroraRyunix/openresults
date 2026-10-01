@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-01
+
 - [Feature] **Hall display: a full-screen page for the television in the
   playing hall.** `/t/<slug>/hall`, linked from every round page, no login.
   It cycles through the current round's pairings in big type, an
