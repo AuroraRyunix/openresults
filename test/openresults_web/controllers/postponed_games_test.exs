@@ -412,6 +412,72 @@ defmodule OpenResultsWeb.PostponedGamesTest do
              ]
     end
 
+    test "state the valuation when the rules do not count a postponed game as a draw", %{
+      conn: conn,
+      swiss: swiss
+    } do
+      for {as_white, as_black, white, black, phrase} <- [
+            {"loss", "loss", 0.0, 0.0, "as a loss for both players"},
+            {"win", "win", 1.0, 1.0, "as a win for both players"},
+            {"win", "loss", 1.0, 0.0, "as a win for one player and a loss for the other"},
+            {"draw", "win", 0.5, 1.0, "as a win for one player and a draw for the other"},
+            {"loss", "draw", 0.0, 0.5, "as a draw for one player and a loss for the other"}
+          ] do
+        publish(valued(swiss, white, black, as_white, as_black))
+        document = conn |> get(~p"/t/#{@slug}") |> doc()
+
+        assert texts(document, "#standings-provisional") == [
+                 "Provisional: 2 postponed games are still to be played and count #{phrase} until they are."
+               ]
+      end
+    end
+
+    test "say so when the postponed games are valued differently from one another", %{
+      conn: conn,
+      swiss: swiss
+    } do
+      mixed =
+        update_in(swiss, ["rounds", Access.at(1), "boards", Access.at(1)], fn board ->
+          Map.put(board, "postponed_as", %{"white" => "loss", "black" => "win"})
+        end)
+
+      publish(mixed)
+      document = conn |> get(~p"/t/#{@slug}") |> doc()
+
+      assert texts(document, "#standings-provisional") == [
+               "Provisional: 2 postponed games are still to be played and count as they were valued when postponed until they are."
+             ]
+    end
+
+    test "follow the reader's language, and the count", %{conn: conn, swiss: swiss} do
+      one =
+        swiss
+        |> valued(0.0, 0.0, "loss", "loss")
+        |> put_in(["standings", "postponed_games"], 1)
+
+      publish(one)
+
+      assert texts(conn |> get(~p"/t/#{@slug}?lang=nl") |> doc(), "#standings-provisional") == [
+               "Voorlopig: 1 uitgestelde partij moet nog gespeeld worden en telt tot dan als een verlies voor beide spelers."
+             ]
+
+      assert texts(conn |> get(~p"/t/#{@slug}?lang=fr") |> doc(), "#standings-provisional") == [
+               "Provisoire : 1 partie reportée reste à jouer et compte d'ici là comme une défaite pour les deux joueurs."
+             ]
+    end
+
+    test "keep the draw wording for an older snapshot that does not say", %{
+      conn: conn,
+      swiss: swiss
+    } do
+      publish(legacy(valued(swiss, 0.0, 0.0, "loss", "loss")))
+      document = conn |> get(~p"/t/#{@slug}") |> doc()
+
+      assert texts(document, "#standings-provisional") == [
+               "Provisional: 2 postponed games are still to be played and count as draws until they are."
+             ]
+    end
+
     test "say nothing of the kind when they are final", %{conn: conn} do
       publish(SnapshotPayloads.swiss())
       document = conn |> get(~p"/t/#{SnapshotPayloads.swiss()["tournament"]["slug"]}") |> doc()
@@ -533,6 +599,23 @@ defmodule OpenResultsWeb.PostponedGamesTest do
 
       # A player's own card stops at the postponed game, as it always did.
       assert payload |> Tournament.card(6) |> Enum.at(1) |> Map.fetch!(:score) |> is_nil()
+    end
+
+    test "postponed_valuation/1 reads postponed_as on the boards the standings cover", %{
+      swiss: swiss
+    } do
+      assert Tournament.postponed_valuation(swiss) == :draw
+
+      assert Tournament.postponed_valuation(valued(swiss, 0.0, 1.0, "loss", "win")) ==
+               {:uniform, ["loss", "win"]}
+
+      assert Tournament.postponed_valuation(legacy(swiss)) == :unknown
+      # No postponed board at all.
+      assert Tournament.postponed_valuation(SnapshotPayloads.swiss()) == :unknown
+      # A postponed board past the standings is not counted by them.
+      assert Tournament.postponed_valuation(
+               put_in(valued(swiss, 0.0, 0.0, "loss", "loss"), ["standings", "after_round"], 1)
+             ) == :unknown
     end
 
     test "score_gaps/2 calls a missing round a gap", %{swiss: swiss} do

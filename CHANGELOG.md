@@ -38,6 +38,12 @@ Each entry is tagged so a version can be skimmed:
   OpenPairings still reads the token as 1, a half and 0, starts the pairing
   list from the standings' own totals where they cover the round, and shows
   "-" for a player whose total depends on a postponed game it cannot price.
+- [Fix] The standings page's provisional line no longer always says postponed
+  games "count as draws": it states how the snapshot's `postponed_as` says they
+  are counted (a loss or a win for both players, a win for one and a loss or
+  draw for the other, or "as they were valued when postponed" when the games
+  differ), in Dutch and French too. A snapshot that does not say keeps the
+  draw wording.
 - [Fix] That "-" no longer says "an earlier round is not public" when the
   reason is a postponed game: it says a postponed game has not been played
   yet (Dutch and French included).

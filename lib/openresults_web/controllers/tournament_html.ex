@@ -1748,32 +1748,74 @@ defmodule OpenResultsWeb.TournamentHTML do
   @doc """
   One line saying the standings are provisional, when a postponed game in the
   rounds they cover is still to be played - `standings.provisional` and
-  `standings.postponed_games`. OpenPairings counts each such game as a draw
-  until it is played, so the table is right for now and will move; the line
-  says both. Nothing when the standings are final.
+  `standings.postponed_games`. The table counts each such game as the
+  snapshot's `postponed_as` says (`Tournament.postponed_valuation/1`) - a draw
+  unless the rules say otherwise - until it is played, so it is right for now
+  and will move; the line says both. A snapshot that does not say how they are
+  valued gets the draw wording it always had. Nothing when the standings are
+  final.
   """
   attr :payload, :map, required: true
 
   def provisional_standings_note(assigns) do
     {provisional?, count} = Tournament.standings_provisional(assigns.payload)
-    assigns = assign(assigns, provisional?: provisional?, count: count)
+
+    assigns =
+      assign(assigns,
+        provisional?: provisional?,
+        count: count,
+        valuation: valuation_phrase(Tournament.postponed_valuation(assigns.payload))
+      )
 
     ~H"""
     <p :if={@provisional?} id="standings-provisional" class="footnote standings-provisional">
-      <%= if @count do %>
-        {ngettext(
-          "Provisional: 1 postponed game is still to be played and counts as a draw until it is.",
-          "Provisional: %{count} postponed games are still to be played and count as draws until they are.",
-          @count
-        )}
-      <% else %>
-        {gettext(
-          "Provisional: postponed games are still to be played and count as draws until they are."
-        )}
+      <%= cond do %>
+        <% is_nil(@valuation) and @count -> %>
+          {ngettext(
+            "Provisional: 1 postponed game is still to be played and counts as a draw until it is.",
+            "Provisional: %{count} postponed games are still to be played and count as draws until they are.",
+            @count
+          )}
+        <% is_nil(@valuation) -> %>
+          {gettext(
+            "Provisional: postponed games are still to be played and count as draws until they are."
+          )}
+        <% @count -> %>
+          {ngettext(
+            "Provisional: 1 postponed game is still to be played and counts %{valuation} until it is.",
+            "Provisional: %{count} postponed games are still to be played and count %{valuation} until they are.",
+            @count,
+            valuation: @valuation
+          )}
+        <% true -> %>
+          {gettext(
+            "Provisional: postponed games are still to be played and count %{valuation} until they are.",
+            valuation: @valuation
+          )}
       <% end %>
     </p>
     """
   end
+
+  # How the standings count the postponed games, as a phrase that follows
+  # "counts"/"count"; `nil` for the draw wording (and for a snapshot that does
+  # not say).
+  defp valuation_phrase(:draw), do: nil
+  defp valuation_phrase(:unknown), do: nil
+  defp valuation_phrase({:uniform, ["draw", "draw"]}), do: nil
+  defp valuation_phrase({:uniform, ["loss", "loss"]}), do: gettext("as a loss for both players")
+  defp valuation_phrase({:uniform, ["win", "win"]}), do: gettext("as a win for both players")
+
+  defp valuation_phrase({:uniform, ["loss", "win"]}),
+    do: gettext("as a win for one player and a loss for the other")
+
+  defp valuation_phrase({:uniform, ["draw", "win"]}),
+    do: gettext("as a win for one player and a draw for the other")
+
+  defp valuation_phrase({:uniform, ["draw", "loss"]}),
+    do: gettext("as a draw for one player and a loss for the other")
+
+  defp valuation_phrase(:mixed), do: gettext("as they were valued when postponed")
 
   @doc """
   A running score, or a marker where it cannot be known.

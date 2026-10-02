@@ -589,6 +589,43 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  How the postponed games the standings count are valued, from
+  `boards[].postponed_as` on the postponed boards in the rounds the standings
+  cover: `:draw` when every seat of every such board is a draw (what the
+  standings note has always said), `{:uniform, pair}` when every board has
+  the same two valuations (`pair` sorted, e.g. `["loss", "win"]`), `:mixed`
+  when the boards differ, and `:unknown` when it cannot be said - an older
+  snapshot without `postponed_as`, or no postponed board in those rounds.
+  """
+  def postponed_valuation(payload) do
+    covered = after_round(payload)
+
+    pairs =
+      for round <- rounds(payload),
+          is_integer(covered) and number_of(round) <= covered,
+          results_public?(round),
+          board <- boards(round),
+          postponed?(board),
+          do: valuation_pair(board)
+
+    cond do
+      pairs == [] or :unknown in pairs -> :unknown
+      Enum.all?(pairs, &(&1 == ["draw", "draw"])) -> :draw
+      match?([_], Enum.uniq(pairs)) -> {:uniform, hd(pairs)}
+      true -> :mixed
+    end
+  end
+
+  defp valuation_pair(board) do
+    with %{"white" => white, "black" => black} <- Map.get(board, "postponed_as"),
+         true <- white in ~w(win draw loss) and black in ~w(win draw loss) do
+      Enum.sort([white, black])
+    else
+      _absent_or_unreadable -> :unknown
+    end
+  end
+
+  @doc """
   The live rounds, in number order - see `live_round?/1`.
   """
   def live_rounds(payload), do: payload |> rounds() |> Enum.filter(&live_round?/1)
