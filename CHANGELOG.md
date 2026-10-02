@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-10-02
+
 - [Feature] **The projector view follows the newest round.** New
   `/t/<slug>/projector`: large boards for the latest round, updating by
   itself when a round is published or a result comes in (the hall display's
