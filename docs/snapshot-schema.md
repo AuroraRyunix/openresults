@@ -223,13 +223,10 @@ server only ever sees one vocabulary.
 to be played: the arbiter paired it and the two players will play it later.
 **Absent means not postponed** - the key is only ever sent as `true`, never
 as `false`. Its `result` is `null` while it is postponed, and OpenPairings
-counts the game in the standings until it is played, as a draw by default
-(see `standings.provisional` below) - but the tournament's rules can value
-it otherwise (a win or a loss for the player who asked, or nothing), and the
-snapshot does not say which. **A reader must therefore not add a postponed
-board up as a draw**; OpenResults leaves the running score of both players
-unknown until `standings.rows[].points` covers the round or the game is
-played. Withheld (absent) when the round's results
+counts the game in the standings until it is played - as a draw by default,
+but the tournament's rules can value it otherwise (see `boards[].postponed_as`
+and `boards[].points` below, which say exactly how it is counted; see
+`standings.provisional` below). Withheld (absent) when the round's results
 are not public, like the result itself. Once the game is played the next
 snapshot carries its real result and no flag, so a reader never has to clear
 anything. A board carrying both a result token and the flag is read by its
@@ -278,6 +275,44 @@ app to explain why. The failure directions are not symmetric either: an entry
 that should not have been taken lands in a queue an arbiter reads and
 rejects, while a form that is shut when it should be open turns a real person
 away and tells nobody.
+
+**`tournament.scoring`** - the tournament's point system as OpenPairings
+applies it. Added 2026-10-02. **Absent means an older publisher**, and a
+reader then falls back to 1 / 1/2 / 0 read from the result token.
+
+```json
+"scoring": { "win": 3.0, "draw": 1.0, "loss": 0.0, "bye": 3.0,
+             "forfeit_win": 3.0, "forfeit_loss": 0.0, "presence": null }
+```
+
+| key | meaning |
+|---|---|
+| `win`, `draw`, `loss` | what one result pays |
+| `bye` | what a pairing-allocated bye pays, presence add-on included |
+| `forfeit_win`, `forfeit_loss` | what a forfeit pays the winner and the loser |
+| `presence` | the SWAR 3-2-1 presence point added to every game a player turned up for, or `null` when the tournament has none |
+
+It is for explaining a figure ("3 for a win"). **Nothing is added up from it**:
+the per-game figures that matter travel as `boards[].points` and
+`byes[].points`, already including presence points and postponed valuations.
+
+**`boards[].points`** - what each seat scored on the board, as OpenPairings
+scores it: `{ "white": 0.5, "black": 0.5 }`, in the tournament's own point
+system. Added 2026-10-02. Present on a board with a result and on a postponed
+board (where it is what the game is credited with while it waits); **absent**
+on a board with no result and no postponement, and withheld with the result
+when the round's results are not public. **Absent also means an older
+publisher**, and a reader then reads the points off the result token as 1 /
+1/2 / 0. A reader adds these up for a running score; it does not interpret the
+result token for points when this is present. The figures are the ones the
+standings are computed from, so a running score built from them agrees with
+`standings.rows[].points`.
+
+**`boards[].postponed_as`** - on a postponed board only: how each seat's game
+counts until it is played, `{ "white": "draw", "black": "draw" }`, each
+`"win"`, `"draw"` or `"loss"`. A draw unless the tournament counts it
+otherwise for the player who asked to postpone. The points it is worth are
+already in `boards[].points`.
 
 **`tournament.hall`** - the arbiter's settings for the hall display
 (`/t/<slug>/hall`, see `docs/public-extras.md`). Added 2026-09-30. **Absent
@@ -420,7 +455,8 @@ round 6 while standings still stand after 5.
 `provisional: true` and a count, present only while a postponed game
 (`boards[].postponed`) in the rounds the standings cover is still to be
 played. **Absent means the standings are not provisional.** The placings
-count each such game as a draw until it is played, so the table is correct
+count each such game as its `postponed_as` valuation (a draw unless the
+tournament says otherwise) until it is played, so the table is correct
 for now and will move when the game is in. OpenResults prints one line above
 the standings saying so, with the count when it is a positive integer, and
 never recomputes anything.
@@ -647,10 +683,11 @@ something needs it - which is the additive-only rule working as intended.
 that way is an arbiter's diagnostic, and it references internal player ids
 that mean nothing here.
 
-**Anything that would let the server recompute.** No individual game points,
-no float history, no colour history. If the server had those it would be
-tempting to calculate a placing, and then the hall and the web page could
-disagree.
+**Anything that would let the server rank.** No float history, no colour
+history, no tie-break inputs beyond what `working` shows. Per-game points DO
+travel (`boards[].points`, since 2026-10-02) - not so the server can calculate
+a placing, which it still never does, but so a running score is exactly what
+the arbiter's screen shows under any point system.
 
 ## The tournament key, and taking a tournament down
 

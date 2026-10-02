@@ -182,6 +182,10 @@
           "black": 7,
           "board": 1,
           "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0",
           "white": 1
         },
@@ -189,6 +193,10 @@
           "black": 2,
           "board": 2,
           "label": "2",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
           "result": "1/2-1/2",
           "white": 8
         },
@@ -196,6 +204,10 @@
           "black": 5,
           "board": 3,
           "label": "3",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
           "result": "0-1",
           "white": 3
         },
@@ -203,6 +215,10 @@
           "black": 4,
           "board": 4,
           "label": "4",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0",
           "white": 6
         }
@@ -721,6 +737,15 @@
     },
     "registration_open": false,
     "rounds_count": 3,
+    "scoring": {
+      "bye": 1.0,
+      "draw": 0.5,
+      "forfeit_loss": 0.0,
+      "forfeit_win": 1.0,
+      "loss": 0.0,
+      "presence": null,
+      "win": 1.0
+    },
     "slug": "team-roundrobin-fixture",
     "start_date": null,
     "system": "roundrobin",

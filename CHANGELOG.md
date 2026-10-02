@@ -27,16 +27,20 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
-- [Fix] The "points before this round" column on a round's pairing list no
-  longer counts every postponed game as a half point. OpenPairings values a
-  postponed game by the tournament's rules and point system, which the
-  snapshot does not carry, so the column now starts from the totals in
-  `standings.rows` for every round those standings cover (postponed games and
-  non-1/half/0 point systems included) and shows "-" for a player whose total
-  depends on a postponed game the standings do not cover yet. The standings'
-  "provisional" line is unchanged. The assumption is written down in
-  `docs/snapshot-schema.md`; an exact figure for the rounds past the standings
-  needs the point system and the postponed valuation added to the snapshot.
+- [Fix] **A running score is now exactly OpenPairings' own, under any point
+  system and with postponed games.** The "points before this round" column
+  on a round's pairing list counted every postponed game as a half point, and
+  every played game as 1, a half or 0 read off the result token. OpenPairings
+  now publishes the tournament's point system (`tournament.scoring`) and what
+  each seat scored on each board (`boards[].points`, with `postponed_as` for a
+  postponed game), and the pairing list, a player's card and the cross-table
+  all read those instead of interpreting the token. A snapshot from an older
+  OpenPairings still reads the token as 1, a half and 0, starts the pairing
+  list from the standings' own totals where they cover the round, and shows
+  "-" for a player whose total depends on a postponed game it cannot price.
+- [Fix] That "-" no longer says "an earlier round is not public" when the
+  reason is a postponed game: it says a postponed game has not been played
+  yet (Dutch and French included).
 
 ## [0.19.0] - 2026-10-01
 

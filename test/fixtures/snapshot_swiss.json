@@ -139,6 +139,10 @@
           "black": 6,
           "board": 1,
           "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0",
           "white": 1
         },
@@ -146,6 +150,10 @@
           "black": 2,
           "board": 2,
           "label": "2",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
           "result": "0-1",
           "white": 7
         },
@@ -153,6 +161,10 @@
           "black": 8,
           "board": 3,
           "label": "3",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
           "result": "1/2-1/2",
           "white": 3
         },
@@ -160,6 +172,10 @@
           "black": 4,
           "board": 4,
           "label": "4",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0FF",
           "white": 9
         },
@@ -167,6 +183,10 @@
           "black": 10,
           "board": 5,
           "label": "5",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0U",
           "white": 5
         }
@@ -182,6 +202,10 @@
           "black": 1,
           "board": 1,
           "label": "1",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
           "result": "1/2-1/2",
           "white": 2
         },
@@ -189,6 +213,10 @@
           "black": 3,
           "board": 2,
           "label": "2",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
           "result": "0-1",
           "white": 6
         },
@@ -196,6 +224,10 @@
           "black": 7,
           "board": 3,
           "label": "3",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
           "result": "0-1FF",
           "white": 5
         },
@@ -203,6 +235,10 @@
           "black": 9,
           "board": 4,
           "label": "4",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
           "result": "0-1",
           "white": 8
         }
@@ -229,6 +265,10 @@
           "black": 3,
           "board": 1,
           "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0",
           "white": 1
         },
@@ -236,6 +276,10 @@
           "black": 2,
           "board": 2,
           "label": "2",
+          "points": {
+            "black": 0.0,
+            "white": 0.5
+          },
           "result": "1/2-0",
           "white": 4
         },
@@ -269,6 +313,10 @@
           "black": 1,
           "board": 1,
           "label": "1",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
           "result": "0-1",
           "white": 2
         },
@@ -276,6 +324,10 @@
           "black": 5,
           "board": 2,
           "label": "2",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0",
           "white": 3
         },
@@ -283,6 +335,10 @@
           "black": 6,
           "board": 3,
           "label": "3",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
           "result": "1/2-1/2",
           "white": 4
         },
@@ -290,6 +346,10 @@
           "black": 7,
           "board": 4,
           "label": "4",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
           "result": "1-0",
           "white": 8
         },
@@ -297,6 +357,10 @@
           "black": 9,
           "board": 5,
           "label": "5",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
           "result": "0-1",
           "white": 10
         }
@@ -988,6 +1052,15 @@
     },
     "registration_open": true,
     "rounds_count": 5,
+    "scoring": {
+      "bye": 1.0,
+      "draw": 0.5,
+      "forfeit_loss": 0.0,
+      "forfeit_win": 1.0,
+      "loss": 0.0,
+      "presence": null,
+      "win": 1.0
+    },
     "slug": "gent-spring-open-2026",
     "start_date": "2026-03-01",
     "system": "swiss",

@@ -336,8 +336,12 @@ defmodule OpenResultsWeb.CrosstableTest do
       # Neither half of "1-0ADJ" can be handed to a seat without inventing a
       # meaning, and printing the whole token in both rows would tell the
       # loser they won. So both rows show the board's token and no score.
+      # An older snapshot has no per-game points to fall back on; with them,
+      # the board would score as published whatever its token says.
       invented =
-        put_in(swiss, ["rounds", Access.at(0), "boards", Access.at(0), "result"], "1-0ADJ")
+        swiss
+        |> put_in(["rounds", Access.at(0), "boards", Access.at(0), "result"], "1-0ADJ")
+        |> update_in(["rounds", Access.at(0), "boards", Access.at(0)], &Map.delete(&1, "points"))
 
       publish(invented)
       document = grid(conn, slug)

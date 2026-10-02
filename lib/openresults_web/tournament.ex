@@ -953,6 +953,38 @@ defmodule OpenResultsWeb.Tournament do
   def result_points(token), do: Map.get(@result_points, token)
 
   @doc """
+  What each seat of a board scored, as `{white, black}`, or `nil` when that
+  cannot be known.
+
+  Read from `boards[].points`: the figures OpenPairings scored the game with,
+  under the tournament's own point system, presence points included, and for
+  a postponed game what it is credited with while it waits. The result token
+  is never interpreted when those are present.
+
+  A snapshot from before `boards[].points` existed has none, and then the
+  token is read as 1 / half / 0 (`result_points/1`) - the only reading
+  available to it - while a postponed board is `nil`, since how it is valued
+  is not in such a snapshot.
+  """
+  def board_points(board) when is_map(board) do
+    case Map.get(board, "points") do
+      %{"white" => white, "black" => black} when is_number(white) and is_number(black) ->
+        {white, black}
+
+      _absent_or_unreadable ->
+        if postponed?(board), do: nil, else: result_points(Map.get(board, "result"))
+    end
+  end
+
+  def board_points(_not_a_board), do: nil
+
+  @doc """
+  Whether this snapshot comes from a publisher that sends the point system
+  and per-game points - `tournament.scoring`. Absent means an older one.
+  """
+  def scoring_published?(payload), do: is_map(Map.get(info(payload), "scoring"))
+
+  @doc """
   A result token split into what to show and what it needs explaining as:
   `{base, note}`.
 
@@ -1016,7 +1048,7 @@ defmodule OpenResultsWeb.Tournament do
     |> Enum.take_while(&results_public?(Map.get(by_number, &1)))
     |> Enum.map_reduce({:known, 0.0}, fn number, running ->
       entry = card_entry(index, by_number, number, no)
-      running = advance(running, entry.points)
+      running = advance(running, entry.points || entry.provisional_points)
       {Map.put(entry, :score, running_score(running)), running}
     end)
     |> elem(0)
@@ -1035,7 +1067,8 @@ defmodule OpenResultsWeb.Tournament do
       postponed: false,
       postponed_date: nil,
       bye: nil,
-      points: nil
+      points: nil,
+      provisional_points: nil
     }
 
     case Map.get(by_number, number) do
@@ -1062,11 +1095,18 @@ defmodule OpenResultsWeb.Tournament do
     opponent_no = if colour == :white, do: Map.get(board, "black"), else: Map.get(board, "white")
     result = Map.get(board, "result")
 
-    points =
-      case result_points(result) do
+    mine =
+      case board_points(board) do
         {white, black} -> if colour == :white, do: white, else: black
         nil -> nil
       end
+
+    # A postponed game has no result to score yet. What it is credited with
+    # while it waits travels apart from `points`, so the row still shows no
+    # score for it and the running total still counts it, as OpenPairings'
+    # own does.
+    postponed = postponed?(board)
+    points = if postponed, do: nil, else: mine
 
     %{
       entry
@@ -1076,11 +1116,10 @@ defmodule OpenResultsWeb.Tournament do
         opponent: Map.get(index, opponent_no),
         opponent_no: opponent_no,
         result: result,
-        # A postponed game has no result and so no points yet, and the running
-        # score stops at it exactly as it stops at any game with no result.
-        postponed: postponed?(board),
+        postponed: postponed,
         postponed_date: postponed_date(board),
-        points: points
+        points: points,
+        provisional_points: if(postponed, do: mine)
     }
   end
 
@@ -1265,7 +1304,8 @@ defmodule OpenResultsWeb.Tournament do
     # A token this server cannot read leaves BOTH seats without a score
     # rather than one of them with a guess. The renderer shows the token as
     # it arrived and says nothing about who won.
-    {white_points, black_points} = result_points(result) || {nil, nil}
+    {white_points, black_points} =
+      if postponed, do: {nil, nil}, else: board_points(board) || {nil, nil}
 
     [
       {white, game_cell(number, :white, black, result, white_points, postponed, postponed_date)},
@@ -1333,34 +1373,47 @@ defmodule OpenResultsWeb.Tournament do
   `card/2` uses - an unpublished earlier round, a board the arbiter withheld,
   a game with no result yet, or a token this server cannot read. The two must
   agree: a player card and a pairing list disagreeing about the same number
-  would be this site contradicting itself, and the contract carries no
-  per-game points precisely so that nobody has to guess which is right.
+  would be this site contradicting itself.
 
-  **A postponed board is never priced here.** OpenPairings counts a
-  postponed game as whatever the tournament's rules say - a draw by default,
-  but a win or a loss for the player who asked for it, or nothing - and
-  scores it with the tournament's own point system (3-1-0, say). The snapshot
-  carries neither the valuation nor the point system, so adding the board up
-  from its result token would be a guess that is wrong exactly when those
-  rules differ from 1/½/0. Two things keep the number honest instead:
+  **Points are read, never worked out.** A board carries what each seat
+  scored (`boards[].points`, see `board_points/1`) under the tournament's own
+  point system, and a postponed board carries what it is credited with while
+  it waits - a draw by default, a win or a loss when the rules say so. So the
+  total here is the sum OpenPairings' own pairing list shows, a postponed game
+  included, under any point system.
+
+  **Older snapshots** (no `tournament.scoring`) carry no per-game points, so
+  two fallbacks keep them from being wrong rather than merely incomplete:
 
   * **The standings are the anchor.** When `standings.after_round` is below
     `number`, each player the standings list starts from `standings.rows[].points`
-    - OpenPairings' own total after that round, postponed games and point
-    system included - and only the rounds after it are added up. A postponed
-    game inside that range is therefore already priced correctly.
-  * **Otherwise it is unknown.** A postponed board in a round the standings do
-    not yet cover leaves both seats `nil`, like any other game with no result,
-    until it is played or the standings catch up.
-
-  The remaining hard-coded part is `@result_points`: a played game after the
-  anchor is read as 1/½/0 from its token, so a non-standard point system is
-  exact up to `standings.after_round` and an approximation beyond it.
+    - OpenPairings' own total after that round - and only the rounds after it
+    are added up, with a played game read as 1/half/0 from its token.
+  * **A postponed board is unknown.** Its valuation is not in such a
+    snapshot, so a postponed board in a round the standings do not cover
+    leaves both seats `nil` (see `score_gaps/2` for the reason).
 
   One pass over the earlier rounds rather than `card/2` per player, which
   would re-walk every round's boards once per seat on the page.
   """
   def scores_before(payload, number) do
+    payload
+    |> score_states(number)
+    |> Map.new(fn {no, state} -> {no, running_score(state)} end)
+  end
+
+  @doc """
+  Why a player's score into round `number` is unknown, for the players whose
+  it is: `%{no => :postponed | :gap}`. `:postponed` when the first thing that
+  stopped the total was a postponed game whose points the snapshot does not
+  carry, `:gap` for everything else (an unpublished or withheld round, a game
+  with no result). A player with a known score is not in the map.
+  """
+  def score_gaps(payload, number) do
+    for {no, {:unknown, reason}} <- score_states(payload, number), into: %{}, do: {no, reason}
+  end
+
+  defp score_states(payload, number) do
     earlier = payload |> round_slots() |> Enum.filter(&(&1 < number))
     by_number = rounds_by_number(payload)
 
@@ -1382,23 +1435,25 @@ defmodule OpenResultsWeb.Tournament do
       total =
         Enum.reduce(earlier, start, fn n, state ->
           if n > from,
-            do: advance(state, Map.get(contributions[n], no, :absent)),
+            do: advance_score(state, Map.get(contributions[n], no, :absent)),
             else: state
         end)
 
-      {no, running_score(total)}
+      {no, total}
     end
   end
 
-  # The one total in the document that OpenPairings computed with the
-  # tournament's own point system and its own value for a postponed game:
-  # `standings.rows[].points` after `standings.after_round`. Returned as
-  # `{round, %{no => points}}` when the standings stop before round `number`,
-  # and `{0, %{}}` when they do not (so there is nothing to start from).
+  # The one total in the document, for a snapshot without per-game points,
+  # that OpenPairings computed with the tournament's own point system and its
+  # own value for a postponed game: `standings.rows[].points` after
+  # `standings.after_round`. Returned as `{round, %{no => points}}` when the
+  # standings stop before round `number`, and `{0, %{}}` when they do not (so
+  # there is nothing to start from) or when the snapshot carries per-game
+  # points, which are exact for every round and need no anchor.
   #
   # A Keizer table ranks on Keizer points, so its game score is `score`.
   defp standings_anchor(payload, number) do
-    case after_round(payload) do
+    case if(scoring_published?(payload), do: nil, else: after_round(payload)) do
       round when is_integer(round) and round < number ->
         # OpenPairings never puts a withheld round inside its standings; a
         # document that does is not one to anchor a running score on.
@@ -1452,20 +1507,19 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   defp board_contributions(board) do
-    cond do
-      # A postponed game is still to be played and OpenPairings prices it by
-      # the tournament's rules, which the snapshot does not carry - see
-      # `scores_before/2`. Unknown for both seats, never a guessed draw.
-      postponed?(board) ->
-        [{Map.get(board, "white"), :unknown}, {Map.get(board, "black"), :unknown}]
+    seats = [Map.get(board, "white"), Map.get(board, "black")]
 
-      true ->
-        case result_points(Map.get(board, "result")) do
-          {white, black} -> [{Map.get(board, "white"), white}, {Map.get(board, "black"), black}]
-          # A board with no result yet contributes an unknown to BOTH seats,
-          # rather than nothing - a game in progress is not a game worth zero.
-          nil -> [{Map.get(board, "white"), :unknown}, {Map.get(board, "black"), :unknown}]
-        end
+    case board_points(board) do
+      {white, black} ->
+        Enum.zip(seats, [white, black])
+
+      # No points: a board with no result yet contributes an unknown to BOTH
+      # seats, rather than nothing - a game in progress is not a game worth
+      # zero. A postponed game with no published points is an older snapshot
+      # that does not say how it is valued - see `scores_before/2`.
+      nil ->
+        gap = if postponed?(board), do: :postponed, else: :unknown
+        Enum.map(seats, &{&1, gap})
     end
   end
 
@@ -1478,8 +1532,14 @@ defmodule OpenResultsWeb.Tournament do
   defp advance({:known, total}, points) when is_number(points), do: {:known, total + points}
   defp advance(_gap_reached_or_reaching, _points), do: :unknown
 
+  # `advance/2` that remembers why it stopped, for `score_gaps/2`.
+  defp advance_score({:known, total}, points) when is_number(points), do: {:known, total + points}
+  defp advance_score({:known, _total}, :postponed), do: {:unknown, :postponed}
+  defp advance_score({:known, _total}, _gap), do: {:unknown, :gap}
+  defp advance_score({:unknown, _reason} = stopped, _points), do: stopped
+
   defp running_score({:known, total}), do: total
-  defp running_score(:unknown), do: nil
+  defp running_score(_unknown), do: nil
 
   ## ---------- team tournaments ----------
 
