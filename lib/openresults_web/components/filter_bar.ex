@@ -121,7 +121,13 @@ defmodule OpenResultsWeb.Components.FilterBar do
       |> assign(:show_meta?, assigns.chips != [] or assigns.count_text != nil)
 
     ~H"""
-    <div :if={@any_control? or @sort?} class="filter-bar">
+    <%!-- Always rendered, even with nothing to filter by or sort: the
+          search box is how a player in the hall finds their own name - on
+          a round page, their board - and a tournament that publishes no
+          club, federation or category still has names. On a phone the bar
+          stays at the top of the screen while the table scrolls under it
+          (`.filter-bar` in app.css). --%>
+    <div class="filter-bar" id="filter-bar">
       <form
         method="get"
         action={@action}
@@ -156,6 +162,8 @@ defmodule OpenResultsWeb.Components.FilterBar do
             <input
               type="search"
               name="q"
+              id="player-search"
+              enterkeyhint="search"
               value={@filters.q}
               placeholder={gettext("Search player")}
               maxlength="100"

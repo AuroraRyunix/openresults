@@ -291,6 +291,13 @@ defmodule OpenResultsWeb.TournamentHTML do
     end
   end
 
+  # See `standings_table/1`: the most rows a standings table carries every
+  # tie-break's per-round working for.
+  @inline_working_rows 100
+
+  @doc false
+  def inline_working_rows, do: @inline_working_rows
+
   @doc """
   The standings, filtered and sorted per the filter bar's own query string -
   see `OpenResultsWeb.Tournament.Filter.standings/2` for what decides which
@@ -334,6 +341,15 @@ defmodule OpenResultsWeb.TournamentHTML do
     # Only when the tournament actually groups its players. A column of
     # dashes on every ordinary open is noise.
     categories? = Enum.any?(all_rows, & &1["category"])
+    working_published? = Tournament.show?(payload, "tiebreak_working")
+    # Each row's working is a small table per tie-break with every opponent
+    # named in it - on a thousand-player open, over two hundred thousand
+    # elements and eleven megabytes of HTML for one standings page, which a
+    # phone on the hall's wifi parses again on every result. Inline only
+    # while the table is short enough to carry it: a search for one name,
+    # a category, or an ordinary club tournament. The player's own page
+    # always has the full working.
+    explain_inline? = length(filtered.rows) <= @inline_working_rows
 
     assigns =
       assigns
@@ -359,7 +375,14 @@ defmodule OpenResultsWeb.TournamentHTML do
       # A finer tick than `tiebreaks` itself: an arbiter can publish the
       # columns while keeping the per-round arithmetic behind them closed.
       # Absent means shown, like every other key `Tournament.show?/2` reads.
-      |> assign(:explain_tiebreaks?, Tournament.show?(payload, "tiebreak_working"))
+      |> assign(:explain_tiebreaks?, explain_inline? and working_published?)
+      # The arbiter published the working, but this many rows cannot carry
+      # it - said once under the table, where the player pages are offered
+      # instead.
+      |> assign(
+        :working_elsewhere?,
+        working_published? and not explain_inline? and Tournament.show?(payload, "tiebreaks")
+      )
       # The filter bar's own option lists - only categories the arbiter
       # shows (`Filter.categories/1` reads the same gate `Tournament.show?/2`
       # does through `tournament.categories` itself being absent when
@@ -405,6 +428,12 @@ defmodule OpenResultsWeb.TournamentHTML do
       {gettext("No standings have been published for this tournament yet.")}
     </p>
 
+    <p :if={@rows != [] and @working_elsewhere?} id="working-elsewhere" class="footnote">
+      {gettext(
+        "How each tie-break was reached is on the player's own page - open a name. Search for a player, or filter, to see it in this table."
+      )}
+    </p>
+
     <FilterBar.filter_bar
       :if={@rows != [] or @empty?}
       action={~p"/t/#{@slug}"}
@@ -434,18 +463,20 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <th
               :if={@show.rating}
-              class="num"
+              class="num col-rating"
               scope="col"
               aria-sort={aria_sort(@filters, "rating")}
             >
               <.sort_link slug={@slug} filters={@filters} key="rating">{gettext("Rating")}</.sort_link>
             </th>
 
-            <th :if={@categories? and @show.category} scope="col">{gettext("Cat")}</th>
+            <th :if={@categories? and @show.category} class="col-cat" scope="col">
+              {gettext("Cat")}
+            </th>
 
             <th
               :if={@rounds_played?}
-              class="num"
+              class="num col-rds"
               scope="col"
               title={gettext("Rounds this player was there for")}
               aria-sort={aria_sort(@filters, "rounds_played")}
@@ -505,11 +536,11 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
             </th>
 
-            <td :if={@show.rating} class="num">{dash(@players[row["player"]]["rating"])}</td>
+            <td :if={@show.rating} class="num col-rating">{rating(@players, row["player"])}</td>
 
-            <td :if={@categories? and @show.category}>{dash(row["category"])}</td>
+            <td :if={@categories? and @show.category} class="col-cat">{dash(row["category"])}</td>
 
-            <td :if={@rounds_played?} class="num">{dash(row["rounds_played"])}</td>
+            <td :if={@rounds_played?} class="num col-rds">{dash(row["rounds_played"])}</td>
 
             <%= if @keizer? do %>
               <td class="num">{number(row["value"])}</td>
@@ -1376,11 +1407,11 @@ defmodule OpenResultsWeb.TournamentHTML do
           <tr>
             <th class="num" scope="col">{gettext("Bd")}</th>
 
-            <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
+            <th :if={@show.rating} class="num col-rating" scope="col">{gettext("Elo")}</th>
 
             <th
               :if={@show.pairing_scores}
-              class="num"
+              class="num col-pts"
               scope="col"
               title={gettext("Points going into this round")}
             >
@@ -1395,14 +1426,14 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <th
               :if={@show.pairing_scores}
-              class="num"
+              class="num col-pts"
               scope="col"
               title={gettext("Points going into this round")}
             >
               {gettext("Pts")}
             </th>
 
-            <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
+            <th :if={@show.rating} class="num col-rating" scope="col">{gettext("Elo")}</th>
           </tr>
         </thead>
 
@@ -1415,13 +1446,13 @@ defmodule OpenResultsWeb.TournamentHTML do
           >
             <th scope="row" class="num row-head">{Tournament.board_label(board)}</th>
 
-            <td :if={@show.rating} class="num">{dash(@players[board["white"]]["rating"])}</td>
+            <td :if={@show.rating} class="num col-rating">{rating(@players, board["white"])}</td>
 
-            <td :if={@show.pairing_scores} class="num">
+            <td :if={@show.pairing_scores} class="num col-pts">
               <.score points={@scores[board["white"]]} reason={@gaps[board["white"]]} />
             </td>
 
-            <td class={tag.white? && "pairing-match"} aria-current={tag.white? && "true"}>
+            <td class={seat_class(tag.white?)} aria-current={tag.white? && "true"}>
               <.player_link
                 slug={@slug}
                 no={board["white"]}
@@ -1442,7 +1473,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
             </td>
 
-            <td class={tag.black? && "pairing-match"} aria-current={tag.black? && "true"}>
+            <td class={seat_class(tag.black?)} aria-current={tag.black? && "true"}>
               <.player_link
                 slug={@slug}
                 no={board["black"]}
@@ -1455,17 +1486,26 @@ defmodule OpenResultsWeb.TournamentHTML do
               <span :if={tag.black?} class="visually-hidden">{gettext("matches your filter")}</span>
             </td>
 
-            <td :if={@show.pairing_scores} class="num">
+            <td :if={@show.pairing_scores} class="num col-pts">
               <.score points={@scores[board["black"]]} reason={@gaps[board["black"]]} />
             </td>
 
-            <td :if={@show.rating} class="num">{dash(@players[board["black"]]["rating"])}</td>
+            <td :if={@show.rating} class="num col-rating">{rating(@players, board["black"])}</td>
           </tr>
         </tbody>
       </table>
     </div>
     """
   end
+
+  # A player's rating, or the dash - one short call, because the pairing
+  # list prints two of these on each of five hundred boards.
+  defp rating(players, no), do: dash(players[no]["rating"])
+
+  # A seat cell's classes: `seat` for the phone layout, the match mark when
+  # the filter bar picked this seat out.
+  defp seat_class(true), do: "seat pairing-match"
+  defp seat_class(_matched), do: "seat"
 
   @doc """
   One round's matches, "Team A 2½ - 1½ Team B", each expandable to its board

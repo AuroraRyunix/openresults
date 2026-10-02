@@ -168,6 +168,12 @@ body {
   max-width: 90rem;
   margin: 0 auto;
   padding: 1rem 1rem 4rem;
+  /* Clear of a phone's rounded corners and notch in landscape, and of the
+     home bar under the footer - `viewport-fit=cover` in the root layout lets
+     the background run edge to edge, this keeps the text inside. */
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* The prose that lives between the tables. A measure, not a container width -
@@ -362,6 +368,12 @@ a.chip:hover {
 .scroller {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* The containing block for what is absolutely positioned inside - every
+     `.visually-hidden` caption and label in the table. Without it they were
+     placed against the page, out where the table's far columns are, and the
+     scroller could not clip them: a ten-player standings with tie-break
+     working scrolled the whole page sideways on a phone. */
+  position: relative;
 }
 
 table {
@@ -2165,6 +2177,9 @@ a.xt-opp:hover {
 .hall-body {
   margin: 0;
   height: 100vh;
+  /* The visible height on a phone or tablet, whose browser bar `100vh`
+     ignores - the footer was cut off under it. */
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
@@ -2177,11 +2192,38 @@ a.xt-opp:hover {
   grid-template-rows: auto 1fr auto;
   gap: calc(1.5 * var(--u));
   height: 100vh;
+  height: 100dvh;
   padding: calc(2.5 * var(--u)) calc(4 * var(--u));
+  padding-left: max(calc(4 * var(--u)), env(safe-area-inset-left, 0px));
+  padding-right: max(calc(4 * var(--u)), env(safe-area-inset-right, 0px));
   font-size: calc(3.2 * var(--u));
   line-height: 1.2;
   cursor: default;
   user-select: none;
+}
+
+/* A phone held upright. The 16:9 unit above is the width's there - 2px on a
+   390px phone, and type a seventh of the size anyone can read. Sized to the
+   width instead, a little larger, so a board's line is legible in a hand;
+   the server's rows per page were chosen for a wide screen, and a tall one
+   has the room for them. */
+@media screen and (max-aspect-ratio: 1/1) {
+  .hall {
+    --u: min(1.3vw, 0.9vh);
+  }
+
+  /* "1/2-1/2" whole, at the cost of a little of each name. Qualified by
+     `.hall`, because the base widths further down this file come later. */
+  .hall .hall-boards thead th:nth-child(3),
+  .hall .hall-matches thead th:nth-child(3) {
+    width: 24%;
+  }
+
+  .hall .hall-table th,
+  .hall .hall-table td {
+    padding-left: calc(0.6 * var(--u));
+    padding-right: calc(0.6 * var(--u));
+  }
 }
 
 .hall-head {
@@ -2594,6 +2636,9 @@ a.xt-opp:hover {
   border: 1px solid var(--rule);
   padding: 0.25rem 0.6rem;
   text-align: left;
+  /* Prose, not figures: the site-wide `nowrap` on cells pushed the tag
+     legend past a phone's edge and the whole page sideways. */
+  white-space: normal;
 }
 
 .changelog-body table td:first-child {
@@ -3231,6 +3276,286 @@ a.xt-opp:hover {
 
 .admin-notice-preview .public-notice {
   margin-bottom: 0;
+}
+
+/* ---- Phones and touch screens ----------------------------------------------
+   Most readers of this site are standing in a playing hall with a phone in
+   one hand. Everything here is additive: a desktop with a mouse matches none
+   of these queries and renders exactly as it did. Three different questions,
+   so three different queries:
+
+     (pointer: coarse)     a finger, not a mouse - targets at least 44px
+                           (WCAG 2.5.5), whatever the width
+     max-width: 40rem      a phone held upright - columns that can go, go
+     max-width: 48rem      a phone or a small tablet - the search stays on
+                           screen while a long table scrolls
+
+   `screen` on each, so a printed sheet - sized by the paper, not a phone -
+   never picks any of it up. */
+
+/* A text box under 16px makes iOS zoom the whole page in when it takes focus,
+   and leaves it zoomed - the table the reader was searching then sits half
+   off the screen. 16px exactly, only where a finger or a narrow screen is. */
+@media screen and (pointer: coarse), screen and (max-width: 40rem) {
+  .index-search-input,
+  .filter-bar .filter-search-input,
+  .filter-bar .filter-pill select,
+  .field input[type="text"],
+  .field input[type="email"],
+  .field textarea,
+  .field select,
+  .fide-search input {
+    font-size: 1rem;
+  }
+}
+
+@media screen and (pointer: coarse) {
+  .chip,
+  .filter-chip a,
+  .filter-summary,
+  .theme-picker-trigger,
+  .theme-picker-item,
+  .card-close,
+  .fide-results button,
+  .actions button {
+    min-height: 2.75rem;
+  }
+
+  .chip,
+  .lang-opt,
+  .card-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lang-opt {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .lang-opt.is-current {
+    padding: 0.15rem 0.35rem;
+  }
+
+  .filter-bar .filter-search-input,
+  .filter-bar .filter-pill select,
+  .filter-submit {
+    height: 2.75rem;
+  }
+
+  .field .check {
+    min-height: 2.75rem;
+    padding: 0.4rem 0.9rem;
+  }
+
+  .field .radio {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  /* The whole line is the target, not just the tournament's name. */
+  .tournaments li {
+    padding: 0;
+  }
+
+  .tournaments a {
+    display: block;
+    padding: 0.6rem 0 0.15rem;
+  }
+
+  .tournaments li > .details {
+    padding-bottom: 0.6rem;
+  }
+
+  /* Rows a finger can pick out of a list of five hundred boards. */
+  .pairings th,
+  .pairings td,
+  .standings th,
+  .standings td {
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .sort-link {
+    display: inline-block;
+    padding: 0.5rem 0;
+  }
+
+  .site-foot a,
+  .actions .cancel,
+  .brand {
+    display: inline-block;
+    padding: 0.6rem 0;
+  }
+
+  .tb-cell summary {
+    padding: 0.35rem 0;
+  }
+}
+
+/* The search box on top of the screen while a table of a thousand rows
+   scrolls under it - the one thing a player looking for their name needs to
+   reach without scrolling back up. Sticky within its own section, so it
+   never follows the reader past the table it searches. */
+@media screen and (max-width: 48rem) {
+  .filter-bar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 0.25rem 0.5rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* One line while it is folded: the search and the Filters button side by
+     side, so the bar costs a phone as little of its height as it can. Open,
+     the controls take the next line whole. */
+  .filter-bar .filter-search {
+    flex: 1 1 8rem;
+    min-width: 0;
+  }
+
+  .filter-disclosure:not([open]) {
+    flex: 0 0 auto;
+  }
+
+  .filter-meta {
+    margin-top: 0.35rem;
+  }
+
+  /* A link to a board (`/player/:no/board`) or a row lands below the bar
+     rather than under it. */
+  html {
+    scroll-padding-top: 5.5rem;
+  }
+}
+
+/* The board somebody followed a link to - "their board in the latest
+   round" - marked where it landed. The left rule as well as the tint, so it
+   is not colour alone. */
+.pairings tr:target > * {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.pairings tr:target > :first-child {
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+@media screen and (max-width: 40rem) {
+  /* Board, White, result, Black: what a player in the hall looks for. The
+     ratings and the points going in are one tap away on either player's
+     page, and four more columns put the names off the screen. */
+  .pairings .col-rating,
+  .pairings .col-pts {
+    display: none;
+  }
+
+  /* Names wrap rather than push the result and Black off the right edge -
+     on the projector view too, when somebody opens it on a phone. */
+  .pairings td.seat,
+  .projector-pairings td {
+    min-width: 7rem;
+    white-space: normal;
+  }
+
+  .projector-pairings td {
+    min-width: 0;
+  }
+
+  .pairings th,
+  .pairings td {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+  }
+
+  /* Rank, name, points first: what a player asks the standings. Rating,
+     category and rounds present are on each player's page, and they pushed
+     the points off the right edge. */
+  .standings .col-rating,
+  .standings .col-cat,
+  .standings .col-rds {
+    display: none;
+  }
+
+  /* The standings scroll sideways through their tie-breaks; the rank and the
+     name stay put, as on the cross-table, so a reader who has scrolled to
+     the third tie-break still knows whose numbers they are reading. The
+     same three load-bearing properties as `.crosstable .xt-name`. */
+  .standings {
+    --st-rank: 3.25rem;
+  }
+
+  .standings tr > :first-child,
+  .standings tr > :nth-child(2) {
+    position: sticky;
+    z-index: 1;
+    background: var(--bg);
+    box-shadow:
+      inset -1px 0 var(--rule),
+      inset 0 -1px var(--rule);
+  }
+
+  .standings tr > :first-child {
+    left: 0;
+    box-sizing: border-box;
+    width: var(--st-rank);
+    min-width: var(--st-rank);
+    max-width: var(--st-rank);
+    white-space: normal;
+  }
+
+  .standings tr > :nth-child(2) {
+    left: var(--st-rank);
+    min-width: 8rem;
+    max-width: 11rem;
+    white-space: normal;
+  }
+
+  .standings .category-place {
+    display: block;
+    font-size: 0.75rem;
+  }
+
+  .standings .category-place::before {
+    content: none;
+  }
+
+  .scroller:has(> .standings) {
+    scroll-padding-left: calc(3.25rem + 11rem);
+  }
+
+  /* Two rounds beside an eleven-rem name is not a cross-table. Narrower
+     pinned columns leave the rounds most of the screen; the whole name is
+     on the player's page. */
+  .crosstable {
+    --xt-key: 2.75rem;
+  }
+
+  .crosstable .xt-name {
+    width: 7.5rem;
+    min-width: 7.5rem;
+    max-width: 7.5rem;
+  }
+
+  .xt-scroller {
+    scroll-padding-left: calc(2.75rem + 7.5rem);
+  }
+}
+
+/* The player card on a phone - reached from the keyboard's context-menu key
+   or a long press where a browser sends one. The dynamic viewport, so the
+   browser's own toolbar does not hide its bottom; clear of a notch. */
+.card-overlay {
+  padding:
+    max(1rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px))
+    max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+}
+
+.card-dialog {
+  max-height: 85dvh;
 }
 
 /* ---- Embed: `?embed=1` ----------------------------------------------------

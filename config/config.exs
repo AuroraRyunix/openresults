@@ -63,10 +63,10 @@ config :openresults, OpenResultsWeb.Endpoint,
   pubsub_server: OpenResults.PubSub,
   live_view: [signing_salt: "cwbu1VZz"]
 
-# Configure LiveView
-config :phoenix_live_view,
-  # the attribute set on all root tags. Used for Phoenix.LiveView.ColocatedCSS.
-  root_tag_attribute: "phx-r"
+# No `root_tag_attribute`: the generator's `phx-r` exists for
+# `Phoenix.LiveView.ColocatedCSS`, which nothing here uses, and it was stamped
+# on the root tag of every component call - every player link, every
+# cross-table cell - several thousand times over on a big open's pages.
 
 # Configure esbuild (the version is required)
 config :esbuild,

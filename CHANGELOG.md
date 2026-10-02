@@ -27,6 +27,51 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **A thousand-player standings page is 16 times lighter on a
+  phone.** Every tie-break value carried its own per-round working table,
+  every opponent named, so a 1,000-player, nine-round open with four
+  tie-breaks sent 11 MB of HTML (346 KB gzipped) and 221,000 elements - and
+  the refresher fetched and swapped it again on every result. The working now
+  stays inline only while the table shows at most a hundred rows (an ordinary
+  club tournament, a category, or a search for one name); above that a line
+  says it is on each player's own page. The same page is now 0.82 MB (50 KB
+  gzipped) and 16,500 elements. A test holds the budget.
+- [Feature] **The player search is on every standings, round and
+  cross-table page, and stays at the top of a phone's screen.** A round
+  whose tournament publishes no club, federation or category had no search
+  box at all, so "find my board" meant scrolling five hundred boards. On a
+  phone or small tablet the search bar now sticks to the top while the table
+  scrolls under it, folded to one line, and a link to a board ("their board in
+  the latest round") lands below it with the board marked.
+- [Change] **Phone layouts for the tables.** On a phone held upright the
+  pairing list is board, White, result, Black (ratings and points going in
+  are on each player's page) with names wrapping instead of pushing Black off
+  the screen; the standings show rank, name and points first, with the rank
+  and name pinned while the tie-breaks scroll sideways; the cross-table's
+  pinned name column is narrower so more rounds fit. Wider screens are
+  unchanged.
+- [Fix] **No more sideways page scroll on a phone** from a standings table
+  with tie-break working (its hidden captions were placed against the page,
+  outside the table's own scroller), from the changelog's tag table, or from
+  the projector view opened on a phone.
+- [Fix] **Typing in a search or form field no longer zooms the page on an
+  iPhone.** Text boxes and dropdowns are 16px on touch screens and narrow
+  ones; iOS zoomed in on anything smaller and left the page zoomed.
+- [Change] **Touch targets of at least 44px on touch screens**: the round
+  strip, the language and theme pickers, the filter controls and chips, the
+  tournament list, table rows, the entry form's checkboxes, footer links and
+  the player card's Close button. A desktop with a mouse is unchanged.
+- [Fix] **The hall display is readable on a phone held upright.** Its type
+  was sized to a 16:9 screen's height, which on a 390px-wide phone made it
+  about 7px; portrait screens now size it to the width. It also uses the
+  visible height, so a phone's browser bar no longer hides its footer.
+- [Change] **Notches and rounded corners**: pages, the player card and the
+  hall display keep their content inside the screen's safe area
+  (`viewport-fit=cover`). Zoom is never disabled.
+- [Change] **No `phx-r` attribute on every component's root tag.** It
+  exists for colocated CSS, which this site does not use, and was stamped on
+  every player link and cross-table cell.
+
 - [Fix] **A running score is now exactly OpenPairings' own, under any point
   system and with postponed games.** The "points before this round" column
   on a round's pairing list counted every postponed game as a half point, and
