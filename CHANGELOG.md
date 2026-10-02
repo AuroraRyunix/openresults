@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-02
+
 - [Fix] **A thousand-player standings page is 16 times lighter on a
   phone.** Every tie-break value carried its own per-round working table,
   every opponent named, so a 1,000-player, nine-round open with four
