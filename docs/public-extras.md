@@ -60,8 +60,10 @@ shows dates.
 ## The hall display - `/t/<slug>/hall`
 
 A full-screen page for a television or a projector in the playing hall. No
-login, one address per tournament, linked from every round page. Open it in
-a browser on the screen's computer and make the window full screen (F11).
+login, one address per tournament, linked from a card near the top of the
+standings, cross-table and round pages (one card for each of the two screens,
+once per tournament, not per round). Open it in a browser on the screen's
+computer and press the Full screen button (or F).
 
 It cycles through, a page at a time:
 
@@ -95,7 +97,7 @@ screen, in the URL:
 
 | parameter | effect |
 |---|---|
-| `?theme=light` | the high-contrast light theme; the default is dark |
+| `?theme=black\|white\|ultra` | the colours: black (the default), white (pure white, black text), or ultra contrast (pure black and white, a yellow accent, bold, thick rules, every text pairing above 7:1). `light` still works and means white |
 | `?views=names,pairings` | only these views on this screen - for a hall with two screens. It can only narrow what the arbiter chose |
 | `?lang=nl` | the language, as on every page |
 
@@ -119,5 +121,31 @@ page's signed LiveView session. The reverse proxy must pass WebSockets
 through (Cloudflare's tunnel does); LiveView falls back to long polling
 where it cannot.
 
-The older projector view (`/t/<slug>/round/<n>?display=1`) is unchanged: one
-round's boards, a plain document with no connection.
+## The projector view - `/t/<slug>/projector`
+
+The same screen machinery as the hall display, with the pairings only, in
+large type, and always the **newest round**: it follows a newly published
+round and the results as they arrive, by itself, over the same connection
+(LiveView on `OpenResults.TournamentEvents`, never the page cache). It
+respects the same display rules: no boards when the arbiter withholds the
+pairings, no result from a round whose results are not public, a hidden or
+unknown tournament is the standings page's own 404 and a screen left open on
+a tournament that is then hidden empties. `?views=` is ignored; the hall's
+per-view settings are not needed (the projector shows the pairings whenever
+the public round pages exist), but the seconds per page are used.
+
+**On-screen controls**, on both screens, in the top corner: Full screen
+(also the F key; uses the browser's Fullscreen API with the WebKit prefix, and
+the button is hidden where the browser has none, e.g. iPhone Safari) and the
+colours Black / White / Ultra contrast. The controls fade out after four
+seconds without a mouse move, tap or key and return on any. A colour chosen
+on the screen is remembered in that browser (localStorage); `?theme=` in
+the URL wins over what was remembered. `tournament.hall` in the snapshot
+carries no colour option today, so a per-tournament default is not offered;
+adding one would be a snapshot change on the OpenPairings side. The hall
+clock shows seconds (HH:MM:SS) and ticks in the browser, with no server
+round-trips.
+
+The older per-round page (`/t/<slug>/round/<n>?display=1`) is unchanged and
+still works for bookmarks: it shows that one round, a plain document that
+polls; it is no longer linked from the site, and has no on-screen controls.

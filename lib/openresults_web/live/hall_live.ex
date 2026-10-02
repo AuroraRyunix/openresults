@@ -69,13 +69,21 @@ defmodule OpenResultsWeb.HallLive do
 
     if connected?(socket), do: TournamentEvents.subscribe(slug)
 
+    projector? = socket.assigns[:live_action] == :projector
+    choice = theme_choice(params["theme"])
+
     socket =
       socket
       |> assign(
         slug: slug,
         locale: locale,
-        theme: theme(params["theme"]),
-        only: Hall.parse_views(params["views"]),
+        projector?: projector?,
+        theme_choice: choice || "black",
+        theme_from_url?: choice != nil,
+        theme: theme(choice),
+        # The projector view is the pairings and nothing else, whatever
+        # `?views=` says; the hall display narrows by it.
+        only: if(projector?, do: [:pairings], else: Hall.parse_views(params["views"])),
         snapshot_id: nil,
         available?: false,
         data: nil,
@@ -86,7 +94,7 @@ defmodule OpenResultsWeb.HallLive do
         paused?: false,
         cycle: 0,
         timer_cycle: nil,
-        page_title: gettext("Hall display")
+        page_title: screen_title(projector?)
       )
       |> init_streams()
       |> load(true)
@@ -95,12 +103,22 @@ defmodule OpenResultsWeb.HallLive do
     {:ok, socket, layout: false}
   end
 
-  # A theme picked for the room by whoever sets up the screen, in the URL -
-  # not a preference remembered by a browser nobody will ever touch again.
-  # Dark unless asked: a bright white slab at the front of a playing hall is
-  # the thing everyone looks at instead of their board.
-  defp theme("light"), do: "contrast"
-  defp theme(_dark_or_absent), do: "night"
+  defp screen_title(true), do: gettext("Projector view")
+  defp screen_title(false), do: gettext("Hall display")
+
+  # A theme picked for the room by whoever sets up the screen, in the URL
+  # (`?theme=black|white|ultra`; `light` is the older spelling of white), or
+  # on the screen itself - the hook then remembers it in that browser, and the
+  # URL still wins over what it remembered. Black unless asked: a bright white
+  # slab at the front of a playing hall is the thing everyone looks at
+  # instead of their board.
+  defp theme_choice(value) when value in ["black", "white", "ultra"], do: value
+  defp theme_choice("light"), do: "white"
+  defp theme_choice(_absent_or_junk), do: nil
+
+  defp theme("white"), do: "contrast"
+  defp theme("ultra"), do: "ultra"
+  defp theme(_black_or_absent), do: "night"
 
   defp init_streams(socket) do
     socket
@@ -168,7 +186,7 @@ defmodule OpenResultsWeb.HallLive do
   end
 
   defp apply_snapshot(socket, snapshot, initial?) do
-    settings = Hall.settings(snapshot.payload, socket.assigns.only)
+    settings = snapshot.payload |> Hall.settings(socket.assigns.only) |> screen_settings(socket)
     data = Hall.build(snapshot.payload, settings)
     now = now()
     slides = Hall.slides(data, settings)
@@ -192,11 +210,19 @@ defmodule OpenResultsWeb.HallLive do
       arrivals: Hall.arrivals(socket.assigns.arrivals, data, now, initial?),
       slides: slides,
       index: index,
-      page_title: "#{data.name} - #{gettext("Hall display")}"
+      page_title: "#{data.name} - #{screen_title(socket.assigns.projector?)}"
     )
     |> then(fn socket -> if new_round?, do: bump(socket), else: socket end)
     |> put_rows()
   end
+
+  # The projector view shows the pairings whether or not the arbiter put them
+  # in the hall display's cycle: it is a screen of its own, and what it may
+  # show is decided by the display rules `Hall.build/2` already applies.
+  defp screen_settings(settings, %{assigns: %{projector?: true}}),
+    do: %{settings | views: [:pairings]}
+
+  defp screen_settings(settings, _socket), do: settings
 
   # The same page if it still exists, else the first page of the same view,
   # else the slide that now sits where the old one was.
@@ -277,7 +303,8 @@ defmodule OpenResultsWeb.HallLive do
     ~H"""
     <div
       id="hall"
-      class={["hall", @paused? && "is-paused"]}
+      class={["hall", @paused? && "is-paused", @projector? && "is-projector"]}
+      data-screen={if(@projector?, do: "projector", else: "hall")}
       data-view={@slide && elem(@slide, 0)}
       data-page={@slide && elem(@slide, 1)}
       data-cycle={@cycle}
@@ -285,9 +312,14 @@ defmodule OpenResultsWeb.HallLive do
       phx-click="toggle_pause"
       phx-window-keydown="key"
     >
+      <a class="skip-link" href="#hall-stage">
+        {gettext("Skip to content")}
+      </a>
+      <.screen_tools theme_choice={@theme_choice} theme_from_url?={@theme_from_url?} />
+
       <header class="hall-head">
         <div class="hall-title">
-          <h1 id="hall-name">{(@data && @data.name) || gettext("Hall display")}</h1>
+          <h1 id="hall-name">{(@data && @data.name) || screen_title(@projector?)}</h1>
           <p :if={@data && @data.round} id="hall-round" class="hall-round">
             <span>{@data.round.heading}</span>
             <span :if={@data.round.date} class="hall-quiet">
@@ -301,7 +333,7 @@ defmodule OpenResultsWeb.HallLive do
         <.clock />
       </header>
 
-      <main id="hall-stage" class="hall-stage" aria-live="polite">
+      <main id="hall-stage" class="hall-stage" tabindex="-1" aria-live="polite">
         <%= cond do %>
           <% not @available? -> %>
             <p id="hall-unavailable" class="hall-empty">
@@ -595,12 +627,198 @@ defmodule OpenResultsWeb.HallLive do
   defp colour(:black), do: gettext("Black")
   defp colour(_none), do: nil
 
+  attr :theme_choice, :string, required: true
+  attr :theme_from_url?, :boolean, required: true
+
+  # The controls a person at the screen reaches for: full screen, and the
+  # colours. Fixed in the corner, faded out after a few seconds without
+  # movement so they are never on the picture for the room, and back on any
+  # mouse move, tap or key. Server-rendered once and then the hook's: the
+  # label and pressed states change in the browser only, hence `ignore`.
+  defp screen_tools(assigns) do
+    ~H"""
+    <div
+      id="screen-tools"
+      class="screen-tools"
+      phx-hook=".ScreenTools"
+      phx-update="ignore"
+      data-choice={@theme_choice}
+      data-theme-from-url={to_string(@theme_from_url?)}
+      data-theme-store="openresults.screen.theme"
+    >
+      <div id="screen-themes" class="screen-themes" role="group" aria-label={gettext("Colours")}>
+        <button
+          :for={{choice, label} <- theme_options()}
+          type="button"
+          id={"theme-#{choice}"}
+          class="screen-btn"
+          data-choice={choice}
+          aria-pressed={to_string(choice == @theme_choice)}
+        >
+          {label}
+        </button>
+      </div>
+      <button
+        type="button"
+        id="fullscreen-toggle"
+        class="screen-btn"
+        data-state="off"
+        data-label-enter={gettext("Full screen")}
+        data-label-exit={gettext("Exit full screen")}
+        title={gettext("Full screen (F)")}
+        hidden
+      >
+        <svg class="screen-icon screen-icon-enter" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <svg class="screen-icon screen-icon-exit" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span class="screen-btn-label">{gettext("Full screen")}</span>
+      </button>
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".ScreenTools">
+      export default {
+        mounted() {
+          this.root = document.documentElement
+          this.fsButton = this.el.querySelector("#fullscreen-toggle")
+          this.names = {black: "night", white: "contrast", ultra: "ultra"}
+          this.store = this.el.dataset.themeStore
+
+          // The URL wins; then what this browser remembered; then the server's.
+          let choice = this.el.dataset.choice
+          if (this.el.dataset.themeFromUrl !== "true") {
+            const kept = this.read()
+            if (kept && this.names[kept]) choice = kept
+          }
+          this.apply(choice, false)
+
+          this.onClick = (e) => {
+            // A tap on a control must not also pause the cycle underneath.
+            e.stopPropagation()
+            const theme = e.target.closest("[data-choice]")
+            if (theme) { this.apply(theme.dataset.choice, true); return }
+            if (e.target.closest("#fullscreen-toggle")) this.toggleFullscreen()
+          }
+          this.el.addEventListener("click", this.onClick)
+
+          this.onKey = (e) => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return
+            if ((e.key === "f" || e.key === "F") && !e.target.closest("input, textarea, select")) {
+              this.toggleFullscreen()
+            }
+          }
+          window.addEventListener("keydown", this.onKey)
+
+          this.onWake = () => this.wake()
+          for (const type of ["mousemove", "pointerdown", "touchstart", "keydown"]) {
+            window.addEventListener(type, this.onWake, {passive: true})
+          }
+          this.wake()
+
+          this.onFsChange = () => this.syncFullscreen()
+          document.addEventListener("fullscreenchange", this.onFsChange)
+          document.addEventListener("webkitfullscreenchange", this.onFsChange)
+          if (document.fullscreenEnabled || document.webkitFullscreenEnabled) {
+            this.fsButton.hidden = false
+          }
+          this.syncFullscreen()
+        },
+        destroyed() {
+          clearTimeout(this.idle)
+          window.removeEventListener("keydown", this.onKey)
+          for (const type of ["mousemove", "pointerdown", "touchstart", "keydown"]) {
+            window.removeEventListener(type, this.onWake)
+          }
+          document.removeEventListener("fullscreenchange", this.onFsChange)
+          document.removeEventListener("webkitfullscreenchange", this.onFsChange)
+        },
+        read() {
+          try { return window.localStorage.getItem(this.store) } catch (_e) { return null }
+        },
+        write(choice) {
+          try { window.localStorage.setItem(this.store, choice) } catch (_e) { /* private window */ }
+        },
+        apply(choice, remember) {
+          this.root.setAttribute("data-theme", this.names[choice])
+          for (const button of this.el.querySelectorAll("[data-choice]")) {
+            button.setAttribute("aria-pressed", String(button.dataset.choice === choice))
+          }
+          if (remember) this.write(choice)
+        },
+        wake() {
+          this.el.classList.remove("is-idle")
+          clearTimeout(this.idle)
+          this.idle = setTimeout(() => {
+            // Never hide a control somebody is steering by keyboard.
+            if (this.el.contains(document.activeElement)) { this.wake(); return }
+            this.el.classList.add("is-idle")
+          }, 4000)
+        },
+        fullscreenElement() {
+          return document.fullscreenElement || document.webkitFullscreenElement
+        },
+        toggleFullscreen() {
+          if (this.fsButton.hidden) return
+          let result
+          if (this.fullscreenElement()) {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen
+            result = exit && exit.call(document)
+          } else {
+            const el = document.documentElement
+            const enter = el.requestFullscreen || el.webkitRequestFullscreen
+            result = enter && enter.call(el)
+          }
+          if (result && result.catch) result.catch(() => {})
+        },
+        syncFullscreen() {
+          const on = !!this.fullscreenElement()
+          const button = this.fsButton
+          button.dataset.state = on ? "on" : "off"
+          button.setAttribute("aria-pressed", String(on))
+          button.querySelector(".screen-btn-label").textContent =
+            on ? button.dataset.labelExit : button.dataset.labelEnter
+        }
+      }
+    </script>
+    """
+  end
+
+  defp theme_options do
+    [
+      {"black", gettext("Black")},
+      {"white", gettext("White")},
+      {"ultra", gettext("Ultra contrast")}
+    ]
+  end
+
   # The time on the television, not the server's: a hall in Brussels
   # watching a server in Frankfurt would otherwise be an hour out every
   # winter. Rendered by the hook from the browser's own clock and locale.
   defp clock(assigns) do
     ~H"""
-    <p id="hall-clock" class="hall-clock" phx-hook=".HallClock" phx-update="ignore"></p>
+    <p
+      id="hall-clock"
+      class="hall-clock"
+      data-format="HH:MM:SS"
+      phx-hook=".HallClock"
+      phx-update="ignore"
+    >
+    </p>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".HallClock">
       export default {
         mounted() {
@@ -612,7 +830,9 @@ defmodule OpenResultsWeb.HallLive do
         },
         tick() {
           const lang = document.documentElement.lang || undefined
-          this.el.textContent = new Date().toLocaleTimeString(lang, {hour: "2-digit", minute: "2-digit"})
+          this.el.textContent = new Date().toLocaleTimeString(lang, {
+            hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+          })
         }
       }
     </script>

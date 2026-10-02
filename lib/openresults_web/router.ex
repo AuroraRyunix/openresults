@@ -123,7 +123,10 @@ defmodule OpenResultsWeb.Router do
     live_session :hall,
       root_layout: {OpenResultsWeb.Layouts, :hall_root},
       session: {OpenResultsWeb.HallLive, :session, []} do
-      live "/t/:slug/hall", HallLive
+      live "/t/:slug/hall", HallLive, :hall
+      # The same LiveView, pairings only: the projector view, which follows
+      # the newest round. Not the `?display=1` page of one round.
+      live "/t/:slug/projector", HallLive, :projector
     end
   end
 

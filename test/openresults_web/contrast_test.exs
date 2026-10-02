@@ -55,7 +55,16 @@ defmodule OpenResultsWeb.ContrastTest do
 
   test "every theme the picker offers is defined, with all seven tokens", %{themes: themes} do
     assert Map.keys(themes) |> Enum.sort() ==
-             Enum.sort(["default", "device dark", "paper", "night", "board", "slate", "contrast"])
+             Enum.sort([
+               "default",
+               "device dark",
+               "paper",
+               "night",
+               "board",
+               "slate",
+               "contrast",
+               "ultra"
+             ])
 
     for {name, palette} <- themes do
       assert Enum.sort(Map.keys(palette)) == Enum.sort(@tokens), "#{name} is missing a token"
@@ -75,6 +84,31 @@ defmodule OpenResultsWeb.ContrastTest do
       end
 
     assert failures == [], Enum.join(failures, "\n")
+  end
+
+  # The hall screens' third colour option is meant for the back row of a bright
+  # hall, so it is held to WCAG AAA (7:1 for text, 3:1 for non-text), and its
+  # secondary colours may not be greys at all.
+  test "the ultra contrast theme reaches AAA for every text pairing and has no grey text", %{
+    themes: themes
+  } do
+    palette = Map.fetch!(themes, "ultra")
+
+    failures =
+      for {what, fg, bg, needed} <- @pairings,
+          ratio = ratio(palette[fg], palette[bg]),
+          ratio < max(needed, if(needed >= 4.5, do: 7.0, else: needed)),
+          do: "#{what}: #{Float.round(ratio, 2)}:1"
+
+    assert failures == []
+
+    for token <- ~w(ink quiet withheld) do
+      assert palette[token] in ["#ffffff", "#000000"], "--#{token} must be pure black or white"
+    end
+  end
+
+  test "the three screen colours the hall offers are all defined", %{themes: themes} do
+    for theme <- ["night", "contrast", "ultra"], do: assert(Map.has_key?(themes, theme))
   end
 
   test "no text box or dropdown is edged in the hairline colour" do

@@ -147,6 +147,73 @@ defmodule OpenResultsWeb.TournamentHTML do
         <% end %>
       </nav>
 
+      <%!-- The two screens for the hall, once per tournament and near the top
+            where an organiser looks first - not on each round. Both follow
+            the newest round by themselves. Offered only where the pages they
+            show are public: the projector view is pairings, the hall display
+            is pairings or standings, and a screen left open on a tournament
+            that later hides them says so rather than showing it. Only on the
+            overview pages, not on a player's card or a form. --%>
+      <div
+        :if={screens?(@current) and (@show.pairings or @show.standings)}
+        id="screens"
+        class="screens"
+      >
+        <a
+          :if={@show.pairings}
+          id="projector-link"
+          class="screen-card"
+          href={~p"/t/#{@slug}/projector"}
+        >
+          <svg class="screen-card-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="12"
+              rx="1.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="M8 20h8M12 16v4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span class="screen-card-text">
+            <span class="screen-card-title">{gettext("Projector view")}</span>
+            <span class="screen-card-desc">
+              {gettext("Large boards for the newest round, updating by themselves")}
+            </span>
+          </span>
+        </a>
+        <a id="hall-display-link" class="screen-card" href={~p"/t/#{@slug}/hall"}>
+          <svg class="screen-card-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="1.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path d="M3 9h18M9 9v12" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span class="screen-card-text">
+            <span class="screen-card-title">{gettext("Hall display")}</span>
+            <span class="screen-card-desc">
+              {gettext("Pairings, results and standings in turn, always the newest round")}
+            </span>
+          </span>
+        </a>
+      </div>
+
       <%!--
         Outside the round strip, which is about rounds. Taken down on
         2026-08-29 while the form was unfinished and put back on 2026-09-30
@@ -177,6 +244,10 @@ defmodule OpenResultsWeb.TournamentHTML do
     </header>
     """
   end
+
+  # The overview pages carry the hall-screen cards; a player's card and the
+  # forms do not.
+  defp screens?(current), do: current in [:standings, :crosstable] or match?({:round, _}, current)
 
   @doc """
   The tournament's dates, as one span or two.

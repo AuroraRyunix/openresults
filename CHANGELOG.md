@@ -27,6 +27,22 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **The projector view follows the newest round.** New
+  `/t/<slug>/projector`: large boards for the latest round, updating by
+  itself when a round is published or a result comes in (the hall display's
+  live connection, never the page cache), with the same visibility rules as
+  the other pages. A round's old `?display=1` link keeps working and keeps
+  showing that round, but is no longer linked.
+- [Change] **The two hall screens are linked once, near the top.** Two cards
+  (icon, title, one line) under the round strip on the standings, cross-table
+  and round pages, instead of a dotted line under each round's boards.
+- [Feature] **Full screen and three colours on both screens.** A button in
+  the corner (also F) toggles full screen; Black (still the default), White
+  and Ultra contrast (pure black and white, bold, thick rules, above 7:1) can
+  be picked on the screen, with `?theme=black|white|ultra` (`light` still
+  means white) and are remembered per browser. The controls fade after a few
+  seconds. The hall clock now shows seconds.
+
 ## [0.19.1] - 2026-10-02
 
 - [Fix] **A thousand-player standings page is 16 times lighter on a

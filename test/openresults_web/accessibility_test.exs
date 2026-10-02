@@ -116,12 +116,23 @@ defmodule OpenResultsWeb.AccessibilityTest do
           "/t/#{world.swiss}/hall",
           "/t/#{world.swiss}/hall?lang=nl&theme=light",
           "/t/#{world.swiss}/hall?views=names&lang=fr",
+          "/t/#{world.swiss}/hall?theme=ultra",
           "/t/#{world.swiss}/hall?views=standings",
           "/t/#{world.keizer}/hall?views=standings",
           "/t/#{world.before_round_one}/hall",
           "/t/#{world.team_rr}/hall",
           "/t/#{world.team_rr}/hall?views=standings",
           "/t/no-such-tournament/hall"
+        ]
+
+      "/t/:slug/projector" ->
+        [
+          "/t/#{world.swiss}/projector",
+          "/t/#{world.swiss}/projector?lang=fr&theme=ultra",
+          "/t/#{world.swiss}/projector?theme=white",
+          "/t/#{world.team_rr}/projector",
+          "/t/#{world.before_round_one}/projector",
+          "/t/no-such-tournament/projector"
         ]
 
       "/t/:slug/player/:no" ->

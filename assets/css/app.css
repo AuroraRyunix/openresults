@@ -140,6 +140,19 @@
   --withheld: #555555;
 }
 
+/* Ultra contrast, the hall screens' third colour option: pure white on pure
+   black, no grey text anywhere, a yellow accent. Every text pairing is above
+   7:1 (WCAG AAA) - see ContrastTest. */
+:root[data-theme="ultra"] {
+  --bg: #000000;
+  --panel: #000000;
+  --ink: #ffffff;
+  --quiet: #ffffff;
+  --rule: #ffffff;
+  --accent: #ffff00;
+  --withheld: #ffffff;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -3674,4 +3687,162 @@ a.xt-opp:hover {
   details > *:not(summary) {
     display: none;
   }
+}
+
+/* ---- the two hall screens, linked from the top of the tournament pages ---- */
+
+.screens {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.screen-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 44px;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--quiet);
+  border-radius: 0.6rem;
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.screen-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.screen-card-icon {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  color: var(--accent);
+}
+
+.screen-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.screen-card-title {
+  font-weight: 700;
+}
+
+.screen-card-desc {
+  color: var(--quiet);
+  font-size: 0.9rem;
+}
+
+/* ---- on-screen controls of the projector view and the hall display ---- */
+
+.screen-tools {
+  position: fixed;
+  z-index: 20;
+  top: max(0.5rem, env(safe-area-inset-top, 0px));
+  right: max(0.5rem, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.4rem;
+  border: 2px solid var(--quiet);
+  border-radius: 0.7rem;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.2;
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.screen-tools.is-idle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.screen-tools [hidden] {
+  display: none;
+}
+
+.screen-themes {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.screen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.4rem 0.8rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.screen-btn:hover {
+  border-color: var(--quiet);
+}
+
+.screen-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.screen-icon {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.screen-btn[data-state="off"] .screen-icon-exit,
+.screen-btn[data-state="on"] .screen-icon-enter {
+  display: none;
+}
+
+/* ---- ultra contrast: for the back row of a bright hall ---- */
+
+:root[data-theme="ultra"] .hall {
+  font-weight: 700;
+}
+
+:root[data-theme="ultra"] .hall-head {
+  border-bottom-width: calc(0.6 * var(--u));
+}
+
+:root[data-theme="ultra"] .hall-table th,
+:root[data-theme="ultra"] .hall-table td {
+  border-bottom-width: calc(0.35 * var(--u));
+}
+
+:root[data-theme="ultra"] .hall-table thead th,
+:root[data-theme="ultra"] .hall-person-meta,
+:root[data-theme="ultra"] .hall-quiet {
+  color: var(--ink);
+}
+
+:root[data-theme="ultra"] .hall-final {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+:root[data-theme="ultra"] .hall-result,
+:root[data-theme="ultra"] .hall-board {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+:root[data-theme="ultra"] .screen-tools,
+:root[data-theme="ultra"] .screen-card {
+  border-width: 3px;
 }
