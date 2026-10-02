@@ -223,8 +223,13 @@ server only ever sees one vocabulary.
 to be played: the arbiter paired it and the two players will play it later.
 **Absent means not postponed** - the key is only ever sent as `true`, never
 as `false`. Its `result` is `null` while it is postponed, and OpenPairings
-counts the game as a draw in the standings until it is played (see
-`standings.provisional` below). Withheld (absent) when the round's results
+counts the game in the standings until it is played, as a draw by default
+(see `standings.provisional` below) - but the tournament's rules can value
+it otherwise (a win or a loss for the player who asked, or nothing), and the
+snapshot does not say which. **A reader must therefore not add a postponed
+board up as a draw**; OpenResults leaves the running score of both players
+unknown until `standings.rows[].points` covers the round or the game is
+played. Withheld (absent) when the round's results
 are not public, like the result itself. Once the game is played the next
 snapshot carries its real result and no flag, so a reader never has to clear
 anything. A board carrying both a result token and the flag is read by its

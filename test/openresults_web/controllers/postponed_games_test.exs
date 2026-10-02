@@ -81,6 +81,23 @@ defmodule OpenResultsWeb.PostponedGamesTest do
     end)
   end
 
+  # The same snapshot with its standings stopping after `round` and carrying
+  # exactly these totals - what OpenPairings publishes after pricing the
+  # postponed games by the tournament's rules and point system.
+  defp standings_after(payload, round, totals) do
+    rows =
+      totals
+      |> Enum.sort()
+      |> Enum.with_index(1)
+      |> Enum.map(fn {{no, points}, rank} ->
+        %{"rank" => rank, "player" => no, "points" => points, "tiebreaks" => []}
+      end)
+
+    update_in(payload, ["standings"], fn standings ->
+      standings |> Map.put("after_round", round) |> Map.put("rows", rows)
+    end)
+  end
+
   defp publish(payload), do: {:ok, _snapshot} = Snapshots.ingest(payload)
 
   defp doc(conn), do: LazyHTML.from_document(html_response(conn, 200))
@@ -168,21 +185,51 @@ defmodule OpenResultsWeb.PostponedGamesTest do
       assert texts(document, "#board-2 .result .postponed") == []
     end
 
-    test "a later round's 'points before this round' column counts a postponed game as its draw",
-         %{conn: conn} do
+    test "a later round's 'points before this round' column does not guess a postponed game",
+         %{conn: conn, swiss: swiss} do
       # Round 3, board 1: player 3 was one seat of round 2's postponed board
-      # 2. Their points before round 3 must count that game's provisional
-      # 0.5, not stop dead at it the way a player's own running score does
-      # (see "the running score stops there" below) - a pairing list that
-      # went dark for every player ever paired into a postponed game would
-      # be a worse answer than a number that moves once the game is in.
+      # 2. These standings stop after round 5, so nothing published prices
+      # that game, and OpenPairings may count it as a win, a loss or nothing
+      # as well as a draw. The column says it cannot be known.
+      publish(standings_after(swiss, 5, %{}))
       document = conn |> get(~p"/t/#{@slug}/round/3") |> doc()
 
-      assert texts(document, "#board-1 td:nth-child(7)") == ["1"]
-      assert texts(document, "#board-1 td:nth-child(7) .unreported") == []
+      assert texts(document, "#board-1 td:nth-child(7) .unreported") == [
+               "- an earlier round is not public"
+             ]
 
       # Board 3: player 8 was the other postponed board's White.
-      assert texts(document, "#board-3 td:nth-child(3)") == ["1"]
+      assert texts(document, "#board-3 td:nth-child(3) .unreported") == [
+               "- an earlier round is not public"
+             ]
+    end
+
+    test "with standings that stop before the round, the column shows OpenPairings' own totals",
+         %{conn: conn, swiss: swiss} do
+      # 3-1-0 scoring, and the postponed game valued as the arbiter's rules
+      # say: 3 drew round 1 (1) and the postponed game counts as a win for
+      # 3 (3) - a total no 1/half/0 sum of the tokens could reach.
+      publish(
+        standings_after(swiss, 2, %{1 => 4, 2 => 4, 3 => 4, 6 => 0, 8 => 2, 9 => 3, 4 => 3})
+      )
+
+      document = conn |> get(~p"/t/#{@slug}/round/3") |> doc()
+
+      assert texts(document, "#board-1 td:nth-child(7)") == ["4"]
+      assert texts(document, "#board-3 td:nth-child(3)") == ["2"]
+      assert texts(document, "#board-3 td:nth-child(3) .unreported") == []
+    end
+
+    test "the standings page is still flagged provisional beside those totals", %{
+      conn: conn,
+      swiss: swiss
+    } do
+      publish(standings_after(swiss, 2, %{1 => 1}))
+      document = conn |> get(~p"/t/#{@slug}") |> doc()
+
+      assert texts(document, "#standings-provisional") == [
+               "Provisional: 2 postponed games are still to be played and count as draws until they are."
+             ]
     end
   end
 
@@ -321,24 +368,81 @@ defmodule OpenResultsWeb.PostponedGamesTest do
       assert Tournament.standings_provisional(SnapshotPayloads.swiss()) == {false, nil}
     end
 
-    test "scores_before/2 counts a postponed game as its provisional draw", %{swiss: swiss} do
-      # Round 2's board 2 (6 v 3) and board 4 (8 v 9) are both postponed.
-      # Round 1 gave player 3 a draw (0.5) and player 8 a draw (0.5); the
-      # postponed game adds 0.5 more to each, same as OpenPairings' own
-      # provisional standings. Player 6 lost round 1 (0) and player 9 won by
-      # forfeit (1), so their totals before round 3 are 0.5 and 1.5.
-      before_round_3 = Tournament.scores_before(swiss, 3)
+    test "scores_before/2 never prices a postponed game from its token", %{swiss: swiss} do
+      # Standings that stop after round 5 cover nothing before round 3, so
+      # nothing published prices round 2's postponed boards (6 v 3, 8 v 9).
+      before_round_3 = Tournament.scores_before(standings_after(swiss, 5, %{}), 3)
 
-      assert before_round_3[3] == 1.0
-      assert before_round_3[6] == 0.5
-      assert before_round_3[8] == 1.0
-      assert before_round_3[9] == 1.5
+      for no <- [3, 6, 8, 9], do: assert(is_nil(before_round_3[no]))
 
-      # A player's own card is not this - it stops at the postponed game
-      # exactly as it does at any unresolved one, deliberately, per the
-      # test above.
+      # Everyone else's total is untouched: player 1 won round 1 and drew
+      # round 2, player 4 lost round 1 by forfeit and had round 2's bye.
+      assert before_round_3[1] == 1.5
+      assert before_round_3[4] == 1.0
+
+      # A player's own card stops at the postponed game, as it always did.
       [_round1, round2] = Tournament.card(swiss, 6)
       assert is_nil(round2.score)
+    end
+
+    # What each valuation leaves players 6 and 3 (round 2's board 2, after a
+    # lost and a drawn round 1) and 8 and 9 (board 4) with in a 1/half/0
+    # tournament, as OpenPairings would publish it in `standings.rows`.
+    @valuations [
+      draw: %{6 => 0.5, 3 => 1.0, 8 => 1.0, 9 => 1.5},
+      win_for_white: %{6 => 1.0, 3 => 0.5, 8 => 1.5, 9 => 1.0},
+      loss_for_white: %{6 => 0.0, 3 => 1.5, 8 => 0.5, 9 => 2.0},
+      nothing: %{6 => 0.0, 3 => 0.5, 8 => 0.5, 9 => 1.0}
+    ]
+
+    for {valuation, totals} <- @valuations do
+      test "scores_before/2 reports the published total when a postponed game is valued as #{valuation}",
+           %{swiss: swiss} do
+        payload = standings_after(swiss, 2, unquote(Macro.escape(totals)))
+        scores = Tournament.scores_before(payload, 3)
+
+        for {no, points} <- unquote(Macro.escape(totals)), do: assert(scores[no] == points)
+      end
+    end
+
+    test "scores_before/2 follows a 3-1-0 point system through the standings", %{swiss: swiss} do
+      published = %{6 => 0, 3 => 1, 8 => 1, 9 => 4}
+      scores = Tournament.scores_before(standings_after(swiss, 2, published), 3)
+
+      assert scores[6] == 0.0
+      assert scores[3] == 1.0
+      assert scores[9] == 4.0
+
+      # After the anchor, rounds are added up from their tokens again: player 6
+      # takes round 3's half-point bye on top of the published total.
+      assert Tournament.scores_before(standings_after(swiss, 2, published), 4)[6] == 0.5
+    end
+
+    test "scores_before/2 adds only the rounds after the standings, and stops at unknowns", %{
+      swiss: swiss
+    } do
+      payload = standings_after(swiss, 2, %{1 => 2, 2 => 1, 3 => 2, 6 => 1, 8 => 1, 9 => 2})
+      scores = Tournament.scores_before(payload, 4)
+
+      # Round 3: player 1 beat 3 (1-0), player 4 drew a 1/2-0 against 2 (0.5
+      # to 4), 8 v 5 has no result yet, player 6 had a half-point bye.
+      assert scores[1] == 3.0
+      assert scores[3] == 2.0
+      assert scores[6] == 1.5
+      assert is_nil(scores[8])
+      assert is_nil(scores[5])
+      # Player 4 is not in the standings rows, so their total is summed from
+      # round 1 as before: a forfeit loss (0), the round 2 bye (1) and the
+      # half point White took from 1/2-0 in round 3.
+      assert scores[4] == 1.5
+    end
+
+    test "a postponed game in a round after the standings stays unknown", %{swiss: swiss} do
+      payload = standings_after(swiss, 1, %{1 => 1, 2 => 0, 3 => 0.5, 6 => 0, 8 => 0.5, 9 => 1})
+      scores = Tournament.scores_before(payload, 3)
+
+      for no <- [3, 6, 8, 9], do: assert(is_nil(scores[no]))
+      assert scores[1] == 1.5
     end
   end
 end

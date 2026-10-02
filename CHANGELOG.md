@@ -27,6 +27,17 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] The "points before this round" column on a round's pairing list no
+  longer counts every postponed game as a half point. OpenPairings values a
+  postponed game by the tournament's rules and point system, which the
+  snapshot does not carry, so the column now starts from the totals in
+  `standings.rows` for every round those standings cover (postponed games and
+  non-1/half/0 point systems included) and shows "-" for a player whose total
+  depends on a postponed game the standings do not cover yet. The standings'
+  "provisional" line is unchanged. The assumption is written down in
+  `docs/snapshot-schema.md`; an exact figure for the rounds past the standings
+  needs the point system and the postponed valuation added to the snapshot.
+
 ## [0.19.0] - 2026-10-01
 
 - [Feature] **Hall display: a full-screen page for the television in the
