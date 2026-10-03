@@ -493,6 +493,51 @@ h2 .title {
   font-style: italic;
 }
 
+/* A team round's pairing list: the boards of one match sit in their own
+   `tbody` under a header line - match number, the two teams, the score. The
+   rule above each group is what separates one match from the next. */
+.pairings tr.match-head th {
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 600;
+  text-align: left;
+  white-space: normal;
+}
+
+.match-head-no {
+  margin-right: 0.75rem;
+  color: var(--quiet);
+  font-weight: 400;
+}
+
+.match-head-score {
+  margin: 0 0.5rem;
+}
+
+/* What a player scored on a board, beside the name, on a team's own page. */
+.seat-score {
+  margin-left: 0.4rem;
+  color: var(--quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.seat-score::before {
+  content: "· ";
+}
+
+/* Two players on one board number in the teams-by-board grid: a reserve
+   took over. */
+.team-board-entry + .team-board-entry {
+  margin-top: 0.25rem;
+}
+
+/* The running match and game points under a team cross-table cell's score. */
+.xt-running {
+  font-variant-numeric: tabular-nums;
+}
+
 tr.withheld td,
 tr.withheld th {
   color: var(--withheld);

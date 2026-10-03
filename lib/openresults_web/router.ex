@@ -103,6 +103,7 @@ defmodule OpenResultsWeb.Router do
     get "/t/:slug/round/:n", TournamentController, :round
     get "/t/:slug/player/:no", TournamentController, :player
     get "/t/:slug/team/:no", TournamentController, :team
+    get "/t/:slug/teams", TournamentController, :teams
     get "/t/:slug/board-prizes", TournamentController, :board_prizes
   end
 

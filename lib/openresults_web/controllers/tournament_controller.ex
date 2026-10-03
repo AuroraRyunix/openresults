@@ -234,6 +234,42 @@ defmodule OpenResultsWeb.TournamentController do
   end
 
   @doc """
+  `GET /t/:slug/teams` - every team with its place, its match and game
+  points and its roster, and the teams-by-board grid.
+
+  Behind the `"standings"` switch, same reasoning as `team/2` above: a list
+  of the teams is the team standings by another name. An individual
+  tournament has no teams, and answers as an unknown page rather than an
+  empty list.
+  """
+  def teams(conn, %{"slug" => slug}) do
+    with_payload(conn, slug, fn conn, payload ->
+      cond do
+        not Tournament.show?(payload, "standings") ->
+          withheld(conn, payload, slug, :standings)
+
+        not Tournament.team_event?(payload) ->
+          not_found(
+            conn,
+            gettext("%{tournament} is not a team tournament.",
+              tournament: Tournament.name(payload)
+            ),
+            back: ~p"/t/#{slug}"
+          )
+
+        true ->
+          render(conn, :teams,
+            page_title: "#{gettext("Teams")} - #{Tournament.name(payload)}",
+            page_description: Meta.teams(payload),
+            payload: payload,
+            slug: slug,
+            current: :teams
+          )
+      end
+    end)
+  end
+
+  @doc """
   `GET /t/:slug/board-prizes` - `board_stats`, one table per board.
 
   Behind the `"standings"` switch, same reasoning as `team/2` above.

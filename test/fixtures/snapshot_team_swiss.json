@@ -1,0 +1,1543 @@
+{
+  "board_stats": [
+    {
+      "board": 1,
+      "games": 3,
+      "percentage": 83.3,
+      "performance": 2300,
+      "player": 1,
+      "points": 2.5,
+      "team": 1
+    },
+    {
+      "board": 1,
+      "games": 3,
+      "percentage": 66.7,
+      "performance": 2140,
+      "player": 13,
+      "points": 2.0,
+      "team": 5
+    },
+    {
+      "board": 1,
+      "games": 2,
+      "percentage": 75.0,
+      "performance": 2220,
+      "player": 7,
+      "points": 1.5,
+      "team": 3
+    },
+    {
+      "board": 1,
+      "games": 2,
+      "percentage": 0.0,
+      "performance": 2260,
+      "player": 4,
+      "points": 0.0,
+      "team": 2
+    },
+    {
+      "board": 1,
+      "games": 2,
+      "percentage": 0.0,
+      "performance": 2180,
+      "player": 10,
+      "points": 0.0,
+      "team": 4
+    },
+    {
+      "board": 2,
+      "games": 3,
+      "percentage": 66.7,
+      "performance": 2200,
+      "player": 2,
+      "points": 2.0,
+      "team": 1
+    },
+    {
+      "board": 2,
+      "games": 2,
+      "percentage": 75.0,
+      "performance": 2080,
+      "player": 11,
+      "points": 1.5,
+      "team": 4
+    },
+    {
+      "board": 2,
+      "games": 2,
+      "percentage": 50.0,
+      "performance": 2160,
+      "player": 5,
+      "points": 1.0,
+      "team": 2
+    },
+    {
+      "board": 2,
+      "games": 3,
+      "percentage": 33.3,
+      "performance": 2040,
+      "player": 14,
+      "points": 1.0,
+      "team": 5
+    },
+    {
+      "board": 2,
+      "games": 2,
+      "percentage": 25.0,
+      "performance": 2120,
+      "player": 8,
+      "points": 0.5,
+      "team": 3
+    },
+    {
+      "board": 3,
+      "games": 2,
+      "percentage": 75.0,
+      "performance": 2100,
+      "player": 3,
+      "points": 1.5,
+      "team": 1
+    },
+    {
+      "board": 3,
+      "games": 3,
+      "percentage": 50.0,
+      "performance": 1940,
+      "player": 15,
+      "points": 1.5,
+      "team": 5
+    },
+    {
+      "board": 3,
+      "games": 1,
+      "percentage": 100.0,
+      "performance": 1950,
+      "player": 16,
+      "points": 1.0,
+      "team": 1
+    },
+    {
+      "board": 3,
+      "games": 1,
+      "percentage": 50.0,
+      "performance": 2060,
+      "player": 6,
+      "points": 0.5,
+      "team": 2
+    },
+    {
+      "board": 3,
+      "games": 2,
+      "percentage": 25.0,
+      "performance": 1980,
+      "player": 12,
+      "points": 0.5,
+      "team": 4
+    },
+    {
+      "board": 3,
+      "games": 1,
+      "percentage": 0.0,
+      "performance": 2020,
+      "player": 9,
+      "points": 0.0,
+      "team": 3
+    }
+  ],
+  "players": [
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Antwerp Knights 1",
+      "no": 1,
+      "rating": 2300,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Antwerp Knights 2",
+      "no": 2,
+      "rating": 2200,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Antwerp Knights 3",
+      "no": 3,
+      "rating": 2100,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Brugse SK 1",
+      "no": 4,
+      "rating": 2260,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Brugse SK 2",
+      "no": 5,
+      "rating": 2160,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Brugse SK 3",
+      "no": 6,
+      "rating": 2060,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Charleroi 1",
+      "no": 7,
+      "rating": 2220,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Charleroi 2",
+      "no": 8,
+      "rating": 2120,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Charleroi 3",
+      "no": 9,
+      "rating": 2020,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Deurne 1",
+      "no": 10,
+      "rating": 2180,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Deurne 2",
+      "no": 11,
+      "rating": 2080,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Deurne 3",
+      "no": 12,
+      "rating": 1980,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Eupen 1",
+      "no": 13,
+      "rating": 2140,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Eupen 2",
+      "no": 14,
+      "rating": 2040,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Eupen 3",
+      "no": 15,
+      "rating": 1940,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Antwerp Knights R",
+      "no": 16,
+      "rating": 1950,
+      "title": null
+    }
+  ],
+  "published_at": "2026-08-29T00:00:00Z",
+  "rounds": [
+    {
+      "boards": [
+        {
+          "black": 10,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 11
+        },
+        {
+          "black": 12,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 3
+        },
+        {
+          "black": 13,
+          "board": 4,
+          "label": "4",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 4
+        },
+        {
+          "black": 5,
+          "board": 5,
+          "label": "5",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 14
+        },
+        {
+          "black": 15,
+          "board": 6,
+          "label": "6",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 6
+        }
+      ],
+      "byes": [],
+      "date": null,
+      "matches": [
+        {
+          "board1_white_team": 1,
+          "boards": [
+            1,
+            2,
+            3
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 2.5,
+            "b": 0.5
+          },
+          "match_points": {
+            "a": 2.0,
+            "b": 0.0
+          },
+          "number": 1,
+          "team_a": 1,
+          "team_b": 4
+        },
+        {
+          "board1_white_team": 2,
+          "boards": [
+            4,
+            5,
+            6
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.0,
+            "b": 2.0
+          },
+          "match_points": {
+            "a": 0.0,
+            "b": 2.0
+          },
+          "number": 2,
+          "team_a": 2,
+          "team_b": 5
+        },
+        {
+          "board1_white_team": false,
+          "boards": [],
+          "bye": true,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 0.0
+          },
+          "match_points": {
+            "a": 1.0,
+            "b": null
+          },
+          "number": 3,
+          "team_a": 3,
+          "team_b": null
+        }
+      ],
+      "number": 1,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 13,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 14
+        },
+        {
+          "black": 15,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 3
+        },
+        {
+          "black": 4,
+          "board": 4,
+          "label": "4",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 7
+        },
+        {
+          "black": 8,
+          "board": 5,
+          "label": "5",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 5
+        }
+      ],
+      "byes": [],
+      "date": null,
+      "matches": [
+        {
+          "board1_white_team": 1,
+          "boards": [
+            1,
+            2,
+            3
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 2.0,
+            "b": 1.0
+          },
+          "match_points": {
+            "a": 2.0,
+            "b": 0.0
+          },
+          "number": 1,
+          "team_a": 1,
+          "team_b": 5
+        },
+        {
+          "board1_white_team": 3,
+          "boards": [
+            4,
+            5,
+            6
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 1.5
+          },
+          "match_points": {
+            "a": 1.0,
+            "b": 1.0
+          },
+          "number": 2,
+          "team_a": 3,
+          "team_b": 2
+        },
+        {
+          "board1_white_team": false,
+          "boards": [],
+          "bye": true,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 0.0
+          },
+          "match_points": {
+            "a": 1.0,
+            "b": null
+          },
+          "number": 3,
+          "team_a": 4,
+          "team_b": null
+        }
+      ],
+      "number": 2,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 7,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 1
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 8
+        },
+        {
+          "black": 9,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 16
+        },
+        {
+          "black": 10,
+          "board": 4,
+          "label": "4",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 13
+        },
+        {
+          "black": 14,
+          "board": 5,
+          "label": "5",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 11
+        },
+        {
+          "black": 12,
+          "board": 6,
+          "label": "6",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 15
+        }
+      ],
+      "byes": [],
+      "date": null,
+      "matches": [
+        {
+          "board1_white_team": 1,
+          "boards": [
+            1,
+            2,
+            3
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 2.5,
+            "b": 0.5
+          },
+          "match_points": {
+            "a": 2.0,
+            "b": 0.0
+          },
+          "number": 1,
+          "team_a": 1,
+          "team_b": 3
+        },
+        {
+          "board1_white_team": 5,
+          "boards": [
+            4,
+            5,
+            6
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 1.5
+          },
+          "match_points": {
+            "a": 1.0,
+            "b": 1.0
+          },
+          "number": 2,
+          "team_a": 5,
+          "team_b": 4
+        },
+        {
+          "board1_white_team": false,
+          "boards": [],
+          "bye": true,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 0.0
+          },
+          "match_points": {
+            "a": 1.0,
+            "b": null
+          },
+          "number": 3,
+          "team_a": 2,
+          "team_b": null
+        }
+      ],
+      "number": 3,
+      "results_public": true
+    }
+  ],
+  "schema": "openresults/snapshot",
+  "source": {
+    "app": "openpairings",
+    "version": "0.0.0-fixture"
+  },
+  "standings": {
+    "after_round": 3,
+    "manual_incomplete": false,
+    "manual_order": false,
+    "manual_stale": false,
+    "rows": [
+      {
+        "category": null,
+        "player": 1,
+        "points": 2.5,
+        "rank": 1,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 10,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 13,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 7,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 2,
+        "points": 2.0,
+        "rank": 2,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 11,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 14,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 8,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 13,
+        "points": 2.0,
+        "rank": 3,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 4,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 10,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 3,
+        "points": 1.5,
+        "rank": 4,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 12,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 15,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 6,
+        "points": 1.5,
+        "rank": 5,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 15,
+                "round": 1,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 7,
+        "points": 1.5,
+        "rank": 6,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 4,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 1,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 11,
+        "points": 1.5,
+        "rank": 7,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 14,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 15,
+        "points": 1.5,
+        "rank": 8,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 12,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 5,
+        "points": 1.0,
+        "rank": 9,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 14,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 8,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 14,
+        "points": 1.0,
+        "rank": 10,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 11,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 16,
+        "points": 1.0,
+        "rank": 11,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 9,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 8,
+        "points": 0.5,
+        "rank": 12,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 12,
+        "points": 0.5,
+        "rank": 13,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 3,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 15,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 4,
+        "points": 0.0,
+        "rank": 14,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 13,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 7,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 9,
+        "points": 0.0,
+        "rank": 15,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 16,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 10,
+        "points": 0.0,
+        "rank": 16,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 13,
+                "round": 3,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      }
+    ],
+    "tiebreaks": [
+      {
+        "code": "MP",
+        "label": "Match points"
+      },
+      {
+        "code": "GP",
+        "label": "Game points"
+      },
+      {
+        "code": "DE",
+        "label": "Direct encounter"
+      },
+      {
+        "code": "BB",
+        "label": "Board points weighted (Berlin)"
+      },
+      {
+        "code": "SB",
+        "label": "Sonneborn-Berger"
+      }
+    ],
+    "tiebreaks_withheld": false
+  },
+  "team_standings": {
+    "after_round": 3,
+    "rows": [
+      {
+        "gp": 7.0,
+        "mp": 6.0,
+        "rank": 1,
+        "team": 1,
+        "tiebreaks": [
+          6.0,
+          7.0,
+          0.0,
+          10.5,
+          3.5
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 4,
+              "round": 1,
+              "value": 1.0
+            },
+            {
+              "opponent": 5,
+              "round": 2,
+              "value": 1.5
+            },
+            {
+              "opponent": 3,
+              "round": 3,
+              "value": 1.0
+            }
+          ]
+        }
+      },
+      {
+        "gp": 4.5,
+        "mp": 3.0,
+        "rank": 2,
+        "team": 5,
+        "tiebreaks": [
+          3.0,
+          4.5,
+          0.0,
+          6.8,
+          5.0
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 2,
+              "round": 1,
+              "value": 1.0
+            },
+            {
+              "opponent": 1,
+              "round": 2,
+              "value": 3.0
+            },
+            {
+              "opponent": 4,
+              "round": 3,
+              "value": 1.0
+            }
+          ]
+        }
+      },
+      {
+        "gp": 4.0,
+        "mp": 2.0,
+        "rank": 3,
+        "team": 2,
+        "tiebreaks": [
+          2.0,
+          4.0,
+          0.0,
+          6.0,
+          2.5
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 5,
+              "round": 1,
+              "value": 1.5
+            },
+            {
+              "opponent": 3,
+              "round": 2,
+              "value": 1.0
+            }
+          ]
+        }
+      },
+      {
+        "gp": 3.5,
+        "mp": 2.0,
+        "rank": 4,
+        "team": 3,
+        "tiebreaks": [
+          2.0,
+          3.5,
+          0.0,
+          5.2,
+          4.0
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 2,
+              "round": 2,
+              "value": 1.0
+            },
+            {
+              "opponent": 1,
+              "round": 3,
+              "value": 3.0
+            }
+          ]
+        }
+      },
+      {
+        "gp": 3.5,
+        "mp": 2.0,
+        "rank": 5,
+        "team": 4,
+        "tiebreaks": [
+          2.0,
+          3.5,
+          0.0,
+          5.2,
+          4.5
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 1,
+              "round": 1,
+              "value": 3.0
+            },
+            {
+              "opponent": 5,
+              "round": 3,
+              "value": 1.5
+            }
+          ]
+        }
+      }
+    ],
+    "tiebreaks": [
+      {
+        "code": "MP",
+        "label": "Match points"
+      },
+      {
+        "code": "GP",
+        "label": "Game points"
+      },
+      {
+        "code": "DE",
+        "label": "Direct encounter"
+      },
+      {
+        "code": "BB",
+        "label": "Board points weighted (Berlin)"
+      },
+      {
+        "code": "SB",
+        "label": "Sonneborn-Berger"
+      }
+    ]
+  },
+  "teams": [
+    {
+      "captain": "Jan Peeters",
+      "name": "Antwerp Knights",
+      "no": 1,
+      "players": [
+        1,
+        2,
+        3,
+        16
+      ],
+      "short_name": null
+    },
+    {
+      "captain": null,
+      "name": "Brugse SK",
+      "no": 2,
+      "players": [
+        4,
+        5,
+        6
+      ],
+      "short_name": null
+    },
+    {
+      "captain": null,
+      "name": "Charleroi",
+      "no": 3,
+      "players": [
+        7,
+        8,
+        9
+      ],
+      "short_name": null
+    },
+    {
+      "captain": null,
+      "name": "Deurne",
+      "no": 4,
+      "players": [
+        10,
+        11,
+        12
+      ],
+      "short_name": null
+    },
+    {
+      "captain": null,
+      "name": "Eupen",
+      "no": 5,
+      "players": [
+        13,
+        14,
+        15
+      ],
+      "short_name": "Eupen"
+    }
+  ],
+  "tournament": {
+    "arbiter": null,
+    "categories": [],
+    "city": "Gent",
+    "deputy": null,
+    "display": {
+      "arbiter": true,
+      "byes": true,
+      "category": true,
+      "city": true,
+      "club": true,
+      "dates": true,
+      "deputy": true,
+      "federation": true,
+      "fide_badge": true,
+      "pairing_scores": true,
+      "pairings": true,
+      "player_cards": true,
+      "rating": true,
+      "rounds_played": false,
+      "standings": true,
+      "tiebreak_working": true,
+      "tiebreaks": true,
+      "time_control": true,
+      "title": true
+    },
+    "end_date": null,
+    "federation": "BEL",
+    "fide_rated": false,
+    "hall": {
+      "hold_new_round": true,
+      "names": true,
+      "page_seconds": 15,
+      "pairings": true,
+      "results": true,
+      "standings": true,
+      "standings_top": 10
+    },
+    "listed": false,
+    "match_format": false,
+    "name": "Team Swiss",
+    "registration": {
+      "list_public": false,
+      "taken": 9
+    },
+    "registration_open": false,
+    "rounds_count": 3,
+    "scoring": {
+      "bye": 1.0,
+      "draw": 0.5,
+      "forfeit_loss": 0.0,
+      "forfeit_win": 1.0,
+      "loss": 0.0,
+      "presence": null,
+      "win": 1.0
+    },
+    "slug": "team-swiss-fixture",
+    "start_date": null,
+    "system": "swiss",
+    "team_event": true,
+    "tempo": "standard",
+    "time_control": null
+  },
+  "version": 1
+}

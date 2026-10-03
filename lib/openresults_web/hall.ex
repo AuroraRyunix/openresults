@@ -163,15 +163,21 @@ defmodule OpenResultsWeb.Hall do
     results? = round != nil and Tournament.results_public?(round)
     boards = if round, do: Tournament.boards(round), else: []
 
+    # In a team event a board is a seat of a match, and a match is a table:
+    # "match 3, board 2" is what a captain's sheet says and what a player
+    # looks for. The round-wide board number means nothing to them.
+    in_match =
+      if round && Tournament.team_event?(payload), do: Tournament.board_matches(round), else: %{}
+
     %{
       name: Tournament.name(payload),
       round: round_info(payload, round, show),
       results?: results?,
       progress: if(round, do: Tournament.results_progress(round), else: {0, 0}),
-      boards: Enum.map(boards, &board_row(&1, players, show, results?)),
+      boards: Enum.map(boards, &board_row(&1, players, show, results?, in_match)),
       matches: matches(payload, round, results?),
-      names: if(round, do: names(round, boards, players, show), else: []),
-      reported: if(results?, do: reported(boards, players, show), else: []),
+      names: if(round, do: names(round, boards, players, show, in_match), else: []),
+      reported: if(results?, do: reported(boards, players, show, in_match), else: []),
       standings: standings(payload, players, show, settings.standings_top),
       announcement: settings.announcement
     }
@@ -202,12 +208,15 @@ defmodule OpenResultsWeb.Hall do
     }
   end
 
-  defp board_row(board, players, show, results?) do
+  defp board_row(board, players, show, results?, in_match) do
     postponed? = Tournament.postponed?(board)
+    seat = Map.get(in_match, Map.get(board, "board"))
 
     %{
       id: "board-#{Map.get(board, "board")}",
-      label: Tournament.board_label(board),
+      label: board_label(board, seat),
+      match: seat && seat.match["number"],
+      k: seat && seat.k,
       white: person(players, Map.get(board, "white"), show),
       black: person(players, Map.get(board, "black"), show),
       result: if(results?, do: string(board, "result")),
@@ -215,6 +224,11 @@ defmodule OpenResultsWeb.Hall do
       postponed_date: if(results? and show.dates, do: Tournament.postponed_date(board))
     }
   end
+
+  # "3/2" - board 2 of match 3 - for a team event's board, the board's own
+  # label otherwise.
+  defp board_label(board, nil), do: Tournament.board_label(board)
+  defp board_label(_board, %{match: match, k: k}), do: "#{match["number"]}/#{k}"
 
   # A player as the display prints them: the name always, the rest only where
   # the arbiter's tick allows it. `nil` for an empty seat.
@@ -232,8 +246,8 @@ defmodule OpenResultsWeb.Hall do
     }
   end
 
-  # A team event's matches, when the round has any - a team Swiss paired
-  # player by player has none, and its boards are the pairing.
+  # A team event's matches, when the round has any. A round without them
+  # (nothing paired as teams yet) shows its boards.
   defp matches(payload, round, results?) do
     if round && Tournament.team_event?(payload) do
       teams = Tournament.teams_by_no(payload)
@@ -249,6 +263,9 @@ defmodule OpenResultsWeb.Hall do
           team_a: Tournament.team_label(Map.get(teams, Map.get(match, "team_a"))),
           team_b: Tournament.team_label(Map.get(teams, Map.get(match, "team_b"))),
           bye?: Map.get(match, "bye") == true,
+          # Which team has White on board 1 (so Black on the next, and so on).
+          colour_a: board1_colour(match, "team_a"),
+          colour_b: board1_colour(match, "team_b"),
           score_a: if(is_map(points), do: Map.get(points, "a")),
           score_b: if(is_map(points), do: Map.get(points, "b"))
         }
@@ -258,18 +275,37 @@ defmodule OpenResultsWeb.Hall do
     end
   end
 
+  # The colour a side has on board 1 of its match, or `nil` for a bye and for
+  # a match that does not say.
+  defp board1_colour(match, side) do
+    white = Map.get(match, "board1_white_team")
+
+    cond do
+      Map.get(match, "bye") == true or not is_integer(white) -> nil
+      white == Map.get(match, side) -> :white
+      true -> :black
+    end
+  end
+
   # Everybody in the round, alphabetically, with where to sit. Byes only when
   # the byes table is public - a name listed with "bye" beside it is that
   # table, one row at a time.
-  defp names(round, boards, players, show) do
+  defp names(round, boards, players, show, in_match) do
     seated =
       Enum.flat_map(boards, fn board ->
         label = Tournament.board_label(board)
+        seat = Map.get(in_match, Map.get(board, "board"))
 
         [{Map.get(board, "white"), :white}, {Map.get(board, "black"), :black}]
         |> Enum.reject(fn {no, _colour} -> is_nil(no) end)
         |> Enum.map(fn {no, colour} ->
-          Map.merge(person(players, no, show), %{board: label, colour: colour, bye: nil})
+          Map.merge(person(players, no, show), %{
+            board: label,
+            match: seat && seat.match["number"],
+            k: seat && seat.k,
+            colour: colour,
+            bye: nil
+          })
         end)
       end)
 
@@ -281,7 +317,13 @@ defmodule OpenResultsWeb.Hall do
         |> Enum.map(fn bye ->
           players
           |> person(Map.get(bye, "player"), show)
-          |> Map.merge(%{board: nil, colour: nil, bye: string(bye, "kind") || "bye"})
+          |> Map.merge(%{
+            board: nil,
+            match: nil,
+            k: nil,
+            colour: nil,
+            bye: string(bye, "kind") || "bye"
+          })
         end)
       else
         []
@@ -317,10 +359,10 @@ defmodule OpenResultsWeb.Hall do
     |> String.replace(Map.keys(@folded), &Map.fetch!(@folded, &1))
   end
 
-  defp reported(boards, players, show) do
+  defp reported(boards, players, show, in_match) do
     boards
     |> Enum.filter(&is_binary(Map.get(&1, "result")))
-    |> Enum.map(&board_row(&1, players, show, true))
+    |> Enum.map(&board_row(&1, players, show, true, in_match))
   end
 
   defp standings(payload, players, show, top) do

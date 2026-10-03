@@ -560,6 +560,14 @@ odd-sized field) is `{ "team_a": <no>, "team_b": null, "bye": true }` with no
 points and no boards - it scores nothing, the same as a bye scores nothing in
 `PairingsEngine.TeamStandings`.
 
+**A team Swiss carries matches exactly like a round robin.** Since
+OpenPairings 0.62.0 a team Swiss is paired team against team (C.04.6), so
+every round has its `matches`. An odd field gives a pairing-allocated bye,
+`{ "team_a": <no>, "team_b": null, "bye": true }`, which in a Swiss is scored as
+a drawn match: it carries `game_points.a` and `match_points.a` (a round
+robin's bye carries none). Nothing in the document tells the two apart but
+`tournament.system`.
+
 **`matches[].board1_white_team`** - which team has White on board 1 of the
 match (and, by the FIDE convention this app follows, on every odd board -
 see `PairingsEngine.TeamRoundRobin`'s moduledoc). Named explicitly rather than
@@ -571,6 +579,17 @@ printed `label`) that belong to this match, in the round's own numbering. A
 board the arbiter hid is left out of this list for the same reason a hidden
 board is absent from `boards[]`, though it still counts in `game_points` -
 hidden is a display flag on `boards[]`, not on the arithmetic.
+
+**The board's place inside its match is not sent.** `matches[].boards` are
+round-wide numbers (OpenPairings numbers a match's boards
+`(match - 1) * boards_per_match + k`), and the number of boards per match is
+not in the snapshot either. OpenResults reads "board `k` of the match" as the
+position in that sorted list, which is exact unless the arbiter hid a board
+(a hidden board is left out of the list and shifts the ones after it). A board
+that is in `matches[].boards` but not in `rounds[].boards` is one seat that
+nobody filled: the opponent has the point, counted in `game_points`, and there
+is no game to show. Missing and worth adding, additively: `tournament.team_boards`
+and `matches[].boards` as `[{ "board": n, "k": k }]`.
 
 **`matches[].game_points`/`match_points`** - **withheld exactly like a
 board's own result**: `null` on both while the round's results are not public

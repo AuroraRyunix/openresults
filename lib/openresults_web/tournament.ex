@@ -1748,14 +1748,28 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
-  Whether the tournament offers a team-vs-team cross-table: a team event
-  played as a round robin, where `matches` exists to grid. Phase 1 of a team
-  Swiss still pairs its players individually (`docs/team-tournaments.md` on
-  the OpenPairings side) - there is no scheduled match between two teams to
-  put in a cell, only individual boards, which the ordinary cross-table
-  already shows.
+  Whether the tournament offers the team-vs-team GRID: a team event played
+  as a round robin, where every pair of teams meets and a cell per pair
+  says how. A team Swiss does not fill a grid - most pairs never meet - and
+  gets the round-by-round table instead (`team_round_crosstable?/1`).
   """
   def team_crosstable?(payload), do: team_event?(payload) and system(payload) == "roundrobin"
+
+  @doc """
+  Whether this is a team event paired as a Swiss - team against team, by
+  C.04.6, since OpenPairings 0.62.0.
+  """
+  def team_swiss?(payload), do: team_event?(payload) and system(payload) == "swiss"
+
+  @doc """
+  Whether the tournament offers the team cross-table by round: a team event
+  that is not a round robin and has at least one scheduled match to put in
+  it. A team event that has not paired a round yet has nothing to grid.
+  """
+  def team_round_crosstable?(payload) do
+    team_event?(payload) and system(payload) != "roundrobin" and
+      Enum.any?(rounds(payload), &(matches(&1) != []))
+  end
 
   @doc """
   The team-vs-team grid for a team round robin: a row per team, a column per
@@ -1794,6 +1808,391 @@ defmodule OpenResultsWeb.Tournament do
         gp: Map.get(placing, "gp"),
         cells: cells
       }
+    end
+  end
+
+  ## ---------- boards inside matches ----------
+
+  @doc """
+  A round's published boards, indexed by their real round-wide number
+  (`boards[].board`) - what `match_slots/2` looks boards up in.
+  """
+  def board_index(round) do
+    round |> boards() |> Map.new(&{Map.get(&1, "board"), &1})
+  end
+
+  @doc """
+  The boards of one match, in board order, each as `%{k:, number:, board:}`.
+
+  `k` is the board's place inside the match - board 1, 2, 3 of that match,
+  which is what a captain and a team sheet call it. The snapshot carries the
+  round-wide `number` only (`matches[].boards`), so `k` is the position in
+  that sorted list: OpenPairings numbers a match's boards consecutively
+  (`(match - 1) * boards + k`) and lists every one of them, a seat nobody
+  filled included. A board the arbiter hid is left out of the list and would
+  shift the ones after it - an arbiter's display choice, and the only case
+  this reading is off.
+
+  `board` is the published board, or `nil` for a number listed in the match
+  that has no game on the page: a seat one team could not fill (the other
+  side's board is a forfeit win, counted in the match's game points, with no
+  opponent to name).
+
+  Takes a round, or the `board_index/1` of one when several matches of the
+  same round are read.
+  """
+  def match_slots(round_or_index, match) do
+    index =
+      if Map.has_key?(round_or_index, "number"),
+        do: board_index(round_or_index),
+        else: round_or_index
+
+    match
+    |> Map.get("boards", [])
+    |> List.wrap()
+    |> Enum.filter(&is_integer/1)
+    |> Enum.sort()
+    |> Enum.with_index(1)
+    |> Enum.map(fn {number, k} -> %{k: k, number: number, board: Map.get(index, number)} end)
+  end
+
+  @doc """
+  Which match, and which board of it, each board of `round` belongs to:
+  `%{board_number => %{match:, k:}}`. Empty for an individual round. What the
+  pairing list uses to group a team round's boards under their matches.
+  """
+  def board_matches(round) do
+    index = board_index(round)
+
+    for match <- matches(round),
+        Map.get(match, "bye") != true,
+        slot <- match_slots(index, match),
+        slot.board != nil,
+        into: %{},
+        do: {slot.number, %{match: match, k: slot.k}}
+  end
+
+  ## ---------- team pages ----------
+
+  @doc """
+  The teams for the team list, best placed first: `%{no:, team:, rank:, mp:,
+  gp:, roster:}` with `roster` the team's players in board order. In team
+  number order until the team standings carry a rank. Read, never ranked
+  here.
+  """
+  def team_list(payload) do
+    placings = Map.new(team_standings_rows(payload), &{Map.get(&1, "team"), &1})
+
+    payload
+    |> teams()
+    |> Enum.filter(&is_integer(Map.get(&1, "no")))
+    |> Enum.map(fn team ->
+      no = Map.get(team, "no")
+      placing = Map.get(placings, no, %{})
+
+      %{
+        no: no,
+        team: team,
+        rank: Map.get(placing, "rank"),
+        mp: Map.get(placing, "mp"),
+        gp: Map.get(placing, "gp"),
+        roster: team_roster(payload, team)
+      }
+    end)
+    |> Enum.sort_by(&{&1.rank || 1_000_000, &1.no})
+  end
+
+  @doc """
+  One team's line-up in every round it was scheduled, oldest first:
+  `%{round:, match:, bye?:, results?:, opponent:, seats:}` - `results?` is whether
+  that round's results are public.
+
+  `seats` is a seat per board of the match, `%{k:, number:, player:, points:}`
+  - `player` the team's own player (a `no`) and `points` what that player
+  scored on the board, from `boards[].points`, both `nil` where there is
+  nothing to say: a board with no game on the page, or a round whose results
+  are withheld (the line-up stays, the score does not).
+
+  Whose seat is whose is read off the board itself - the side whose player is
+  on the team's roster - and only when that does not settle it (a player who
+  changed team, an unnumbered seat) off the colour convention, team A having
+  White on board 1 and every odd board (`matches[].board1_white_team`).
+  """
+  def team_lineups(payload, %{} = team) do
+    no = Map.get(team, "no")
+    roster = team |> Map.get("players", []) |> List.wrap() |> MapSet.new()
+
+    for round <- rounds(payload),
+        match <- matches(round),
+        match_side(match, no) != nil do
+      bye? = Map.get(match, "bye") == true
+      public? = results_public?(round)
+
+      seats =
+        if bye? do
+          []
+        else
+          index = board_index(round)
+
+          for slot <- match_slots(index, match),
+              do: lineup_seat(slot, match, no, roster, public?)
+        end
+
+      %{
+        round: number_of(round),
+        match: match,
+        bye?: bye?,
+        results?: public?,
+        opponent: match_opponent(match, no),
+        seats: seats
+      }
+    end
+  end
+
+  defp lineup_seat(%{board: nil} = slot, _match, _no, _roster, _public?),
+    do: %{k: slot.k, number: slot.number, player: nil, points: nil}
+
+  defp lineup_seat(%{board: board} = slot, match, no, roster, public?) do
+    white = Map.get(board, "white")
+    black = Map.get(board, "black")
+
+    colour =
+      cond do
+        white in roster and black not in roster -> :white
+        black in roster and white not in roster -> :black
+        team_white_on?(match, no, slot.k) -> :white
+        true -> :black
+      end
+
+    points =
+      with true <- public?, {w, b} <- board_points(board) do
+        if colour == :white, do: w, else: b
+      else
+        _withheld_or_unknown -> nil
+      end
+
+    %{
+      k: slot.k,
+      number: slot.number,
+      player: if(colour == :white, do: white, else: black),
+      points: points
+    }
+  end
+
+  # Whether `no` has White on board `k` of `match`: the side with White on
+  # board 1 has it on every odd board.
+  defp team_white_on?(match, no, k) do
+    first_white =
+      case Map.get(match, "board1_white_team") do
+        team when is_integer(team) -> team
+        _absent -> Map.get(match, "team_a")
+      end
+
+    first_white == no == (rem(k, 2) == 1)
+  end
+
+  @doc """
+  The roster of one team as the team page prints it, in roster order:
+  `%{player:, board:, games:, points:}`.
+
+  `board` is the board the player sat at most often (the lower one on a tie,
+  `board_stats` own rule), `games` and `points` what they scored for the
+  team. From `board_stats` when the snapshot has it for the player, and
+  otherwise from the team's `lineups` (`team_lineups/2`); `nil` for whatever
+  neither knows - a reserve who has not played, a round whose results are not
+  public.
+  """
+  def team_roster_rows(payload, %{} = team, lineups) do
+    stats = Map.new(board_stats(payload), &{Map.get(&1, "player"), &1})
+    played = lineup_record(lineups)
+
+    for player <- team_roster(payload, team) do
+      no = Map.get(player, "no")
+
+      case Map.get(stats, no) do
+        %{} = row ->
+          %{
+            player: player,
+            board: Map.get(row, "board"),
+            games: Map.get(row, "games"),
+            points: Map.get(row, "points")
+          }
+
+        nil ->
+          seats = Map.get(played, no, [])
+
+          %{
+            player: player,
+            board: most_played_board(seats),
+            games: if(seats == [], do: nil, else: length(seats)),
+            points: lineup_points(seats)
+          }
+      end
+    end
+  end
+
+  # player no => their seats, across the line-ups.
+  defp lineup_record(lineups) do
+    lineups
+    |> Enum.flat_map(& &1.seats)
+    |> Enum.reject(&is_nil(&1.player))
+    |> Enum.group_by(& &1.player)
+  end
+
+  defp most_played_board([]), do: nil
+
+  defp most_played_board(seats) do
+    seats
+    |> Enum.frequencies_by(& &1.k)
+    |> Enum.min_by(fn {k, count} -> {-count, k} end)
+    |> elem(0)
+  end
+
+  defp lineup_points(seats) do
+    case Enum.reject(seats, &is_nil(&1.points)) do
+      [] -> nil
+      scored -> scored |> Enum.map(& &1.points) |> Enum.sum()
+    end
+  end
+
+  @doc """
+  The teams by board: a row per team (the order of `team_list/1`), a column
+  per board number that any `board_stats` row names, and in each cell the
+  players of that team whose own board it is - `%{player:, row:}` with `row`
+  the `board_stats` entry. A cell is a list because two players can share a
+  board number when a reserve took over; it is empty when nobody did.
+
+  `%{boards: [integer], rows: [%{no:, team:, rank:, cells: %{board => [..]}}]}`.
+  Empty `boards` until standings have been published (`board_stats` is empty
+  until then).
+  """
+  def team_board_grid(payload) do
+    stats = board_stats(payload)
+    players = players_by_no(payload)
+
+    boards =
+      stats
+      |> Enum.map(&Map.get(&1, "board"))
+      |> Enum.filter(&is_integer/1)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    by_team = Enum.group_by(stats, &Map.get(&1, "team"))
+
+    rows =
+      for entry <- team_list(payload) do
+        cells =
+          by_team
+          |> Map.get(entry.no, [])
+          |> Enum.group_by(&Map.get(&1, "board"))
+          |> Map.new(fn {board, rows} ->
+            {board,
+             rows
+             |> Enum.sort_by(&{-(Map.get(&1, "games") || 0), Map.get(&1, "player")})
+             |> Enum.map(&%{player: Map.get(players, Map.get(&1, "player")), row: &1})
+             |> Enum.reject(&is_nil(&1.player))}
+          end)
+
+        %{no: entry.no, team: entry.team, rank: entry.rank, cells: cells}
+      end
+
+    %{boards: boards, rows: rows}
+  end
+
+  @doc """
+  The team cross-table by round, for a team Swiss: a row per team (in the
+  order of `team_list/1`), a column per round the standings reach whose
+  results are public (`crosstable_rounds/1`), and in each cell the match that
+  team played that round, from its own side:
+
+      %{round:, match:, bye?:, opponent:, colour:, gp:, opp_gp:, mp:,
+        total_mp:, total_gp:}
+
+  `colour` is the team's colour on board 1. `total_mp`/`total_gp` are the
+  running totals through that round, added up here from the matches' own
+  figures; they go `nil` from the first match whose figure is not known yet,
+  and stay `nil`, rather than carry on as if it were zero. A round the team
+  was not scheduled in is a `nil` cell. The final MP and GP columns are the
+  standings' own, never these sums.
+
+  `%{rounds: [integer], rows: [%{no:, team:, rank:, mp:, gp:, cells: [cell | nil]}]}`.
+  """
+  def team_round_crosstable(payload) do
+    by_round = rounds_by_number(payload)
+
+    numbers =
+      payload
+      |> crosstable_rounds()
+      |> Enum.filter(&(by_round |> Map.fetch!(&1) |> matches() != []))
+
+    rows =
+      for entry <- team_list(payload) do
+        {cells, _running} =
+          Enum.map_reduce(numbers, {0.0, 0.0}, fn number, running ->
+            match =
+              by_round
+              |> Map.fetch!(number)
+              |> matches()
+              |> Enum.find(&(match_side(&1, entry.no) != nil))
+
+            round_cell(number, match, entry.no, running)
+          end)
+
+        %{
+          no: entry.no,
+          team: entry.team,
+          rank: entry.rank,
+          mp: entry.mp,
+          gp: entry.gp,
+          cells: cells
+        }
+      end
+
+    %{rounds: numbers, rows: rows}
+  end
+
+  defp round_cell(_number, nil, _no, running), do: {nil, running}
+
+  defp round_cell(number, match, no, {total_mp, total_gp}) do
+    {gp, mp} = match_points_for(match, no)
+    bye? = Map.get(match, "bye") == true
+
+    opp_gp =
+      case match_side(match, no) do
+        :a -> get_in(match, ["game_points", "b"])
+        :b -> get_in(match, ["game_points", "a"])
+      end
+
+    total_mp = add(total_mp, mp)
+    total_gp = add(total_gp, gp)
+
+    cell = %{
+      round: number,
+      match: match,
+      bye?: bye?,
+      opponent: match_opponent(match, no),
+      colour: if(bye?, do: nil, else: board1_colour(match, no)),
+      gp: gp,
+      opp_gp: if(bye?, do: nil, else: opp_gp),
+      mp: mp,
+      total_mp: total_mp,
+      total_gp: total_gp
+    }
+
+    {cell, {total_mp, total_gp}}
+  end
+
+  # A running total that has met an unknown figure stays unknown.
+  defp add(nil, _value), do: nil
+  defp add(_total, nil), do: nil
+  defp add(total, value) when is_number(value), do: total + value
+  defp add(_total, _junk), do: nil
+
+  defp board1_colour(match, no) do
+    case Map.get(match, "board1_white_team") do
+      ^no -> :white
+      team when is_integer(team) -> :black
+      _absent -> if Map.get(match, "team_a") == no, do: :white, else: :black
     end
   end
 

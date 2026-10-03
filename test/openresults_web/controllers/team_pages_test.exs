@@ -2,8 +2,10 @@ defmodule OpenResultsWeb.TeamPagesTest do
   @moduledoc """
   Team standings, matches on round pages, team pages and board prizes - the
   additive team fields from `docs/snapshot-schema.md`, and the fallback for a
-  payload (an individual tournament, or a team Swiss that has not scheduled a
-  single match yet) that does not carry them.
+  payload (an individual tournament, or a team event that has not paired a
+  round yet) that does not carry them. The team Swiss with its matches, the
+  team list and the team cross-table by round are in
+  `OpenResultsWeb.TeamSwissPagesTest`.
   """
   use OpenResultsWeb.ConnCase
 
@@ -12,7 +14,7 @@ defmodule OpenResultsWeb.TeamPagesTest do
 
   setup do
     team_rr = SnapshotPayloads.team_round_robin()
-    team_swiss = SnapshotPayloads.team_swiss()
+    team_swiss = SnapshotPayloads.team_swiss_unpaired()
     swiss = SnapshotPayloads.swiss()
 
     {:ok, _} = Snapshots.ingest(team_rr)
@@ -20,7 +22,10 @@ defmodule OpenResultsWeb.TeamPagesTest do
     {:ok, _} =
       Snapshots.ingest(
         team_swiss
-        |> Map.put("tournament", Map.put(team_swiss["tournament"], "slug", "team-swiss-fixture"))
+        |> Map.put(
+          "tournament",
+          Map.put(team_swiss["tournament"], "slug", "team-swiss-unpaired")
+        )
       )
 
     {:ok, _} = Snapshots.ingest(swiss)
@@ -29,7 +34,7 @@ defmodule OpenResultsWeb.TeamPagesTest do
      team_rr: team_rr,
      rr_slug: team_rr["tournament"]["slug"],
      swiss_slug: swiss["tournament"]["slug"],
-     team_swiss_slug: "team-swiss-fixture"}
+     team_swiss_slug: "team-swiss-unpaired"}
   end
 
   defp doc(conn, status \\ 200), do: LazyHTML.from_document(html_response(conn, status))
@@ -68,12 +73,34 @@ defmodule OpenResultsWeb.TeamPagesTest do
   end
 
   describe "a round page, team round robin" do
-    test "lists the round's matches, expandable to their boards", %{conn: conn, rr_slug: slug} do
-      html = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
+    test "lists the round's matches, and the boards once, under their matches", %{
+      conn: conn,
+      rr_slug: slug,
+      team_rr: payload
+    } do
+      document = conn |> get(~p"/t/#{slug}/round/1") |> doc()
 
-      assert html =~ "table class=\"matches\""
-      assert html =~ "<details>"
-      assert html =~ "Boards"
+      assert Enum.count(LazyHTML.query(document, "table.matches tbody tr")) == 2
+      # No second, nested copy of the boards behind a disclosure.
+      assert LazyHTML.query(document, "table.matches details") |> Enum.to_list() == []
+      assert LazyHTML.query(document, "table.nested") |> Enum.to_list() == []
+
+      # One header line per match, and every board of the round exactly once.
+      assert Enum.count(LazyHTML.query(document, "table.pairings tr.match-head")) == 2
+      board_count = payload["rounds"] |> hd() |> Map.fetch!("boards") |> length()
+
+      assert Enum.count(LazyHTML.query(document, "table.pairings tbody tr[id^=board-]")) ==
+               board_count
+    end
+
+    test "the Bd column is the board within the match, not the round-wide number", %{
+      conn: conn,
+      rr_slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}/round/1") |> doc()
+
+      # Two matches of two boards: 1 2 and 1 2, not 1 2 3 4.
+      assert texts(document, "table.pairings tbody tr[id^=board-] th") == ["1", "2", "1", "2"]
     end
 
     test "the team filter narrows the board lines", %{conn: conn, rr_slug: slug, team_rr: payload} do
@@ -140,9 +167,13 @@ defmodule OpenResultsWeb.TeamPagesTest do
       ingest!(forfeit_payload(payload, "forfeit-present", %{"to" => to}))
 
       document = conn |> get(~p"/t/forfeit-present/round/1") |> doc()
-      assert texts(document, ".match-forfeit") == ["Awarded to Charleroi by the arbiter"]
-      # The match's boards are still there to expand.
-      assert Enum.count(LazyHTML.query(document, "table.matches details")) == 2
+
+      assert texts(document, "table.matches .match-forfeit") == [
+               "Awarded to Charleroi by the arbiter"
+             ]
+
+      # The match's boards are still listed, under its header line.
+      assert Enum.count(LazyHTML.query(document, "table.pairings tr.match-head")) == 2
 
       for team_no <- [to, Enum.find(payload["teams"], &(&1["name"] == "Brugse SK"))["no"]] do
         document = conn |> get(~p"/t/forfeit-present/team/#{team_no}") |> doc()
@@ -159,10 +190,16 @@ defmodule OpenResultsWeb.TeamPagesTest do
       ingest!(forfeit_payload(payload, "forfeit-locales", %{"to" => charleroi(payload)["no"]}))
 
       nl = conn |> get(~p"/t/forfeit-locales/round/1?lang=nl") |> doc()
-      assert texts(nl, ".match-forfeit") == ["Door de arbiter toegekend aan Charleroi"]
+
+      assert texts(nl, "table.matches .match-forfeit") == [
+               "Door de arbiter toegekend aan Charleroi"
+             ]
 
       fr = conn |> get(~p"/t/forfeit-locales/round/1?lang=fr") |> doc()
-      assert texts(fr, ".match-forfeit") == ["Attribué à Charleroi par l'arbitre"]
+
+      assert texts(fr, "table.matches .match-forfeit") == [
+               "Attribué à Charleroi par l'arbitre"
+             ]
     end
 
     test "null: a match decided on its boards says nothing",
@@ -232,7 +269,7 @@ defmodule OpenResultsWeb.TeamPagesTest do
     end
   end
 
-  describe "a team Swiss that has not scheduled a match yet" do
+  describe "a team Swiss that has not paired a round yet" do
     test "the tournament page says there are no team standings yet", %{
       conn: conn,
       team_swiss_slug: slug
@@ -241,14 +278,31 @@ defmodule OpenResultsWeb.TeamPagesTest do
       assert html =~ "No team standings have been published"
     end
 
-    test "a round page carries no matches table", %{conn: conn, team_swiss_slug: slug} do
-      html = conn |> get(~p"/t/#{slug}/round/1") |> html_response(200)
-      refute html =~ "table class=\"matches\""
+    test "there is no round page yet", %{conn: conn, team_swiss_slug: slug} do
+      conn |> get(~p"/t/#{slug}/round/1") |> html_response(404)
     end
 
-    test "offers no team cross-table", %{conn: conn, team_swiss_slug: slug} do
-      html = conn |> get(~p"/t/#{slug}") |> html_response(200)
-      refute html =~ "Team cross-table"
+    test "offers no team cross-table, on the standings or the cross-table page", %{
+      conn: conn,
+      team_swiss_slug: slug
+    } do
+      refute conn |> get(~p"/t/#{slug}") |> html_response(200) =~ "Team cross-table"
+
+      document = conn |> get(~p"/t/#{slug}/crosstable") |> doc()
+      assert LazyHTML.query(document, "#team-crosstable-section") |> Enum.to_list() == []
+    end
+
+    test "the team list shows the teams, in team number order, with no places", %{
+      conn: conn,
+      team_swiss_slug: slug
+    } do
+      document = conn |> get(~p"/t/#{slug}/teams") |> doc()
+
+      assert texts(document, "#team-list tbody th a") ==
+               ["Antwerp Knights", "Brugse SK", "Charleroi", "Deurne", "Eupen"]
+
+      assert texts(document, "#team-list thead th") == ["Team", "Captain", "Players"]
+      assert texts(document, "main .empty, section .empty") != []
     end
   end
 

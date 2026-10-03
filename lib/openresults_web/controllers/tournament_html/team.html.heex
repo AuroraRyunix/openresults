@@ -1,9 +1,17 @@
 <.masthead payload={@payload} slug={@slug} current={@current} />
 
 <% row = Tournament.team_standings_row(@payload, @team["no"]) %>
-<% roster = Tournament.team_roster(@payload, @team) %>
-<% history = Tournament.team_matches(@payload, @team["no"]) %>
+<% show = display_rules(@payload) %>
+<%!-- The line-ups are the pairings of this team's own matches, so they sit
+      behind the pairings tick like the round pages do; the match history
+      itself is standings-level and stays when they are off. --%>
+<% lineups = Tournament.team_lineups(@payload, @team) %>
+<% shown_lineups =
+  if show.pairings, do: lineups, else: Enum.map(lineups, &Map.put(&1, :seats, [])) %>
+<% roster = Tournament.team_roster_rows(@payload, @team, shown_lineups) %>
+<% board_count = shown_lineups |> Enum.map(&length(&1.seats)) |> Enum.max(fn -> 0 end) %>
 <% teams = Tournament.teams_by_no(@payload) %>
+<% players = Tournament.players_by_no(@payload) %>
 
 <section>
   <h2>
@@ -24,37 +32,44 @@
   <p :if={roster == []} class="empty">{gettext("No players are on this team's roster yet.")}</p>
 
   <div :if={roster != []} class="scroller">
-    <table class="standings">
+    <table class="standings" id="team-roster">
       <caption class="visually-hidden">
         {gettext("Roster of %{team}", team: Tournament.team_label(@team))}
       </caption>
       <thead>
         <tr>
-          <th class="num" scope="col">{gettext("Bd")}</th>
+          <th class="num" scope="col" title={gettext("The board this player played most often")}>
+            {gettext("Bd")}
+          </th>
           <th scope="col">{gettext("Player")}</th>
-          <th :if={Tournament.show?(@payload, "rating")} class="num" scope="col">
+          <th :if={show.rating} class="num" scope="col">
             {gettext("Rating")}
           </th>
+          <th class="num" scope="col">{gettext("Games")}</th>
           <th class="num" scope="col">{gettext("Points")}</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={{player, board} <- Enum.with_index(roster, 1)}>
-          <th scope="row" class="num row-head">{board}</th>
+        <tr :for={entry <- roster}>
+          <th scope="row" class="num row-head">
+            <span :if={entry.board}>{entry.board}</span>
+            <span :if={is_nil(entry.board)} class="quiet">
+              <.said_as words={gettext("has not played yet")}>-</.said_as>
+            </span>
+          </th>
           <td>
             <.player_link
               slug={@slug}
-              no={player["no"]}
-              player={player}
-              show={display_rules(@payload)}
-              cards?={Tournament.show?(@payload, "player_cards")}
+              no={entry.player["no"]}
+              player={entry.player}
+              show={show}
+              cards?={show.player_cards}
               detail
             />
           </td>
-          <td :if={Tournament.show?(@payload, "rating")} class="num">{player["rating"]}</td>
-          <td class="num">
-            {number(get_in(Tournament.standings_row(@payload, player["no"]), ["points"]))}
-          </td>
+          <td :if={show.rating} class="num">{entry.player["rating"]}</td>
+          <td class="num">{dash(entry.games)}</td>
+          <td class="num">{dash(number(entry.points))}</td>
         </tr>
       </tbody>
     </table>
@@ -62,10 +77,10 @@
 
   <h3>{gettext("Matches")}</h3>
 
-  <p :if={history == []} class="empty">{gettext("No matches have been published yet.")}</p>
+  <p :if={lineups == []} class="empty">{gettext("No matches have been published yet.")}</p>
 
-  <div :if={history != []} class="scroller">
-    <table class="standings">
+  <div :if={lineups != []} class="scroller">
+    <table class="standings team-matches" id="team-matches">
       <caption class="visually-hidden">
         {gettext("Match history of %{team}", team: Tournament.team_label(@team))}
       </caption>
@@ -74,30 +89,58 @@
           <th class="num" scope="col">{gettext("Rd")}</th>
           <th scope="col">{gettext("Opponent")}</th>
           <th class="num" scope="col">{gettext("Score")}</th>
+          <th :for={k <- 1..board_count//1} scope="col">
+            {gettext("Board %{board}", board: k)}
+          </th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={%{round: round, match: match} <- history}>
+        <tr :for={entry <- shown_lineups} id={"team-round-#{entry.round}"}>
           <th scope="row" class="num row-head">
-            <a href={~p"/t/#{@slug}/round/#{round}"}>{Tournament.round_label(@payload, round)}</a>
+            <a href={~p"/t/#{@slug}/round/#{entry.round}"}>
+              {Tournament.round_label(@payload, entry.round)}
+            </a>
           </th>
           <td>
-            <%= if match["bye"] do %>
+            <%= if entry.bye? do %>
               <span class="quiet">{gettext("bye")}</span>
             <% else %>
-              <.team_link
-                slug={@slug}
-                teams={teams}
-                no={Tournament.match_opponent(match, @team["no"])}
-              />
+              <.team_link slug={@slug} teams={teams} no={entry.opponent} />
             <% end %>
           </td>
           <td class="num">
-            <.match_score match={match} />
-            <.forfeit_decision match={match} teams={teams} />
+            <.own_match_score match={entry.match} team_no={@team["no"]} results={entry.results?} />
+            <.forfeit_decision
+              match={visible_match(entry.match, entry.results?)}
+              teams={teams}
+            />
+          </td>
+          <td :for={k <- 1..board_count//1}>
+            <% seat = Enum.find(entry.seats, &(&1.k == k)) %>
+            <%= cond do %>
+              <% entry.bye? or is_nil(seat) -> %>
+                <span class="quiet"><.said_as words={gettext("no game")}>-</.said_as></span>
+              <% is_nil(seat.player) -> %>
+                <span class="quiet"><.said_as words={gettext("no game")}>-</.said_as></span>
+              <% true -> %>
+                <.player_link
+                  slug={@slug}
+                  no={seat.player}
+                  player={players[seat.player]}
+                  show={show}
+                  cards?={show.player_cards}
+                />
+                <span :if={is_number(seat.points)} class="seat-score">{number(seat.points)}</span>
+            <% end %>
           </td>
         </tr>
       </tbody>
     </table>
   </div>
+
+  <p :if={board_count > 0} class="footnote">
+    {gettext(
+      "Each row is one match: who sat on each board for this team, and what they scored. A dash is a board with no game - nobody sat there, and the opponent has the point."
+    )}
+  </p>
 </section>

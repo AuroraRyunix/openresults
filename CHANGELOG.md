@@ -27,6 +27,45 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **A team round no longer lists every board twice.** The round page
+  showed each match's boards behind a "Boards" disclosure and again in the
+  flat pairing list. The boards are now listed once, in the pairing list,
+  grouped under a header line per match (match number, the two teams, the
+  score); the matches table above stays as the overview and its match numbers
+  link to the groups. The Bd column is the board within the match (1, 2, 3 ...),
+  not the round-wide number.
+- [Fix] **A team's page showed the wrong board and the wrong points.** The Bd
+  column was the position in the roster list, so a reserve was "board 4" of a
+  three-board match, and Points was the player's whole-event score. It is now
+  the board the player sat at most often, with games and points for the team.
+  A match's score is also read from the team's own side now (its game points
+  first), not always from team A's.
+- [Feature] **Team pages for a team Swiss with matches.** The team page lists
+  every round's line-up - who sat on each board, and what they scored - next to
+  the opponent, the score and the forfeit decision, behind the pairings
+  switch like the round pages. The old "phase 1: a team Swiss still pairs its
+  players individually" wording is gone: OpenPairings has paired team against
+  team since 0.62.0.
+- [Feature] **A team list.** `/t/<slug>/teams`: every team with its place,
+  match and game points, captain and roster in board order, and a
+  teams-by-board grid (who played which board, with their points out of
+  games). Linked as "Teams" in the round strip of a team event; behind the
+  standings switch.
+- [Feature] **A team cross-table for a team Swiss.** On the cross-table page,
+  above the player cross-table: a row per team, a column per round, each cell
+  the opponent, the colour on board 1, the game score and the match and game
+  points so far. Same gate as the player cross-table (the pairings and
+  cross-table switches, rounds the standings reach, results public).
+- [Change] **The hall display and projector for a team event.** Matches show
+  the colour each team has on board 1; "find your board" and the results view
+  say "match 3, board 2" instead of the round-wide board number; a Swiss bye
+  is marked as scored as a drawn match.
+- [Verified] The team round page, team page, team list, team cross-table and
+  the hall display are tested against a team Swiss with matches (new
+  `snapshot_team_swiss.json`: a reserve, a board nobody sat at, a bye every
+  round), including the switches that withhold them and the Dutch and French
+  pages.
+
 ## [0.19.2] - 2026-10-02
 
 - [Feature] **The projector view follows the newest round.** New

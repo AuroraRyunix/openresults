@@ -1,0 +1,13 @@
+<.masthead payload={@payload} slug={@slug} current={@current} />
+
+<section>
+  <h2>{gettext("Teams")}</h2>
+
+  <.team_list_table payload={@payload} slug={@slug} />
+</section>
+
+<section>
+  <h2>{gettext("Teams by board")}</h2>
+
+  <.team_board_grid_table payload={@payload} slug={@slug} />
+</section>

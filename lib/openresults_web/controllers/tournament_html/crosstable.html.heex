@@ -4,6 +4,13 @@
   current={@current}
   query={OpenResultsWeb.FilterParams.to_params(@filters)}
 />
+<%!-- A team Swiss's cross-table is the teams' own: who met whom, round by
+      round. The player cross-table below stays, for the boards. Behind the
+      same two ticks and the same standings gate as the page itself. --%>
+<section :if={Tournament.team_round_crosstable?(@payload)} id="team-crosstable-section">
+  <h2>{gettext("Team cross-table")}</h2>
+  <.team_round_crosstable_table payload={@payload} slug={@slug} />
+</section>
 
 <section>
   <%!-- No "after round N" beside this heading, unlike the standings. The
@@ -12,9 +19,11 @@
         inside that range still leaves a gap, so the highest column does not
         always equal that number either. The round headings say which
         rounds are actually here. --%>
-  <h2>{gettext("Cross-table")}</h2>
-
+  <h2>
+    {if Tournament.team_event?(@payload),
+      do: gettext("Player cross-table"),
+      else: gettext("Cross-table")}
+  </h2>
   <.crosstable_table payload={@payload} slug={@slug} filters={@filters} />
-
   <.withheld_results_note rounds={Tournament.withheld_result_rounds(@payload)} payload={@payload} />
 </section>

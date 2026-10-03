@@ -199,6 +199,14 @@ defmodule OpenResultsWeb.Meta do
     end
   end
 
+  @doc "The team list: every team of the event with its roster."
+  def teams(payload) do
+    gettext("The teams of %{tournament}, their places and their players.",
+      tournament: Tournament.name(payload)
+    )
+    |> with_where(payload)
+  end
+
   @doc "The board prizes page."
   def board_prizes(payload) do
     gettext("Board prizes for %{tournament}, each board's players and their results.",

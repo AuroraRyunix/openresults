@@ -38,23 +38,37 @@ defmodule OpenResults.SnapshotPayloads do
   def team_round_robin, do: load!("snapshot_team_roundrobin.json")
 
   @doc """
-  A team Swiss, shaped the way phase 1 actually publishes one: `team_event`
-  and `teams` are there, rosters and all, but there is no scheduled match -
-  phase 1 still pairs its players individually
-  (`docs/team-tournaments.md` on the OpenPairings side) - so every round's
-  `matches` is `[]` and `team_standings`/`board_stats` have nothing to show.
+  A team Swiss: five teams of three boards, three rounds, paired team against
+  team (C.04.6, OpenPairings 0.62.0 and later), standings published through
+  round 3. Every round has its matches, and the five teams make an odd field,
+  so each round has a pairing-allocated bye, scored as a drawn match.
 
-  Built from `team_round_robin/0` rather than a fixture of its own: this is
-  exactly what that payload would look like had OpenPairings never created a
-  single `Match` row, which is the real difference between the two pairing
-  systems on the wire.
+  What the fixture exercises on purpose: a reserve who takes board 3 in round
+  3 (Antwerp Knights R), a board nobody sat at in round 2 (Charleroi had two
+  players, so board 3 of its match with Brugse SK is a forfeit win that is in
+  the match's `boards` and score but is not a board on the page), a team with
+  a short name, and a captain.
+
+  Built by hand from `docs/snapshot-schema.md` and the shapes OpenPairings'
+  builder produces (match points 2/1/0, a bye worth a drawn
+  match); the tie-break values are placeholders, since this server only ever
+  displays them.
   """
-  def team_swiss do
-    team_round_robin()
-    |> put_in(["tournament", "system"], "swiss")
-    |> update_in(["rounds"], fn rounds -> Enum.map(rounds, &Map.put(&1, "matches", [])) end)
+  def team_swiss, do: load!("snapshot_team_swiss.json")
+
+  @doc """
+  A team Swiss that has been created and has its teams but has not paired a
+  round yet: `team_event` and `teams` are there, there is no round and
+  nothing in the standings.
+  """
+  def team_swiss_unpaired do
+    team_swiss()
+    |> Map.put("rounds", [])
+    |> Map.put("board_stats", [])
     |> put_in(["team_standings", "rows"], [])
-    |> put_in(["board_stats"], [])
+    |> put_in(["team_standings", "after_round"], 0)
+    |> put_in(["standings", "rows"], [])
+    |> put_in(["standings", "after_round"], 0)
   end
 
   @doc """

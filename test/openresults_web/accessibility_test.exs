@@ -94,7 +94,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
         [
           "/t/#{world.swiss}/crosstable",
           "/t/#{world.keizer}/crosstable",
-          "/t/#{world.before_round_one}/crosstable"
+          "/t/#{world.before_round_one}/crosstable",
+          "/t/#{world.team_swiss}/crosstable",
+          "/t/#{world.team_swiss}/crosstable?lang=nl"
         ]
 
       "/t/:slug/round/:n" ->
@@ -106,7 +108,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
           "/t/#{world.swiss}/round/4",
           "/t/#{world.team_rr}/round/1",
           "/t/#{world.team_rr}/round/1?team=#{world.team_no}",
-          "/t/#{world.team_swiss}/round/1"
+          "/t/#{world.team_swiss}/round/1",
+          "/t/#{world.team_swiss}/round/2",
+          "/t/#{world.team_swiss}/round/3?lang=fr"
         ]
 
       # The static render of each state; the views the cycle turns to are
@@ -122,6 +126,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
           "/t/#{world.before_round_one}/hall",
           "/t/#{world.team_rr}/hall",
           "/t/#{world.team_rr}/hall?views=standings",
+          "/t/#{world.team_swiss}/hall",
+          "/t/#{world.team_swiss}/hall?views=names",
+          "/t/#{world.team_swiss}/hall?views=results",
           "/t/no-such-tournament/hall"
         ]
 
@@ -131,6 +138,7 @@ defmodule OpenResultsWeb.AccessibilityTest do
           "/t/#{world.swiss}/projector?lang=fr&theme=ultra",
           "/t/#{world.swiss}/projector?theme=white",
           "/t/#{world.team_rr}/projector",
+          "/t/#{world.team_swiss}/projector",
           "/t/#{world.before_round_one}/projector",
           "/t/no-such-tournament/projector"
         ]
@@ -145,7 +153,17 @@ defmodule OpenResultsWeb.AccessibilityTest do
       "/t/:slug/team/:no" ->
         [
           "/t/#{world.team_rr}/team/#{world.team_no}",
+          "/t/#{world.team_swiss}/team/1",
+          "/t/#{world.team_swiss}/team/3?lang=nl",
           "/t/#{world.team_rr}/team/999"
+        ]
+
+      "/t/:slug/teams" ->
+        [
+          "/t/#{world.team_rr}/teams",
+          "/t/#{world.team_swiss}/teams",
+          "/t/#{world.team_swiss}/teams?lang=fr",
+          "/t/#{world.swiss}/teams"
         ]
 
       "/t/:slug/board-prizes" ->

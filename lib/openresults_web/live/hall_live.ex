@@ -316,15 +316,16 @@ defmodule OpenResultsWeb.HallLive do
         {gettext("Skip to content")}
       </a>
       <.screen_tools theme_choice={@theme_choice} theme_from_url?={@theme_from_url?} />
-
       <header class="hall-head">
         <div class="hall-title">
           <h1 id="hall-name">{(@data && @data.name) || screen_title(@projector?)}</h1>
+
           <p :if={@data && @data.round} id="hall-round" class="hall-round">
             <span>{@data.round.heading}</span>
             <span :if={@data.round.date} class="hall-quiet">
               {TournamentHTML.date(@data.round.date)}
             </span>
+
             <span :if={@data.round.final?} id="hall-final" class="hall-final">
               {gettext("Final round")}
             </span>
@@ -361,9 +362,11 @@ defmodule OpenResultsWeb.HallLive do
             count: page_total(@slides, @slide)
           )}
         </span>
+
         <span :if={@paused?} id="hall-paused" class="hall-paused">
           {gettext("Paused - tap or press space to resume")}
         </span>
+
         <span
           :if={@total > 1 and not @paused?}
           class="hall-bar"
@@ -375,6 +378,7 @@ defmodule OpenResultsWeb.HallLive do
             style={"animation-duration: #{@settings.page_seconds}s"}
           ></span>
         </span>
+
         <span
           id="hall-offline"
           class="hall-offline"
@@ -413,41 +417,63 @@ defmodule OpenResultsWeb.HallLive do
           round: @data.round.label
         )}
       </p>
+
       <table :if={not @matches?} class="hall-table hall-boards">
         <caption class="visually-hidden">{@data.round.heading}</caption>
+
         <thead>
           <tr>
             <th class="num" scope="col">{gettext("Bd")}</th>
+
             <th scope="col">{gettext("White")}</th>
+
             <th class="num" scope="col">{gettext("Result")}</th>
+
             <th scope="col">{gettext("Black")}</th>
           </tr>
         </thead>
+
         <tbody id="hall-rows" phx-update="stream">
           <tr :for={{id, board} <- @streams.rows} id={id}>
             <th scope="row" class="num hall-board">{board.label}</th>
+
             <td><.person person={board.white} /></td>
+
             <td class="num hall-result">
               <.board_result board={board} />
             </td>
+
             <td><.person person={board.black} /></td>
           </tr>
         </tbody>
       </table>
+
       <table :if={@matches?} class="hall-table hall-matches">
         <caption class="visually-hidden">{@data.round.heading}</caption>
+
         <thead>
           <tr>
             <th class="num" scope="col">{gettext("Match")}</th>
+
             <th scope="col">{gettext("Team")}</th>
+
             <th class="num" scope="col">{gettext("Score")}</th>
+
             <th scope="col">{gettext("Team")}</th>
           </tr>
         </thead>
+
         <tbody id="hall-rows" phx-update="stream">
           <tr :for={{id, match} <- @streams.rows} id={id}>
             <th scope="row" class="num hall-board">{match.number}</th>
-            <td>{match.team_a}</td>
+
+            <td>
+              {match.team_a}
+              <span :if={match.colour_a} class={["hall-colour", "hall-colour-#{match.colour_a}"]}>
+                {colour(match.colour_a)}
+              </span>
+            </td>
+
             <td class="num hall-result">
               <%= cond do %>
                 <% match.bye? -> %>
@@ -458,7 +484,13 @@ defmodule OpenResultsWeb.HallLive do
                   <span class="hall-quiet">-</span>
               <% end %>
             </td>
-            <td>{match.team_b}</td>
+
+            <td>
+              {match.team_b}
+              <span :if={match.colour_b} class={["hall-colour", "hall-colour-#{match.colour_b}"]}>
+                {colour(match.colour_b)}
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -474,15 +506,24 @@ defmodule OpenResultsWeb.HallLive do
       <p :if={@range} class="hall-range">
         {gettext("Names %{from} to %{to}", from: elem(@range, 0), to: elem(@range, 1))}
       </p>
+
       <ol id="hall-rows" class="hall-names" phx-update="stream">
         <li :for={{id, entry} <- @streams.rows} id={id} class="hall-name">
           <span class="hall-name-who"><.person person={entry} /></span>
           <span :if={entry.board} class="hall-name-seat">
-            <span class="hall-name-board">{gettext("Bd %{board}", board: entry.board)}</span>
+            <span :if={is_nil(entry.match)} class="hall-name-board">
+              {gettext("Bd %{board}", board: entry.board)}
+            </span>
+
+            <span :if={entry.match} class="hall-name-board">
+              {gettext("Match %{match}, Bd %{board}", match: entry.match, board: entry.k)}
+            </span>
+
             <span class={["hall-colour", "hall-colour-#{entry.colour}"]}>
               {colour(entry.colour)}
             </span>
           </span>
+
           <span :if={is_nil(entry.board)} class="hall-name-seat hall-quiet">
             {TournamentHTML.bye_kind(entry.bye)}
           </span>
@@ -502,6 +543,7 @@ defmodule OpenResultsWeb.HallLive do
         <span id="hall-progress-count" class="hall-progress-count">
           {gettext("%{reported} of %{total} results", reported: @reported, total: @total)}
         </span>
+
         <span class="hall-progress-bar" aria-hidden="true">
           <span
             class="hall-progress-fill"
@@ -509,23 +551,34 @@ defmodule OpenResultsWeb.HallLive do
           ></span>
         </span>
       </p>
+
       <table class="hall-table hall-boards">
         <caption class="visually-hidden">{gettext("Results")}</caption>
+
         <thead>
           <tr>
-            <th class="num" scope="col">{gettext("Bd")}</th>
+            <th class="num" scope="col">
+              {if Hall.matches?(@data), do: gettext("Match/Bd"), else: gettext("Bd")}
+            </th>
+
             <th scope="col">{gettext("White")}</th>
+
             <th class="num" scope="col">{gettext("Result")}</th>
+
             <th scope="col">{gettext("Black")}</th>
           </tr>
         </thead>
+
         <tbody id="hall-rows" phx-update="stream">
           <tr :for={{id, board} <- @streams.rows} id={id} class={[board.fresh? && "is-fresh"]}>
             <th scope="row" class="num hall-board">{board.label}</th>
+
             <td><.person person={board.white} /></td>
+
             <td class="num hall-result">
               <.board_result board={board} />
             </td>
+
             <td><.person person={board.black} /></td>
           </tr>
         </tbody>
@@ -541,21 +594,27 @@ defmodule OpenResultsWeb.HallLive do
         <span :if={@data.standings.after_round}>
           {gettext("after round %{number}", number: @data.standings.after_round)}
         </span>
+
         <span :if={@data.standings.provisional?} class="hall-quiet">
           {gettext("provisional")}
         </span>
       </p>
+
       <table class="hall-table hall-standings">
         <caption class="visually-hidden">{gettext("Standings")}</caption>
+
         <thead>
           <tr>
             <th class="num" scope="col">{gettext("#")}</th>
+
             <th scope="col">
               {if @data.standings.kind == :teams, do: gettext("Team"), else: gettext("Name")}
             </th>
+
             <%= case @data.standings.kind do %>
               <% :teams -> %>
                 <th class="num" scope="col">{gettext("MP")}</th>
+
                 <th class="num" scope="col">{gettext("GP")}</th>
               <% :keizer -> %>
                 <th class="num" scope="col">{gettext("Keizer points")}</th>
@@ -564,15 +623,20 @@ defmodule OpenResultsWeb.HallLive do
             <% end %>
           </tr>
         </thead>
+
         <tbody id="hall-rows" phx-update="stream">
           <tr :for={{id, row} <- @streams.rows} id={id}>
             <th scope="row" class="num hall-board">{row.rank}</th>
+
             <%= if @data.standings.kind == :teams do %>
               <td>{row.team}</td>
+
               <td class="num hall-points">{TournamentHTML.number(row.mp)}</td>
+
               <td class="num">{TournamentHTML.number(row.gp)}</td>
             <% else %>
               <td><.person person={row.person} /></td>
+
               <td class="num hall-points">{TournamentHTML.number(row.points)}</td>
             <% end %>
           </tr>
@@ -658,6 +722,7 @@ defmodule OpenResultsWeb.HallLive do
           {label}
         </button>
       </div>
+
       <button
         type="button"
         id="fullscreen-toggle"
@@ -678,6 +743,7 @@ defmodule OpenResultsWeb.HallLive do
             stroke-linejoin="round"
           />
         </svg>
+
         <svg class="screen-icon screen-icon-exit" viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"
@@ -691,6 +757,7 @@ defmodule OpenResultsWeb.HallLive do
         <span class="screen-btn-label">{gettext("Full screen")}</span>
       </button>
     </div>
+
     <script :type={Phoenix.LiveView.ColocatedHook} name=".ScreenTools">
       export default {
         mounted() {
@@ -819,6 +886,7 @@ defmodule OpenResultsWeb.HallLive do
       phx-update="ignore"
     >
     </p>
+
     <script :type={Phoenix.LiveView.ColocatedHook} name=".HallClock">
       export default {
         mounted() {
