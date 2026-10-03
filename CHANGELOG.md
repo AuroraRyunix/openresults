@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-10-03
+
 - [Fix] **A change the arbiter publishes now shows on open pages within
   about three seconds**, not up to twenty. Traced end to end on 2026-10-03:
   OpenPairings sends about two seconds after the click and this site stores
