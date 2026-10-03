@@ -1848,12 +1848,48 @@ defmodule OpenResultsWeb.Tournament do
         else: round_or_index
 
     match
-    |> Map.get("boards", [])
-    |> List.wrap()
-    |> Enum.filter(&is_integer/1)
-    |> Enum.sort()
-    |> Enum.with_index(1)
+    |> board_positions()
     |> Enum.map(fn {number, k} -> %{k: k, number: number, board: Map.get(index, number)} end)
+  end
+
+  # `[{board number, k}]` for a match: OpenPairings' own
+  # `matches[].board_positions` when the payload has it (since 2026-10-03),
+  # so a hidden board shifts nothing; otherwise, for an older payload, the
+  # position in the sorted `boards` list, which is exact unless a board was
+  # hidden.
+  defp board_positions(match) do
+    case Map.get(match, "board_positions") do
+      positions when is_list(positions) and positions != [] ->
+        for %{"board" => number, "k" => k} <- positions,
+            is_integer(number) and is_integer(k),
+            do: {number, k}
+
+      _absent ->
+        match
+        |> Map.get("boards", [])
+        |> List.wrap()
+        |> Enum.filter(&is_integer/1)
+        |> Enum.sort()
+        |> Enum.with_index(1)
+    end
+  end
+
+  @doc """
+  Whether `match` is a double forfeit - neither team turned up, both lost by
+  forfeit (`matches[].double_forfeit`, sent with the match points). Read,
+  never worked out from the boards.
+  """
+  def double_forfeit?(match), do: Map.get(match, "double_forfeit") == true
+
+  @doc """
+  Boards per match (`tournament.team_boards`), or `nil` for a payload from a
+  publisher older than the field.
+  """
+  def team_boards(payload) do
+    case get_in(payload, ["tournament", "team_boards"]) do
+      n when is_integer(n) and n > 0 -> n
+      _ -> nil
+    end
   end
 
   @doc """

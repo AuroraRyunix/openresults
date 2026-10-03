@@ -2141,7 +2141,9 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   @doc """
   "Awarded to Team A by the arbiter", for a match the arbiter forfeited by
-  decision (`Tournament.forfeit_decision_to/1`). Nothing for any other match.
+  decision (`Tournament.forfeit_decision_to/1`), and "Neither team turned
+  up" for a double forfeit (`Tournament.double_forfeit?/1`). Nothing for any
+  other match.
 
   Shown only beside match points that are shown: OpenPairings sends the
   decision exactly when it sends the match points, and a page that met one
@@ -2162,11 +2164,21 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:shown?, shown?)
       |> assign(:team, to && Map.get(assigns.teams, to))
 
+    assigns =
+      assign(
+        assigns,
+        :double?,
+        Tournament.double_forfeit?(assigns.match) and is_map(assigns.match["match_points"])
+      )
+
     ~H"""
     <span :if={@shown?} class="match-forfeit">
       {gettext("Awarded to %{team} by the arbiter",
         team: if(@team, do: Tournament.team_label(@team), else: gettext("?"))
       )}
+    </span>
+    <span :if={@double?} class="match-forfeit">
+      {gettext("Neither team turned up: both lost by forfeit")}
     </span>
     """
   end

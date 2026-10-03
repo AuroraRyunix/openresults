@@ -500,5 +500,32 @@ defmodule OpenResultsWeb.TeamSwissPagesTest do
                %{k: 3, number: 6, board: nil}
              ] = Tournament.match_slots(round, match)
     end
+
+    test "board_positions, when sent, place each board - a hidden board shifts nothing" do
+      payload = SnapshotPayloads.team_swiss()
+      round = Tournament.round(payload, 2)
+      match = round |> Tournament.matches() |> Enum.find(&(&1["number"] == 2))
+
+      # Board 4 hidden: the publisher leaves it out of both lists.
+      match =
+        match
+        |> Map.put("boards", [5, 6])
+        |> Map.put("board_positions", [%{"board" => 5, "k" => 2}, %{"board" => 6, "k" => 3}])
+
+      assert [%{k: 2, number: 5}, %{k: 3, number: 6}] = Tournament.match_slots(round, match)
+
+      # Without the field, the older reading numbers by position.
+      assert [%{k: 1, number: 5}, %{k: 2, number: 6}] =
+               Tournament.match_slots(round, Map.delete(match, "board_positions"))
+    end
+
+    test "team_boards is read when sent" do
+      payload = SnapshotPayloads.team_swiss()
+      assert Tournament.team_boards(put_in(payload, ["tournament", "team_boards"], 3)) == 3
+
+      assert Tournament.team_boards(
+               update_in(payload, ["tournament"], &Map.delete(&1, "team_boards"))
+             ) == nil
+    end
   end
 end

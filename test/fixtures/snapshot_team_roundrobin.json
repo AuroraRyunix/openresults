@@ -228,6 +228,16 @@
       "matches": [
         {
           "board1_white_team": 1,
+          "board_positions": [
+            {
+              "board": 1,
+              "k": 1
+            },
+            {
+              "board": 2,
+              "k": 2
+            }
+          ],
           "boards": [
             1,
             2
@@ -248,6 +258,16 @@
         },
         {
           "board1_white_team": 2,
+          "board_positions": [
+            {
+              "board": 3,
+              "k": 1
+            },
+            {
+              "board": 4,
+              "k": 2
+            }
+          ],
           "boards": [
             3,
             4
@@ -749,6 +769,7 @@
     "slug": "team-roundrobin-fixture",
     "start_date": null,
     "system": "roundrobin",
+    "team_boards": 2,
     "team_event": true,
     "tempo": "standard",
     "time_control": null

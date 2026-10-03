@@ -130,6 +130,45 @@ defmodule OpenResultsWeb.TeamPagesTest do
     end
   end
 
+  describe "a double forfeit (matches[].double_forfeit)" do
+    test "the match line says neither team turned up, in three languages", %{
+      conn: conn,
+      team_rr: payload
+    } do
+      rounds =
+        Enum.map(payload["rounds"], fn round ->
+          matches =
+            round
+            |> Map.get("matches", [])
+            |> Enum.map(fn m ->
+              if m["number"] == 2 and round["number"] == 1,
+                do: Map.put(m, "double_forfeit", true),
+                else: m
+            end)
+
+          Map.put(round, "matches", matches)
+        end)
+
+      {:ok, _} =
+        payload
+        |> Map.put("rounds", rounds)
+        |> put_in(["tournament", "slug"], "double-forfeit")
+        |> Snapshots.ingest()
+
+      document = conn |> get(~p"/t/double-forfeit/round/1") |> doc()
+
+      assert texts(document, "table.matches .match-forfeit") == [
+               "Neither team turned up: both lost by forfeit"
+             ]
+
+      for lang <- ~w(nl fr) do
+        document = conn |> get(~p"/t/double-forfeit/round/1?lang=#{lang}") |> doc()
+        [text] = texts(document, "table.matches .match-forfeit")
+        refute text == "Neither team turned up: both lost by forfeit"
+      end
+    end
+  end
+
   describe "a match forfeited by decision (matches[].forfeit_decision)" do
     # The fixture's round 1 with its second match - Brugse SK against
     # Charleroi - carrying `forfeit` as that match's `forfeit_decision`, the

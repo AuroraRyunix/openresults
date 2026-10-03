@@ -580,16 +580,26 @@ board the arbiter hid is left out of this list for the same reason a hidden
 board is absent from `boards[]`, though it still counts in `game_points` -
 hidden is a display flag on `boards[]`, not on the arithmetic.
 
-**The board's place inside its match is not sent.** `matches[].boards` are
-round-wide numbers (OpenPairings numbers a match's boards
-`(match - 1) * boards_per_match + k`), and the number of boards per match is
-not in the snapshot either. OpenResults reads "board `k` of the match" as the
-position in that sorted list, which is exact unless the arbiter hid a board
-(a hidden board is left out of the list and shifts the ones after it). A board
-that is in `matches[].boards` but not in `rounds[].boards` is one seat that
-nobody filled: the opponent has the point, counted in `game_points`, and there
-is no game to show. Missing and worth adding, additively: `tournament.team_boards`
-and `matches[].boards` as `[{ "board": n, "k": k }]`.
+**`matches[].board_positions`** (OpenPairings since 2026-10-03, additive) -
+each listed board as `{ "board": n, "k": k }`, `k` its place inside the match
+(1 to `tournament.team_boards`), worked out by OpenPairings from the board's
+own number - so a hidden board, left out of the list, does not shift the ones
+after it. `Tournament.match_slots/2` uses it; a payload from an older
+publisher, without it, falls back to the position in the sorted `boards`
+list, which is exact unless the arbiter hid a board. A board that is in
+`matches[].boards` but not in `rounds[].boards` is one seat that nobody
+filled: the opponent has the point, counted in `game_points`, and there is
+no game to show.
+
+**`tournament.team_boards`** (since 2026-10-03, team events only) - how
+many boards one match is played on. `Tournament.team_boards/1` reads it;
+`nil` for an older payload.
+
+**`matches[].double_forfeit`** (since 2026-10-03) - `true` for a match
+neither team turned up for: every board is a forfeit loss for both players,
+and both teams lose the match (the loss's match points to each). Sent only
+with the match points, absent for every other match. The match line says
+"Neither team turned up: both lost by forfeit" (`forfeit_decision/1`).
 
 **`matches[].game_points`/`match_points`** - **withheld exactly like a
 board's own result**: `null` on both while the round's results are not public
@@ -615,7 +625,8 @@ boards pending") beside it, so it does not read as final.
 
 ```json
 { "number": 1, "team_a": 1, "team_b": 4, "bye": false, "board1_white_team": 1,
-  "boards": [1, 2], "game_points": { "a": 1.5, "b": 0.5 },
+  "boards": [1, 2], "board_positions": [{ "board": 1, "k": 1 }, { "board": 2, "k": 2 }],
+  "game_points": { "a": 1.5, "b": 0.5 },
   "match_points": { "a": 2.0, "b": 0.0 }, "forfeit_decision": null,
   "postponed_boards": 1 }
 ```
