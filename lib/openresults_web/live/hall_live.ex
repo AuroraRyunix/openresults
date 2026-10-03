@@ -695,7 +695,7 @@ defmodule OpenResultsWeb.HallLive do
   attr :theme_from_url?, :boolean, required: true
 
   # The controls a person at the screen reaches for: full screen, and the
-  # colours. Fixed in the corner, faded out after a few seconds without
+  # colours. Fixed in the bottom-right corner (clear of the clock), faded out after a few seconds without
   # movement so they are never on the picture for the room, and back on any
   # mouse move, tap or key. Server-rendered once and then the hook's: the
   # label and pressed states change in the browser only, hence `ignore`.
@@ -706,7 +706,7 @@ defmodule OpenResultsWeb.HallLive do
       class="screen-tools"
       phx-hook=".ScreenTools"
       phx-update="ignore"
-      data-choice={@theme_choice}
+      data-initial-choice={@theme_choice}
       data-theme-from-url={to_string(@theme_from_url?)}
       data-theme-store="openresults.screen.theme"
     >
@@ -767,7 +767,7 @@ defmodule OpenResultsWeb.HallLive do
           this.store = this.el.dataset.themeStore
 
           // The URL wins; then what this browser remembered; then the server's.
-          let choice = this.el.dataset.choice
+          let choice = this.el.dataset.initialChoice
           if (this.el.dataset.themeFromUrl !== "true") {
             const kept = this.read()
             if (kept && this.names[kept]) choice = kept
@@ -777,7 +777,12 @@ defmodule OpenResultsWeb.HallLive do
           this.onClick = (e) => {
             // A tap on a control must not also pause the cycle underneath.
             e.stopPropagation()
-            const theme = e.target.closest("[data-choice]")
+            // `button[data-choice]`, not any `[data-choice]`: the root element
+            // used to carry the server's choice under that very name, so
+            // `closest` found it from the full-screen button too, treated the
+            // click as a colour pick and returned before reaching the
+            // full-screen branch - which is why that button did nothing.
+            const theme = e.target.closest("button[data-choice]")
             if (theme) { this.apply(theme.dataset.choice, true); return }
             if (e.target.closest("#fullscreen-toggle")) this.toggleFullscreen()
           }
@@ -822,7 +827,7 @@ defmodule OpenResultsWeb.HallLive do
         },
         apply(choice, remember) {
           this.root.setAttribute("data-theme", this.names[choice])
-          for (const button of this.el.querySelectorAll("[data-choice]")) {
+          for (const button of this.el.querySelectorAll("button[data-choice]")) {
             button.setAttribute("aria-pressed", String(button.dataset.choice === choice))
           }
           if (remember) this.write(choice)
@@ -848,7 +853,7 @@ defmodule OpenResultsWeb.HallLive do
           } else {
             const el = document.documentElement
             const enter = el.requestFullscreen || el.webkitRequestFullscreen
-            result = enter && enter.call(el)
+            result = enter && enter.call(el, {navigationUI: "hide"})
           }
           if (result && result.catch) result.catch(() => {})
         },

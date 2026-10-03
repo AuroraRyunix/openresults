@@ -1,6 +1,6 @@
 defmodule OpenResultsWeb.ScreensTest do
   @moduledoc """
-  The two hall screens as a pair: the cards that link them from the top of the
+  The two hall screens as a pair: the cards that link them from the foot of the
   tournament pages, the tournament-level projector view (`/t/:slug/projector`,
   which follows the newest round and updates by itself), the full-screen and
   colour controls both carry, and the clock's seconds. The hall display's own
@@ -39,7 +39,7 @@ defmodule OpenResultsWeb.ScreensTest do
     |> List.first()
   end
 
-  describe "the links at the top of the tournament pages" do
+  describe "the links at the foot of the tournament pages" do
     test "each screen is linked once, as its own card, on the overview pages", %{conn: conn} do
       slug = publish(SnapshotPayloads.swiss())
 

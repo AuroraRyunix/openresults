@@ -2575,6 +2575,10 @@ a.xt-opp:hover {
   align-items: center;
   gap: calc(2.5 * var(--u));
   min-height: calc(4 * var(--u));
+  /* Room for the bottom-right controls (`.screen-tools`) on a screen wide
+     enough to have it; a narrow one lets them overlay the footer for the few
+     seconds they are showing. */
+  padding-right: 0;
   font-size: calc(2.2 * var(--u));
   font-weight: 700;
   color: var(--quiet);
@@ -3734,13 +3738,13 @@ a.xt-opp:hover {
   }
 }
 
-/* ---- the two hall screens, linked from the top of the tournament pages ---- */
+/* ---- the two hall screens, linked from the foot of the tournament pages ---- */
 
 .screens {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: 0.75rem;
-  margin: 1rem 0 0;
+  margin: 2rem 0 1rem;
 }
 
 .screen-card {
@@ -3784,12 +3788,17 @@ a.xt-opp:hover {
   font-size: 0.9rem;
 }
 
-/* ---- on-screen controls of the projector view and the hall display ---- */
+/* ---- on-screen controls of the projector view and the hall display ----
+
+   Fixed in the BOTTOM-RIGHT corner, where nothing is: the clock is top right
+   and the title top left. The hall's footer (page counter, progress bar) keeps
+   clear of the corner on a wide screen, so even while the controls are
+   showing they cover neither the clock nor a row of the table. */
 
 .screen-tools {
   position: fixed;
   z-index: 20;
-  top: max(0.5rem, env(safe-area-inset-top, 0px));
+  bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   right: max(0.5rem, env(safe-area-inset-right, 0px));
   display: flex;
   flex-wrap: wrap;
@@ -3890,4 +3899,10 @@ a.xt-opp:hover {
 :root[data-theme="ultra"] .screen-tools,
 :root[data-theme="ultra"] .screen-card {
   border-width: 3px;
+}
+
+@media screen and (min-width: 900px) and (min-aspect-ratio: 1/1) {
+  .hall-foot {
+    padding-right: min(34rem, 45vw);
+  }
 }

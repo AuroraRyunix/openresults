@@ -27,6 +27,27 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **The hall and projector screens' controls no longer sit on the
+  clock, and the full-screen button works.** The Black / White / Ultra
+  colours and the full-screen button are now in the bottom-right corner
+  (they still fade out after a few seconds), and the hall's footer keeps
+  clear of them on a wide screen. The full-screen button never did anything:
+  the controls' root element carried `data-choice`, so a click on the button
+  was matched by `closest("[data-choice]")` as a colour pick and returned
+  before the full-screen call. Only the three colour buttons are colour
+  choices now, and the root's own value is `data-initial-choice`.
+- [Change] **The projector and hall link cards are at the foot of the
+  standings, round and cross-table pages**, after the table, not above it.
+- [Fix] **Teams are shown by their full name everywhere** - team pages,
+  matches, standings, cross-tables, the hall display and the projector
+  view. The short name used to win and is now only the fallback for a team
+  with no name.
+- [Verified] **Publishing the first round of a team event reaches the
+  readers**: a new snapshot gives every static page a new ETag and page-cache
+  key (an old ETag is answered 200, not 304), the pages' 20-second refresher
+  swaps the region, and the hall and projector LiveViews are pushed the
+  change over PubSub. Tests added for each.
+
 - [Fix] **A team round no longer lists every board twice.** The round page
   showed each match's boards behind a "Boards" disclosure and again in the
   flat pairing list. The boards are now listed once, in the pairing list,

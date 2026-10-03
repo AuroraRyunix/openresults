@@ -1595,9 +1595,15 @@ defmodule OpenResultsWeb.Tournament do
   @doc "One team, or `nil`."
   def team(payload, no), do: Enum.find(teams(payload), &(Map.get(&1, "no") == no))
 
-  @doc "The label to print for a team: its short name when set, its name otherwise."
+  @doc """
+  The label to print for a team: its full name, everywhere a team is shown
+  (team pages, matches, standings, cross-tables, the hall display and the
+  projector view). The short name is only the fallback for a payload whose
+  team carries no `name` - it used to win, and the hall screen then showed
+  "Eupen" where the club is "Koninklijke Schaakkring Eupen".
+  """
   def team_label(%{} = team) do
-    string(team, "short_name") || string(team, "name") || ""
+    string(team, "name") || string(team, "short_name") || ""
   end
 
   def team_label(_not_a_team), do: ""

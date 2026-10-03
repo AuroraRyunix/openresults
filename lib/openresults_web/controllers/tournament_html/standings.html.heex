@@ -62,3 +62,5 @@
     <.standings_table :if={not starting_rank?} payload={@payload} slug={@slug} filters={@filters} />
   <% end %>
 </section>
+
+<.screen_cards payload={@payload} slug={@slug} current={@current} />
