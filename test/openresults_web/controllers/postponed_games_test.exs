@@ -499,7 +499,7 @@ defmodule OpenResultsWeb.PostponedGamesTest do
     test "its board line says the game is postponed", %{conn: conn} do
       document = conn |> get(~p"/t/#{@team_slug}/round/1") |> doc()
 
-      assert texts(document, "table.pairings.nested .result .postponed") == ["Postponed"]
+      assert texts(document, "table.pairings .result .postponed") == ["Postponed"]
     end
 
     test "the team page marks the same match", %{conn: conn} do
