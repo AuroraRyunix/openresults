@@ -87,9 +87,9 @@ defmodule OpenResultsWeb.UiFixesTest do
       source =
         Path.expand("../../lib/openresults_web/live/hall_live.ex", __DIR__) |> File.read!()
 
-      assert source =~ ~s[closest("button[data-choice]")]
-      refute source =~ ~s[closest("[data-choice]")]
-      assert source =~ ~s[if (e.target.closest("#fullscreen-toggle")) this.toggleFullscreen()]
+      assert source =~ ~S|closest("button[data-choice]")|
+      refute source =~ ~S|closest("[data-choice]")|
+      assert source =~ ~S|if (e.target.closest("#fullscreen-toggle")) this.toggleFullscreen()|
       assert source =~ "webkitRequestFullscreen"
       assert source =~ "webkitfullscreenchange"
     end
@@ -133,7 +133,10 @@ defmodule OpenResultsWeb.UiFixesTest do
 
   describe "4. a team is shown by its full name" do
     test "team_label/1 prefers the name, falls back to the short name" do
-      assert Tournament.team_label(%{"name" => "Koninklijke Schaakkring Eupen", "short_name" => "KSK Eupen"}) ==
+      assert Tournament.team_label(%{
+               "name" => "Koninklijke Schaakkring Eupen",
+               "short_name" => "KSK Eupen"
+             }) ==
                "Koninklijke Schaakkring Eupen"
 
       assert Tournament.team_label(%{"name" => nil, "short_name" => "KSK"}) == "KSK"
@@ -227,7 +230,12 @@ defmodule OpenResultsWeb.UiFixesTest do
     test "the team pages' refresher is the same poll loop as every static page", %{conn: conn} do
       {:ok, _} = Snapshots.ingest(round_one_published())
 
-      for path <- ["/t/#{@slug}", "/t/#{@slug}/teams", "/t/#{@slug}/round/1", "/t/#{@slug}/team/1"] do
+      for path <- [
+            "/t/#{@slug}",
+            "/t/#{@slug}/teams",
+            "/t/#{@slug}/round/1",
+            "/t/#{@slug}/team/1"
+          ] do
         html = conn |> get(path) |> html_response(200)
         assert count(html, "#live-region[data-version]") == 1, path
         assert html =~ "x-openresults-refresh", path
