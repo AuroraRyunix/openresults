@@ -1070,6 +1070,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:rows, rows)
       |> assign(:placed?, Enum.any?(rows, & &1.rank))
       |> assign(:captains?, Enum.any?(rows, &Map.get(&1.team, "captain")))
+      |> assign(:ratings?, Enum.any?(rows, & &1.rating))
       |> assign(:show, display_rules(assigns.payload))
 
     ~H"""
@@ -1091,6 +1092,8 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <th :if={@placed?} class="num" scope="col">{gettext("GP")}</th>
 
+            <th :if={@ratings?} class="num" scope="col">{gettext("Rating")}</th>
+
             <th :if={@captains?} scope="col">{gettext("Captain")}</th>
 
             <th scope="col">{gettext("Players")}</th>
@@ -1108,6 +1111,11 @@ defmodule OpenResultsWeb.TournamentHTML do
             <td :if={@placed?} class="num strong">{number(row.mp)}</td>
 
             <td :if={@placed?} class="num">{number(row.gp)}</td>
+
+            <td :if={@ratings?} class="num">
+              <span :if={is_nil(row.rating)} class="quiet">-</span>
+              {row.rating}
+            </td>
 
             <td :if={@captains?}>{row.team["captain"]}</td>
 

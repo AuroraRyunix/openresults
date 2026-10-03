@@ -554,6 +554,22 @@ a reserve who never played (a roster longer than the match size) has no
 pairing number yet and is not on this list, exactly as an unpaired individual
 player is absent from `players[]` before round 1.
 
+**`teams[].rating`** (OpenPairings since 2026-10-03, additive) - the team's
+rating as OpenPairings' Teams page shows it: by default the average of its
+highest-rated players, one per board (the Olympiad's rule), or another
+method the arbiter chose, or a rating typed for the team. A whole number, or
+`null` when there is none (a team with no players and nothing typed in).
+Worked out by OpenPairings, never by a reader; the team list shows it in a
+*Rating* column when any team has one. Absent in an older payload.
+
+**A team event without players** (OpenPairings' optional line-ups, since
+2026-10-03): a team may have an empty `players` list, and a match may list
+boards (`matches[].boards`, `board_positions`) of which few or none appear
+in `rounds[].boards` - those carry no players, so there is no game to show,
+but their results are in the match's `game_points` and `match_points` and in
+`team_standings`. Nothing else in the document changes; a reader that shows
+a missing board as an empty slot already shows this correctly.
+
 **`rounds[].matches`** - one entry per match scheduled that round, present
 only when `tournament.team_event` is `true`. A team round robin's bye (an
 odd-sized field) is `{ "team_a": <no>, "team_b": null, "bye": true }` with no

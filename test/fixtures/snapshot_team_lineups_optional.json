@@ -1,0 +1,542 @@
+{
+  "board_stats": [
+    {
+      "board": 1,
+      "games": 2,
+      "percentage": 50.0,
+      "performance": null,
+      "player": 1,
+      "points": 1.0,
+      "team": 2
+    },
+    {
+      "board": 2,
+      "games": 2,
+      "percentage": 50.0,
+      "performance": null,
+      "player": 2,
+      "points": 1.0,
+      "team": 2
+    }
+  ],
+  "players": [
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Brugse SK 1",
+      "no": 1,
+      "rating": 2150,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": null,
+      "fide_id": null,
+      "name": "Brugse SK 2",
+      "no": 2,
+      "rating": 2000,
+      "title": null
+    }
+  ],
+  "published_at": "2026-08-29T00:00:00Z",
+  "rounds": [
+    {
+      "boards": [],
+      "byes": [
+        {
+          "kind": "vacated-seat",
+          "player": 1,
+          "points": 1.0,
+          "result": "1-0"
+        },
+        {
+          "kind": "vacated-seat",
+          "player": 2,
+          "points": 0.5,
+          "result": "1/2-1/2"
+        }
+      ],
+      "date": "2026-09-01",
+      "matches": [
+        {
+          "board1_white_team": 1,
+          "board_positions": [
+            {
+              "board": 1,
+              "k": 1
+            },
+            {
+              "board": 2,
+              "k": 2
+            }
+          ],
+          "boards": [
+            1,
+            2
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 0.5
+          },
+          "match_points": {
+            "a": 2.0,
+            "b": 0.0
+          },
+          "number": 1,
+          "team_a": 1,
+          "team_b": 4
+        },
+        {
+          "board1_white_team": 2,
+          "board_positions": [
+            {
+              "board": 3,
+              "k": 1
+            },
+            {
+              "board": 4,
+              "k": 2
+            }
+          ],
+          "boards": [
+            3,
+            4
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 0.5
+          },
+          "match_points": {
+            "a": 2.0,
+            "b": 0.0
+          },
+          "number": 2,
+          "team_a": 2,
+          "team_b": 3
+        }
+      ],
+      "number": 1,
+      "results_public": true
+    },
+    {
+      "boards": [],
+      "byes": [
+        {
+          "kind": "vacated-seat",
+          "player": 1,
+          "points": 0.0,
+          "result": "1-0"
+        },
+        {
+          "kind": "vacated-seat",
+          "player": 2,
+          "points": 0.5,
+          "result": "1/2-1/2"
+        }
+      ],
+      "date": "2026-09-08",
+      "matches": [
+        {
+          "board1_white_team": 1,
+          "board_positions": [
+            {
+              "board": 1,
+              "k": 1
+            },
+            {
+              "board": 2,
+              "k": 2
+            }
+          ],
+          "boards": [
+            1,
+            2
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 1.5,
+            "b": 0.5
+          },
+          "match_points": {
+            "a": 2.0,
+            "b": 0.0
+          },
+          "number": 1,
+          "team_a": 1,
+          "team_b": 2
+        },
+        {
+          "board1_white_team": 4,
+          "board_positions": [
+            {
+              "board": 3,
+              "k": 1
+            },
+            {
+              "board": 4,
+              "k": 2
+            }
+          ],
+          "boards": [
+            3,
+            4
+          ],
+          "bye": false,
+          "forfeit_decision": null,
+          "game_points": {
+            "a": 0.0,
+            "b": 2.0
+          },
+          "match_points": {
+            "a": 0.0,
+            "b": 2.0
+          },
+          "number": 2,
+          "team_a": 4,
+          "team_b": 3
+        }
+      ],
+      "number": 2,
+      "results_public": true
+    }
+  ],
+  "schema": "openresults/snapshot",
+  "source": {
+    "app": "openpairings",
+    "version": "0.0.0-fixture"
+  },
+  "standings": {
+    "after_round": 2,
+    "manual_incomplete": false,
+    "manual_order": false,
+    "manual_stale": false,
+    "rows": [
+      {
+        "category": null,
+        "player": 1,
+        "points": 1.0,
+        "rank": 1,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "kind": "excluded",
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "kind": "excluded",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 2,
+        "points": 1.0,
+        "rank": 2,
+        "tiebreaks": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "kind": "excluded",
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "kind": "excluded",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      }
+    ],
+    "tiebreaks": [
+      {
+        "code": "MP",
+        "label": "Match points"
+      },
+      {
+        "code": "GP",
+        "label": "Game points"
+      },
+      {
+        "code": "DE",
+        "label": "Direct encounter"
+      },
+      {
+        "code": "BB",
+        "label": "Board points weighted (Berlin)"
+      },
+      {
+        "code": "SB",
+        "label": "Sonneborn-Berger"
+      }
+    ],
+    "tiebreaks_withheld": false
+  },
+  "team_standings": {
+    "after_round": 2,
+    "rows": [
+      {
+        "gp": 3.0,
+        "mp": 4.0,
+        "rank": 1,
+        "team": 1,
+        "tiebreaks": [
+          4.0,
+          3.0,
+          0.0,
+          5.0,
+          4.0
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 4,
+              "round": 1,
+              "value": 0.0
+            },
+            {
+              "opponent": 2,
+              "round": 2,
+              "value": 4.0
+            }
+          ]
+        }
+      },
+      {
+        "gp": 2.5,
+        "mp": 2.0,
+        "rank": 2,
+        "team": 3,
+        "tiebreaks": [
+          2.0,
+          2.5,
+          0.0,
+          3.5,
+          0.0
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 2,
+              "round": 1,
+              "value": 0.0
+            },
+            {
+              "opponent": 4,
+              "round": 2,
+              "value": 0.0
+            }
+          ]
+        }
+      },
+      {
+        "gp": 2.0,
+        "mp": 2.0,
+        "rank": 3,
+        "team": 2,
+        "tiebreaks": [
+          2.0,
+          2.0,
+          0.0,
+          3.0,
+          4.0
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 3,
+              "round": 1,
+              "value": 4.0
+            },
+            {
+              "opponent": 1,
+              "round": 2,
+              "value": 0.0
+            }
+          ]
+        }
+      },
+      {
+        "gp": 0.5,
+        "mp": 0.0,
+        "rank": 4,
+        "team": 4,
+        "tiebreaks": [
+          0.0,
+          0.5,
+          0.0,
+          0.5,
+          0.0
+        ],
+        "working": {
+          "SB": [
+            {
+              "opponent": 1,
+              "round": 1,
+              "value": 0.0
+            },
+            {
+              "opponent": 3,
+              "round": 2,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    ],
+    "tiebreaks": [
+      {
+        "code": "MP",
+        "label": "Match points"
+      },
+      {
+        "code": "GP",
+        "label": "Game points"
+      },
+      {
+        "code": "DE",
+        "label": "Direct encounter"
+      },
+      {
+        "code": "BB",
+        "label": "Board points weighted (Berlin)"
+      },
+      {
+        "code": "SB",
+        "label": "Sonneborn-Berger"
+      }
+    ]
+  },
+  "teams": [
+    {
+      "captain": null,
+      "name": "Antwerp Knights",
+      "no": 1,
+      "players": [],
+      "rating": null
+    },
+    {
+      "captain": null,
+      "name": "Brugse SK",
+      "no": 2,
+      "players": [
+        1,
+        2
+      ],
+      "rating": 2075
+    },
+    {
+      "captain": null,
+      "name": "Charleroi",
+      "no": 3,
+      "players": [],
+      "rating": 1950
+    },
+    {
+      "captain": null,
+      "name": "Deurne",
+      "no": 4,
+      "players": [],
+      "rating": null
+    }
+  ],
+  "tournament": {
+    "arbiter": null,
+    "categories": [],
+    "city": "Gent",
+    "deputy": null,
+    "display": {
+      "arbiter": true,
+      "byes": true,
+      "category": true,
+      "city": true,
+      "club": true,
+      "dates": true,
+      "deputy": true,
+      "federation": true,
+      "fide_badge": true,
+      "pairing_scores": true,
+      "pairings": true,
+      "player_cards": true,
+      "rating": true,
+      "rounds_played": false,
+      "standings": true,
+      "tiebreak_working": true,
+      "tiebreaks": true,
+      "time_control": true,
+      "title": true
+    },
+    "end_date": "2026-09-15",
+    "federation": "BEL",
+    "fide_rated": false,
+    "hall": {
+      "hold_new_round": true,
+      "names": true,
+      "page_seconds": 15,
+      "pairings": true,
+      "results": true,
+      "standings": true,
+      "standings_top": 10
+    },
+    "listed": false,
+    "match_format": false,
+    "name": "Team RR",
+    "registration": {
+      "list_public": false,
+      "taken": 2
+    },
+    "registration_open": false,
+    "rounds_count": 3,
+    "scoring": {
+      "bye": 1.0,
+      "draw": 0.5,
+      "forfeit_loss": 0.0,
+      "forfeit_win": 1.0,
+      "loss": 0.0,
+      "presence": null,
+      "win": 1.0
+    },
+    "slug": "team-lineups-optional-fixture",
+    "start_date": "2026-09-01",
+    "system": "roundrobin",
+    "team_boards": 2,
+    "team_event": true,
+    "tempo": "standard",
+    "time_control": null
+  },
+  "version": 1
+}

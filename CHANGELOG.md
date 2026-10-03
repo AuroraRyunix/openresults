@@ -27,6 +27,17 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] The team list shows each team's **rating** in a *Rating*
+  column, when OpenPairings sends one (`teams[].rating`, since its
+  2026-10-03 snapshot): by default the Olympiad's average of a team's
+  highest-rated players, or a rating the arbiter typed in.
+- [Verified] A team event OpenPairings pairs **without players** (its
+  optional line-ups) publishes and renders: teams with no players, matches
+  with no board on the page, scored only in their match points and game
+  points and the team standings. A contract fixture from OpenPairings,
+  `snapshot_team_lineups_optional.json`, now covers it; the team round
+  robin fixture gains `teams[].rating`.
+
 ## [0.20.1] - 2026-10-03
 
 - [Fix] **A change the arbiter publishes now shows on open pages within

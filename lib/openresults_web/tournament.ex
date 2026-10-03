@@ -1918,7 +1918,9 @@ defmodule OpenResultsWeb.Tournament do
 
   @doc """
   The teams for the team list, best placed first: `%{no:, team:, rank:, mp:,
-  gp:, roster:}` with `roster` the team's players in board order. In team
+  gp:, rating:, roster:}` with `roster` the team's players in board order and
+  `rating` the team's rating as OpenPairings worked it out
+  (`teams[].rating`, since 2026-10-03), `nil` when it sent none. In team
   number order until the team standings carry a rank. Read, never ranked
   here.
   """
@@ -1938,10 +1940,20 @@ defmodule OpenResultsWeb.Tournament do
         rank: Map.get(placing, "rank"),
         mp: Map.get(placing, "mp"),
         gp: Map.get(placing, "gp"),
+        rating: team_rating(team),
         roster: team_roster(payload, team)
       }
     end)
     |> Enum.sort_by(&{&1.rank || 1_000_000, &1.no})
+  end
+
+  # A whole positive number, or nil - an older payload has no key, and a team
+  # OpenPairings could not rate (no players, nothing typed in) sends null.
+  defp team_rating(team) do
+    case Map.get(team, "rating") do
+      n when is_integer(n) and n > 0 -> n
+      _ -> nil
+    end
   end
 
   @doc """
