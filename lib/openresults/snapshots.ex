@@ -119,7 +119,7 @@ defmodule OpenResults.Snapshots do
 
   defp ingest_as_operator(slug, payload, key, received_at) do
     with :ok <- TournamentKeys.authorize_publish(slug, key),
-         {:ok, snapshot} <- store(slug, payload, received_at) do
+         {:ok, snapshot} <- slug |> store(payload, received_at) |> cache_inserted_id(slug) do
       Tournaments.ensure_listed(slug)
       # Only the operator path: an installation-key publish never carries
       # `publisher` (see docs/snapshot-schema.md) - it already identifies its
@@ -145,6 +145,13 @@ defmodule OpenResults.Snapshots do
       end,
       mode: :immediate
     )
+    # After the commit, never inside the transaction. Inside, the new id was
+    # in the cache while the row was still invisible to every other
+    # connection, and a page requested in that window was rendered from the
+    # OLD row under the NEW id's ETag - stored in the page cache and in the
+    # reader's browser as current, so that page showed the old document until
+    # the next publish. See `cache_inserted_id/2`.
+    |> cache_inserted_id(slug)
   end
 
   defp store(slug, payload, received_at) do
@@ -170,15 +177,15 @@ defmodule OpenResults.Snapshots do
           payload: payload
         })
         |> Repo.insert()
-        |> cache_inserted_id(slug)
     end
   end
 
-  # The write side of `LatestIdCache`. The moment a publish inserts a row and
-  # this process knows its id, every OTHER reader of this slug must be able
-  # to see it too - immediately, not on their next cache miss - or a poll
-  # already in flight could be told "unchanged" about a page that no longer
-  # is. See `OpenResults.Snapshots.LatestIdCache` for why this is a plain
+  # The write side of `LatestIdCache`. The moment a publish's row is
+  # committed and this process knows its id, every OTHER reader of this slug
+  # must be able to see it too - immediately, not on their next cache miss -
+  # or a poll already in flight could be told "unchanged" about a page that
+  # no longer is. Committed first, not merely inserted: a reader that finds
+  # the new id must also find the row behind it. See `OpenResults.Snapshots.LatestIdCache` for why this is a plain
   # overwrite rather than a compare-and-swap.
   defp cache_inserted_id({:ok, %Snapshot{id: id}} = result, slug) do
     LatestIdCache.put(slug, id)

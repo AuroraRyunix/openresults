@@ -27,6 +27,13 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **A page asked for while an installation's publish was being saved
+  could stay on the old document until the next publish.** The new version
+  was announced to readers before its row was committed, so a page rendered
+  in that window was the old one under the new version's ETag - cached here
+  and in the reader's browser as current. The version is now announced after
+  the commit.
+
 ## [0.20.0] - 2026-10-03
 
 - [Fix] **The hall and projector screens' controls no longer sit on the
