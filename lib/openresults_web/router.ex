@@ -107,6 +107,17 @@ defmodule OpenResultsWeb.Router do
     get "/t/:slug/board-prizes", TournamentController, :board_prizes
   end
 
+  # The event stream every open page of a tournament listens on, so a
+  # publish reaches it within a second instead of at its next poll - see
+  # `OpenResultsWeb.EventsController`. Outside `:browser`, which accepts only
+  # HTML and would answer `EventSource`'s `text/event-stream` with a 406, and
+  # outside `Revalidate`: a stream has no version to revalidate. Visibility is
+  # decided in the controller, the same way and with the same 404 for a
+  # hidden slug as for an unknown one.
+  scope "/", OpenResultsWeb do
+    get "/t/:slug/events", EventsController, :stream
+  end
+
   # The hall display - the one public page that keeps a connection open, for
   # the reasons in `OpenResultsWeb.HallLive`. Its own scope and its own
   # `live_session`, and deliberately not behind `Revalidate`: the socket

@@ -41,6 +41,10 @@ defmodule OpenResults.Application do
        repos: Application.fetch_env!(:openresults, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:openresults, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: OpenResults.PubSub},
+      # Counts the open event streams, so there is a ceiling on them - see
+      # `OpenResultsWeb.EventsController`. A registry rather than a counter
+      # because it forgets a process the moment it dies, however it dies.
+      {Registry, keys: :duplicate, name: OpenResults.EventStreams},
       # Owns the ETS table behind the entry form's rate limit. Before the
       # endpoint, so the table exists before anything can be posted at it.
       OpenResults.RateLimit,

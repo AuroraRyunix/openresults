@@ -54,11 +54,12 @@
       the HTML lands.
 
       That promise is intact. What follows is not an application - there is
-      no bundle, no socket, no framework and no request on load. It is a
-      preference reader that runs before first paint (inline, so there is no
-      round trip and no flash of the wrong theme) and, further down, a
-      right-click handler and a refresher, both of which only ever act after
-      the page is already readable.
+      no bundle, no socket, no framework and nothing the page waits for. It
+      is a preference reader that runs before first paint (inline, so there
+      is no round trip and no flash of the wrong theme) and, further down, a
+      right-click handler, a refresher and the event stream that tells the
+      refresher when to look, all of which only ever act after the page is
+      already readable.
 
       Every page still renders completely with all of it switched off: the
       theme falls back to the device's own light/dark setting, and a player's
@@ -232,7 +233,12 @@
         notice={@public_notice}
       />
       <main id="main" tabindex="-1">
-        <div id="live-region" data-live data-version={region_version(assigns)}>
+        <div
+          id="live-region"
+          data-live
+          data-version={region_version(assigns)}
+          data-events={events_path(assigns)}
+        >
           {@inner_content}
         </div>
       </main>
@@ -543,6 +549,10 @@
         if (live && !isForm && !isProjector) {
           let failures = 0;
           let busy = false;
+          // A publish heard on the event stream while a poll was already out:
+          // that poll may have left before the publish landed, so one more
+          // goes the moment it is back.
+          let again = false;
 
           // Somebody in the middle of using a control - a filter dropdown
           // open, a search half typed. Swapping now would close the dropdown
@@ -659,6 +669,7 @@
               .then(([r, html]) => {
                 busy = false;
                 failures = 0;
+                if (again) { again = false; setTimeout(tick, 0); }
                 if (status) { status.hidden = true; }
                 // Redirected somewhere else - a renamed or withdrawn page. That
                 // page's region does not belong under this address.
@@ -675,6 +686,7 @@
               })
               .catch(() => {
                 busy = false;
+                again = false;
                 // A hall's wifi drops. Say so rather than showing a page that
                 // has silently stopped being current, and keep trying - this
                 // is not an error worth ending the session over.
@@ -710,6 +722,59 @@
           document.addEventListener("visibilitychange", () => {
             if (!document.hidden) { tick(); }
           });
+          // The arbiter just published - see "hearing about a publish" below.
+          document.addEventListener("openresults:changed", () => {
+            if (busy) { again = true; } else { tick(); }
+          });
+        }
+
+        // ---- hearing about a publish ----
+        //
+        // The polls above are the floor, not the speed: a page that waited
+        // for its next turn showed an arbiter's change up to twenty seconds
+        // after it was on this server. So the page also holds the
+        // tournament's event stream (`data-events`, see
+        // `OpenResultsWeb.EventsController`), which says one word when a
+        // publish lands, and the page polls at once.
+        //
+        // It carries no data: the poll is the same request as always, through
+        // the same revalidation and the same page cache. A browser without
+        // `EventSource`, a stream that drops, or a server that is full only
+        // means the page is back to its polls. The random spread, under a
+        // second, is so a hall full of phones does not ask in the same
+        // millisecond. Closed while the tab is in the background, like the
+        // polls: a phone in a pocket holds no connection open.
+        const events = live && live.getAttribute("data-events");
+
+        if (events && !isForm && window.EventSource) {
+          let source = null;
+
+          const open = () => {
+            if (source || document.hidden) { return; }
+            source = new EventSource(events);
+            source.onmessage = () => {
+              setTimeout(() => {
+                document.dispatchEvent(new CustomEvent("openresults:changed"));
+              }, Math.random() * 800);
+            };
+            // Closed for good means the server said no (full, or the
+            // tournament is gone) - not a dropped connection, which the
+            // browser retries on its own. Forgotten, so a tab brought back
+            // to the front may try once more.
+            source.onerror = () => {
+              if (source && source.readyState === EventSource.CLOSED) { source = null; }
+            };
+          };
+
+          const close = () => {
+            if (source) { source.close(); source = null; }
+          };
+
+          document.addEventListener("visibilitychange", () => {
+            if (document.hidden) { close(); } else { open(); }
+          });
+          window.addEventListener("pagehide", close);
+          open();
         }
 
         // ---- finding yourself on the FIDE list ----

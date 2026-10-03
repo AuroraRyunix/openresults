@@ -27,6 +27,17 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **A change the arbiter publishes now shows on open pages within
+  about three seconds**, not up to twenty. Traced end to end on 2026-10-03:
+  OpenPairings sends about two seconds after the click and this site stores
+  and announces it within milliseconds, but the standings, round, team and
+  cross-table pages only looked again on their 20-second poll (10 while
+  results come in), and the projector page (`?display=1`) every 60 seconds -
+  an "unpublish results" took 15 seconds to show. Every tournament page now
+  also listens on a small event stream (`/t/<slug>/events`) that says
+  "changed" the moment a publish lands, and the page polls at once. The polls
+  stay as the fallback; the stream carries no data, closes while the tab is
+  in the background, and is capped server-wide.
 - [Fix] **A page asked for while an installation's publish was being saved
   could stay on the old document until the next publish.** The new version
   was announced to readers before its row was committed, so a page rendered

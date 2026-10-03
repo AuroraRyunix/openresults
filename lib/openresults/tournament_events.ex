@@ -1,15 +1,20 @@
 defmodule OpenResults.TournamentEvents do
   @moduledoc """
   "Something about this tournament changed" - said on a PubSub topic per
-  slug, for the one page on this site that keeps a connection open: the hall
-  display (`OpenResultsWeb.HallLive`).
+  slug, for the two kinds of listener this site has:
 
-  Every other public page is a static document that polls (see the root
-  layout's refresher), and none of them listens here. The message carries the
-  slug and nothing else on purpose: a listener re-reads the tournament
-  through `OpenResults.Tournaments.public_latest/1`, the same door every
-  public page uses, so visibility is decided in one place and a message can
-  never smuggle a hidden tournament's data to a screen.
+    * the hall display (`OpenResultsWeb.HallLive`), a LiveView that re-reads
+      the tournament on the message;
+    * every other public page, through its event stream
+      (`OpenResultsWeb.EventsController`): the page stays a static document
+      that polls, and the stream only tells its refresher to poll NOW rather
+      than up to twenty seconds later.
+
+  The message carries the slug and nothing else on purpose: a listener
+  re-reads the tournament through `OpenResults.Tournaments.public_latest/1`
+  (or the page's own URL), the same door every public page uses, so
+  visibility is decided in one place and a message can never smuggle a
+  hidden tournament's data to a screen.
 
   Sent from the two places a public page's answer can change:
 
@@ -33,6 +38,15 @@ defmodule OpenResults.TournamentEvents do
   @doc "Subscribes the calling process to `slug`'s changes."
   @spec subscribe(String.t()) :: :ok | {:error, term()}
   def subscribe(slug) when is_binary(slug), do: Phoenix.PubSub.subscribe(@pubsub, topic(slug))
+
+  @doc """
+  Undoes `subscribe/1`. For a process that outlives its interest in `slug` -
+  an HTTP connection that served an event stream and goes on to serve the
+  next request on the same keep-alive connection.
+  """
+  @spec unsubscribe(String.t()) :: :ok
+  def unsubscribe(slug) when is_binary(slug),
+    do: Phoenix.PubSub.unsubscribe(@pubsub, topic(slug))
 
   @doc """
   Tells every subscriber that `slug` changed: they receive

@@ -113,6 +113,13 @@ defmodule OpenResultsWeb.StatsTelemetry do
     us = microseconds(measurements[:duration])
 
     case metadata do
+      # A tournament's event stream (`OpenResultsWeb.EventsController`) is
+      # one request held open for up to half an hour. Counted, it would be a
+      # half-hour "request" in the public pages' duration histogram for every
+      # reader with a tab open - and it is not a page anyone viewed.
+      %{conn: %Plug.Conn{path_info: ["t", _slug, "events"]}} ->
+        :ok
+
       %{conn: %Plug.Conn{} = conn} ->
         group = group(conn)
         cache = conn.private[:openresults_page_cache]

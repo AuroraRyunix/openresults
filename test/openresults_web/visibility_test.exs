@@ -58,6 +58,7 @@ defmodule OpenResultsWeb.VisibilityTest do
     {:get, "/t/SLUG/fide?q=mu"},
     {:get, "/t/SLUG/report"},
     {:get, "/t/SLUG/hall"},
+    {:get, "/t/SLUG/events"},
     {:get, "/api/tournaments/SLUG"}
   ]
 

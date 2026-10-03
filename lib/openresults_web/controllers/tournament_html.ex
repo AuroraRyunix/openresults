@@ -2789,6 +2789,9 @@ defmodule OpenResultsWeb.TournamentHTML do
         document.addEventListener("visibilitychange", () => {
           if (!document.hidden) { refreshRows(); }
         });
+        // The arbiter just published: the root layout's event stream says
+        // so, and the rows are fetched now rather than within the minute.
+        document.addEventListener("openresults:changed", refreshRows);
       })();
     </script>
     """

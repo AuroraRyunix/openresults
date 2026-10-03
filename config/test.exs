@@ -16,6 +16,12 @@ config :openresults, :ingest_token, "test-ingest-token"
 # `OpenResultsWeb.Admin.ConfirmationProbeController` in test/support.
 config :openresults, :admin_confirmation_probe, true
 
+# An event stream that ends almost at once, so a request for one in a test
+# returns instead of holding the test for half an hour. Long enough to hand
+# over a message already waiting in the test process's mailbox - see
+# `OpenResultsWeb.EventsControllerTest`.
+config :openresults, OpenResultsWeb.EventsController, lifetime: 30
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used

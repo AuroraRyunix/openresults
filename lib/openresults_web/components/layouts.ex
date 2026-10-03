@@ -116,6 +116,25 @@ defmodule OpenResultsWeb.Layouts do
   end
 
   @doc """
+  Where this page's event stream is, for `data-events` - see
+  `OpenResultsWeb.EventsController`. The refresher listens on it and polls the
+  moment the arbiter publishes, instead of at its next turn.
+
+  Only on a tournament page that answered 200, for `region_version/1`'s
+  reason: an error page stays byte-identical whichever slug it was asked for.
+  """
+  def events_path(assigns) do
+    case assigns[:conn] do
+      %Plug.Conn{status: status, path_params: %{"slug" => slug}}
+      when status in [nil, 200] and is_binary(slug) ->
+        ~p"/t/#{slug}/events"
+
+      _other ->
+        nil
+    end
+  end
+
+  @doc """
   Whether this page was asked for as an embed, with `?embed=1`.
 
   The same document with the site's own chrome taken off - no masthead, no
