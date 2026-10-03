@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-10-03
+
 - [Feature] The team list shows each team's **rating** in a *Rating*
   column, when OpenPairings sends one (`teams[].rating`, since its
   2026-10-03 snapshot): by default the Olympiad's average of a team's
