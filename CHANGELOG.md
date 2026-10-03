@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-03
+
 - [Fix] **The hall and projector screens' controls no longer sit on the
   clock, and the full-screen button works.** The Black / White / Ultra
   colours and the full-screen button are now in the bottom-right corner
