@@ -452,6 +452,9 @@ All read in `config/runtime.exs`.
 | `DATABASE_PATH` | yes | absolute path to the SQLite file; the app refuses to boot without it |
 | `SECRET_KEY_BASE` | yes | cookie/session signing - generate once, keep stable |
 | `PHX_HOST` | yes | public hostname; drives generated absolute URLs |
+| `PHX_ALLOWED_HOSTS` | no | comma-separated further hostnames whose pages may open the hall display's websocket (`check_origin`); `PHX_HOST` is always allowed |
+| `PHX_REDIRECT_HOSTS` | no (off) | comma-separated old hostnames whose GET/HEAD requests get a 301 to `PHX_HOST`; also allowed as websocket origins. POST/PUT (publishing) are not redirected |
+| `PHX_SHORT_HOST` | no (off) | one short-link hostname (e.g. `pairings.cloud`): `/` and `/t/...` 301 to the same path on `PHX_HOST`, anything else is a 404 |
 | `PHX_SERVER` | yes (`true`) | actually serve HTTP |
 | `PORT` | no (default 4000) | internal HTTP port - **the unit sets 4004**, see below |
 | `OPENRESULTS_INGEST_TOKEN` | effectively | the bearer token an arbiter publishes with. Unset means every publish is refused with a 401 - except with an installation key, see "Public publishing" below |

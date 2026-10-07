@@ -178,6 +178,9 @@ defmodule OpenResults.ServerSettings do
     {"POOL_SIZE", nil, false},
     {"SECRET_KEY_BASE", nil, true},
     {"PHX_HOST", nil, false},
+    {"PHX_ALLOWED_HOSTS", nil, false},
+    {"PHX_REDIRECT_HOSTS", nil, false},
+    {"PHX_SHORT_HOST", nil, false},
     {"PORT", nil, false},
     {"FIDE_LOOKUP_ENDPOINT", :fide_lookup_endpoint, false},
     {"FIDE_LOOKUP_TOKEN", :fide_lookup_token, true}

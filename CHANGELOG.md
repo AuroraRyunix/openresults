@@ -27,6 +27,9 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] The site can now answer on a second address: pages opened on the old address keep working while the new one is switched on, and the old address can be set to forward visitors to the new one. Off until it is turned on.
+- [Feature] A short-link address forwards a tournament link such as `/t/<name>` (and the home page) to the same page on the main address.
+
 ## [0.20.2] - 2026-10-03
 
 - [Feature] The team list shows each team's **rating** in a *Rating*
