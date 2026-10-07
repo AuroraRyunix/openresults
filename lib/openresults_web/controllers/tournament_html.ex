@@ -157,6 +157,19 @@ defmodule OpenResultsWeb.TournamentHTML do
             )}</span>
           </span>
         <% end %>
+
+        <%!-- Beside the rounds, on the arbiter's word alone - see
+              `Tournament.live_boards?/1` for why not on whether a game has
+              been reported. It leaves this page for a live one, which is not
+              part of the cached set. --%>
+        <a
+          :if={@show.pairings and Tournament.live_boards?(@payload)}
+          id="live-boards-link"
+          href={~p"/t/#{@slug}/live"}
+          class="chip"
+        >
+          {gettext("Live boards")}
+        </a>
       </nav>
 
       <%!--
@@ -1113,8 +1126,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             <td :if={@placed?} class="num">{number(row.gp)}</td>
 
             <td :if={@ratings?} class="num">
-              <span :if={is_nil(row.rating)} class="quiet">-</span>
-              {row.rating}
+              <span :if={is_nil(row.rating)} class="quiet">-</span> {row.rating}
             </td>
 
             <td :if={@captains?}>{row.team["captain"]}</td>
@@ -2201,6 +2213,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         team: if(@team, do: Tournament.team_label(@team), else: gettext("?"))
       )}
     </span>
+
     <span :if={@double?} class="match-forfeit">
       {gettext("Neither team turned up: both lost by forfeit")}
     </span>

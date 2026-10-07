@@ -140,6 +140,24 @@ defmodule OpenResultsWeb.Router do
       # the newest round. Not the `?display=1` page of one round.
       live "/t/:slug/projector", HallLive, :projector
     end
+
+    # Live boards - the games of a round as they are played. The same reasons
+    # as the hall display for being outside `Revalidate`: the page is a
+    # socket that re-reads the live games itself, so a cached render could
+    # only ever be a stale copy of what the socket is about to replace. A
+    # second `live_session` because its root layout is the site's own, not
+    # the hall's full-screen one.
+    live_session :live_boards,
+      root_layout: {OpenResultsWeb.Layouts, :live_root},
+      session: {OpenResultsWeb.HallLive, :session, []} do
+      live "/t/:slug/live", BoardsLive, :index
+      live "/t/:slug/live/:round", BoardsLive, :round
+      live "/t/:slug/live/:round/:board", GameLive, :game
+    end
+
+    # A game as a PGN file. Not behind `Revalidate` either: it is built from
+    # the live game on every request, at the broadcast delay.
+    get "/t/:slug/live/:round/:board/pgn", LivePgnController, :show
   end
 
   scope "/", OpenResultsWeb do
@@ -259,6 +277,13 @@ defmodule OpenResultsWeb.Router do
 
     post "/snapshots", SnapshotController, :create, private: %{installation_access: :publish}
 
+    # A hall relay's moves, clocks and results, board by board - see
+    # `OpenResultsWeb.LiveBoardController` and docs/live-boards-api.md. A write
+    # like a publish, so behind the same gate; its own budget for an
+    # installation key, because it is called every few seconds.
+    post "/tournaments/:slug/live", LiveBoardController, :create,
+      private: %{installation_access: :live}
+
     # History is a WRITE-side privilege, not a read-side one. An earlier
     # snapshot can hold a round or board the arbiter has since retracted, so
     # walking back through the append-only table is exactly as sensitive as
@@ -339,6 +364,11 @@ defmodule OpenResultsWeb.Router do
     post "/tournaments/:slug/delete", TournamentController, :delete
     get "/tournaments/:slug/transfer", TournamentController, :confirm_transfer
     post "/tournaments/:slug/transfer", TournamentController, :transfer
+
+    # How far behind the game spectators see the live boards - see
+    # `OpenResults.LiveBoards`. Its own pair, like every change here.
+    get "/tournaments/:slug/live-delay", TournamentController, :confirm_live_delay
+    post "/tournaments/:slug/live-delay", TournamentController, :live_delay
 
     get "/installations", InstallationController, :index
     get "/installations/:id", InstallationController, :show

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html
+  lang={locale(assigns)}
+  data-theme="paper"
+  data-theme-source="default"
+  data-live-shell="1"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <.live_title default="OpenResults" suffix=" - OpenResults">
+      {assigns[:page_title]}
+    </.live_title>
+    <%!-- A live page is never indexed or shared as a static document: what it
+          shows is what is happening now, at whatever delay the organiser set. --%>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!-- The script bundle, as on the hall display: the socket, the clock
+          hook and the theme picker. The saved theme is applied by the bundle
+          itself (`applyStoredTheme` in app.js) - there is no inline script on
+          this page. --%>
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+  </head>
+  <body>
+    {@inner_content}
+  </body>
+</html>

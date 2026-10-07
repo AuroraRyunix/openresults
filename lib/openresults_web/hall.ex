@@ -43,14 +43,22 @@ defmodule OpenResultsWeb.Hall do
   @names_per_page 28
   @standings_per_page 12
   @latest_results 12
+  @live_per_page 4
 
   # A result that came in within this long is marked as new on the results
   # view. Long enough to survive a whole cycle past the other views.
   @fresh_ms :timer.minutes(5)
 
-  @cycle_views [:pairings, :names, :results, :standings]
+  # `:live` is last of the cycle and skipped - it has no pages - until the
+  # relay has reported a game in progress on a board of this round. See
+  # `OpenResultsWeb.LiveBoardsData`; an arbiter switches it off with
+  # `tournament.hall.live: false`.
+  @cycle_views [:pairings, :names, :results, :standings, :live]
   @views @cycle_views ++ [:announcement]
-  @hold_views [:pairings, :names, :announcement]
+  # The live boards are among them: a round that has just started is exactly
+  # when the games are worth watching, and the view has no pages - so is not
+  # in the cycle at all - until one is being played.
+  @hold_views [:pairings, :names, :live, :announcement]
 
   @default_seconds 15
   @default_top 10
@@ -58,13 +66,14 @@ defmodule OpenResultsWeb.Hall do
   @top_range 3..50
   @announcement_max 500
 
-  @type view :: :pairings | :names | :results | :standings | :announcement
+  @type view :: :pairings | :names | :results | :standings | :live | :announcement
   @type slide :: {view(), non_neg_integer()}
 
   def boards_per_page, do: @boards_per_page
   def names_per_page, do: @names_per_page
   def standings_per_page, do: @standings_per_page
   def latest_results, do: @latest_results
+  def live_per_page, do: @live_per_page
 
   @doc "Every view, in cycle order."
   @spec views() :: [view()]
@@ -179,7 +188,11 @@ defmodule OpenResultsWeb.Hall do
       names: if(round, do: names(round, boards, players, show, in_match), else: []),
       reported: if(results?, do: reported(boards, players, show, in_match), else: []),
       standings: standings(payload, players, show, settings.standings_top),
-      announcement: settings.announcement
+      announcement: settings.announcement,
+      # The games on the boards right now - the tiles of
+      # `OpenResultsWeb.LiveBoardsData`. Not worked out here: they come from
+      # the live games, not the snapshot, and the display fills them in.
+      live: []
     }
   end
 
@@ -522,6 +535,7 @@ defmodule OpenResultsWeb.Hall do
   def count(_data, :results), do: 1
   def count(%{standings: nil}, :standings), do: 0
   def count(data, :standings), do: page_count(data.standings.rows, @standings_per_page)
+  def count(data, :live), do: page_count(Map.get(data, :live, []), @live_per_page)
   def count(%{announcement: nil}, :announcement), do: 0
   def count(_data, :announcement), do: 1
 
@@ -542,6 +556,9 @@ defmodule OpenResultsWeb.Hall do
 
   def rows(%{standings: %{rows: rows}}, {:standings, page}, _arrivals, _now),
     do: page(rows, page, @standings_per_page)
+
+  def rows(data, {:live, page}, _arrivals, _now),
+    do: data |> Map.get(:live, []) |> page(page, @live_per_page)
 
   def rows(_data, _slide, _arrivals, _now), do: []
 

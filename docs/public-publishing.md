@@ -293,7 +293,8 @@ Mints a slug bound to this installation. Request body `{}`.
   The operator token keeps break-glass exactly as before.
 - **(settled in the build)** How default-deny is enforced. A route opts in
   in the router with `private: %{installation_access: action}`, where action
-  is `mint`, `publish`, `history`, `registrations` or `delete`; naming the
+  is `mint`, `publish`, `history`, `registrations`, `delete` or `live` (a hall
+  relay's board updates, `docs/live-boards-api.md`); naming the
   action is what runs that action's checks, ownership included, before the
   controller. On any ingest route without it - or with an action nothing
   checks - an installation key gets the anonymous 401, as if it were unknown.

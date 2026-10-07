@@ -58,6 +58,7 @@ defmodule OpenResults.Moderation do
   alias OpenResults.AddressBlocks.Block
   alias OpenResults.Installations
   alias OpenResults.Installations.Installation
+  alias OpenResults.LiveBoards
   alias OpenResults.Moderation.Action
   alias OpenResults.ModerationJournal
   alias OpenResults.PublicNotice
@@ -266,6 +267,34 @@ defmodule OpenResults.Moderation do
       counts
     end)
     |> tap(fn _ -> Tournaments.forget(slug) end)
+  end
+
+  @doc """
+  Sets how far behind the game spectators see a tournament's live boards - see
+  `OpenResults.LiveBoards`. Minutes; `0` removes the delay. Logged with the
+  value it replaced.
+  """
+  @spec set_live_delay(String.t(), term(), actor()) ::
+          {:ok, non_neg_integer()} | {:error, :not_found | :invalid}
+  def set_live_delay(slug, minutes, actor) when is_binary(slug) do
+    email = actor!(actor)
+
+    if Tournaments.get(slug) == nil do
+      {:error, :not_found}
+    else
+      before = LiveBoards.delay_minutes(slug)
+
+      transaction(fn ->
+        case LiveBoards.put_delay(slug, minutes, email) do
+          {:ok, minutes} ->
+            log!(email, "live_delay", "tournament", slug, %{from: before, to: minutes})
+            minutes
+
+          {:error, :invalid} ->
+            Repo.rollback(:invalid)
+        end
+      end)
+    end
   end
 
   @doc """

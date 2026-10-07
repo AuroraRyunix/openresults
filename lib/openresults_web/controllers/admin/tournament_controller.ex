@@ -13,7 +13,7 @@ defmodule OpenResultsWeb.Admin.TournamentController do
   alias OpenResults.Moderation
   alias OpenResultsWeb.Admin.{Confirmation, Params}
 
-  plug Confirmation when action in [:approve, :hide, :unhide, :delete, :transfer]
+  plug Confirmation when action in [:approve, :hide, :unhide, :delete, :transfer, :live_delay]
 
   @statuses ~w(pending listed hidden)
 
@@ -45,6 +45,7 @@ defmodule OpenResultsWeb.Admin.TournamentController do
         page_title: label(tournament),
         tournament: tournament,
         stats: Moderation.tournament_stats(slug),
+        live_delay: OpenResults.LiveBoards.delay_minutes(slug),
         reports: Moderation.list_reports(%{slug: slug}),
         actions: Moderation.list_actions(%{target_type: "tournament", target: slug, limit: 20})
       )
@@ -268,6 +269,55 @@ defmodule OpenResultsWeb.Admin.TournamentController do
       # Only text goes back into the field: `installation_id[x]=1` arrives
       # as a map, and a map is not something an input can show.
       installation_id: if(is_binary(installation_id), do: installation_id),
+      error: error
+    )
+  end
+
+  # --- live board delay --------------------------------------------------------
+
+  def confirm_live_delay(conn, %{"slug" => slug}) do
+    with_tournament(conn, slug, &render_live_delay(conn, &1, nil, nil))
+  end
+
+  def live_delay(conn, %{"slug" => slug} = params) do
+    with_tournament(conn, slug, fn tournament ->
+      case Integer.parse(Params.text(params["minutes"]) || "") do
+        {minutes, ""} ->
+          case Moderation.set_live_delay(slug, minutes, conn.assigns.admin) do
+            {:ok, 0} ->
+              conn
+              |> put_flash(:info, "Live boards are shown without a delay.")
+              |> redirect(to: ~p"/admin/tournaments/#{slug}")
+
+            {:ok, minutes} ->
+              conn
+              |> put_flash(:info, "Live boards are shown #{minutes} minutes behind the game.")
+              |> redirect(to: ~p"/admin/tournaments/#{slug}")
+
+            {:error, :invalid} ->
+              render_live_delay(conn, tournament, params["minutes"], invalid_delay())
+
+            {:error, :not_found} ->
+              gone(conn, slug)
+          end
+
+        _not_a_number ->
+          render_live_delay(conn, tournament, params["minutes"], invalid_delay())
+      end
+    end)
+  end
+
+  defp invalid_delay,
+    do: "Enter a whole number of minutes from 0 to #{OpenResults.LiveBoards.max_delay_minutes()}."
+
+  defp render_live_delay(conn, tournament, minutes, error) do
+    conn
+    |> put_status(if error, do: :unprocessable_entity, else: :ok)
+    |> render(:live_delay,
+      page_title: "Live board delay for #{label(tournament)}",
+      tournament: tournament,
+      current: OpenResults.LiveBoards.delay_minutes(tournament.slug),
+      minutes: if(is_binary(minutes), do: minutes),
       error: error
     )
   end

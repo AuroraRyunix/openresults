@@ -1,0 +1,19 @@
+OpenResults
+Copyright (c) the OpenResults authors. Licensed as stated in LICENSE.
+
+Third-party material
+--------------------
+
+The chess pieces on the live-board pages (`OpenResultsWeb.LiveBoardsComponents`,
+`piece_sprite/1`) are this project's own drawings: plain geometric silhouettes
+made for it, released under the same licence as the rest of the code. They are
+not taken from, traced from or modelled on any other piece set, and no
+third-party piece artwork is shipped or loaded from anywhere.
+
+The three games in `priv/live_sim` are public-domain games played before 1900
+and in 1910 (the moves of a game are not protected), transcribed here for the
+development simulator.
+
+The move generator in `lib/openresults/chess.ex` is written for this project
+and verified against the published perft node counts of the standard test
+positions.

@@ -3906,3 +3906,465 @@ a.xt-opp:hover {
     padding-right: min(34rem, 45vw);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Live boards
+
+   The games of a round as they are played - see `OpenResultsWeb.BoardsLive`,
+   `OpenResultsWeb.GameLive` and `OpenResultsWeb.LiveBoardsComponents`.
+
+   Every text colour here is one of the seven tokens, so the contrast test's
+   pairings cover it in every theme. The board itself is the one place with
+   colours of its own: squares and pieces are drawn the same in every theme,
+   because a chessboard is not a theme, and they carry no text. The squares'
+   custom properties are set on the board, not on `:root`, which defines the
+   site's palette and nothing else.
+   --------------------------------------------------------------------------- */
+
+.lb-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.lb-board {
+  --lb-light: #ecdfc3;
+  --lb-dark: #a8855c;
+  --lb-last: rgba(247, 205, 70, 0.6);
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.lb-sq-light {
+  fill: var(--lb-light);
+}
+
+.lb-sq-dark {
+  fill: var(--lb-dark);
+}
+
+.lb-sq-last {
+  fill: var(--lb-last);
+}
+
+.lb-pc-w {
+  --lb-eye: #1d1b18;
+  fill: #fbfaf5;
+  stroke: #1d1b18;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.lb-pc-b {
+  --lb-eye: #f4f1e8;
+  fill: #2b2825;
+  stroke: #f4f1e8;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.lb-eye {
+  fill: var(--lb-eye);
+  stroke: none;
+}
+
+.lb-coords text {
+  font-size: 0.32px;
+  fill: var(--quiet);
+}
+
+.lb-page .lb-crumbs {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+}
+
+.lb-page h1 {
+  margin-bottom: 0.4rem;
+}
+
+/* ---- the round: a grid of tiles ---- */
+
+.lb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.lb-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.6rem 0.7rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  transition: border-color 0.2s ease;
+}
+
+.lb-tile:hover,
+.lb-tile:focus-within {
+  border-color: var(--accent);
+}
+
+.lb-tile.lb-status-live {
+  border-left: 3px solid var(--accent);
+}
+
+.lb-tile.lb-status-waiting .lb-tile-board-link {
+  opacity: 0.55;
+}
+
+.lb-tile-head,
+.lb-tile-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--quiet);
+  font-size: 0.8125rem;
+}
+
+.lb-tile-foot {
+  min-height: 1.25rem;
+}
+
+.lb-tile-board-link {
+  display: block;
+  border-radius: 4px;
+}
+
+.lb-badge {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lb-badge.lb-status-live,
+.lb-tile.lb-status-live .lb-badge {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lb-result {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-provisional {
+  color: var(--quiet);
+  font-weight: 400;
+}
+
+.lb-last-move {
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-player {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.lb-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-person {
+  font-weight: 600;
+}
+
+.lb-title,
+.lb-rating {
+  color: var(--quiet);
+  font-size: 0.75rem;
+}
+
+.lb-title {
+  margin-right: 0.3rem;
+  font-weight: 600;
+}
+
+.lb-rating {
+  margin-left: 0.35rem;
+}
+
+.lb-dot {
+  flex: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+}
+
+.lb-dot-white {
+  background: #ffffff;
+}
+
+.lb-dot-black {
+  background: #111111;
+}
+
+.lb-clock {
+  flex: none;
+  min-width: 3.7rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.lb-clock.is-running {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.lb-clock.is-low {
+  text-decoration: underline;
+}
+
+/* ---- one game ---- */
+
+.lb-game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 38rem) minmax(15rem, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+.lb-board-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.lb-board-large {
+  margin: 0.15rem 0;
+}
+
+.lb-game-details .lb-badge {
+  margin-right: 0.25rem;
+}
+
+.lb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.lb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--quiet);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.lb-btn-text {
+  font-size: 0.9375rem;
+}
+
+.lb-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.lb-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.lb-btn-live {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.lb-moves-title {
+  margin-top: 0;
+}
+
+.lb-moves {
+  max-height: 28rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  list-style: none;
+}
+
+.lb-move-row {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+}
+
+.lb-move-row:last-child {
+  border-bottom: 0;
+}
+
+.lb-move-number {
+  padding-right: 0.5rem;
+  color: var(--quiet);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.lb-move {
+  min-height: 2.25rem;
+  padding: 0.3rem 0.6rem;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.lb-move:hover {
+  background: var(--bg);
+}
+
+.lb-move.is-current {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.lb-game-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+}
+
+@media (max-width: 52rem) {
+  .lb-game-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lb-moves {
+    max-height: 16rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-tile,
+  .lb-btn {
+    transition: none;
+  }
+}
+
+/* ---- Live boards on the hall display ----
+   Four games a page, two by two, each a board beside its players: sized in
+   viewport units like the rest of the display, so the same markup fills a
+   1080p television and a 4K one. Clocks and the last move are the same
+   components the phone pages use. */
+
+.hall-live-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6vw;
+}
+
+.lb-tile.lb-tile-hall {
+  display: grid;
+  grid-template-columns: 14.5vw minmax(0, 1fr);
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas:
+    "board head"
+    "board black"
+    "board white"
+    "board foot";
+  align-content: center;
+  gap: 0.5vw 1.4vw;
+  padding: 1.1vw;
+  border-radius: 1vw;
+}
+
+.lb-tile-hall > .lb-tile-head {
+  grid-area: head;
+  font-size: 1.15vw;
+}
+
+.lb-tile-hall > .lb-player-black {
+  grid-area: black;
+  align-self: end;
+}
+
+.lb-tile-hall > .lb-player-white {
+  grid-area: white;
+  align-self: start;
+}
+
+.lb-tile-hall > .lb-tile-board-link {
+  grid-area: board;
+}
+
+.lb-tile-hall > .lb-tile-foot {
+  grid-area: foot;
+  align-self: start;
+  font-size: 1.4vw;
+}
+
+.lb-tile-hall .lb-player {
+  font-size: 1.55vw;
+  gap: 0.8vw;
+}
+
+.lb-tile-hall .lb-title,
+.lb-tile-hall .lb-rating {
+  font-size: 1.15vw;
+}
+
+.lb-tile-hall .lb-dot {
+  width: 1.1vw;
+  height: 1.1vw;
+}
+
+.lb-tile-hall .lb-clock {
+  min-width: 5.6vw;
+  padding: 0.15vw 0.5vw;
+  font-size: 1.8vw;
+}

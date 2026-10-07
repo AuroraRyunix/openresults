@@ -27,6 +27,45 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Live boards.** A hall relay can report the games on the boards
+  move by move, and spectators watch them as they are played. A new ingest
+  route, `POST /api/tournaments/:slug/live`, takes a board's moves, clocks and
+  status with the same credentials as a publish (the ingest token or an
+  installation key that owns the slug, plus the tournament's key once it is
+  claimed). Every move is checked for legality by a checker written for this
+  site and proved against the standard perft counts; an illegal move refuses
+  the update and names the ply. Updates are idempotent and order-tolerant,
+  keyed by round, board and ply: an older update never undoes a newer one, and
+  `replace: true` is the full-game resend. The contract is
+  `docs/live-boards-api.md`.
+- [Feature] **Live pages.** `/t/:slug/live` shows a round's boards as a grid
+  of small boards with names, clocks, the last move and the result;
+  `/t/:slug/live/:round/:board` is one game with a large board, a move list
+  to step through (click a move, or use the arrow keys), clocks that count
+  down, flip board and a PGN download, built from the games' players and
+  ratings in the published snapshot. They are sockets that re-read the game
+  themselves, outside the page cache, so a move shows within a second and
+  nothing here is served stale. The boards are drawn as SVG with the project's
+  own pieces; no script is loaded from elsewhere.
+- [Feature] **The hall display shows the games in progress**, four a page,
+  with their clocks, as one more view of its cycle. It has no pages (and is
+  skipped) until a game is reported; `tournament.hall.live: false` switches it
+  off, and `?views=live` gives one screen only the live boards.
+- [Feature] **Broadcast delay.** A tournament can be shown a number of
+  minutes behind the game, set in the admin panel (Tournaments, a tournament,
+  Live board delay), for organisers who need it under anti-cheating rules. The
+  relay's reports are stored in real time and every page, the hall display and
+  the PGN show the game as it stood that long ago; nothing later is sent to a
+  browser.
+- [Feature] `mix openresults.live_sim` replays PGN files into the API with
+  clocks at a configurable speed, for development and demonstrations. Three
+  short public-domain games ship with it.
+- [Change] A snapshot may say `tournament.live_boards: true`; the static pages
+  then link to the live boards. They link on that word alone, not on whether a
+  game has been reported, because they are cached per snapshot.
+- [Change] Taking a tournament down also removes its live games and its delay
+  setting.
+
 ## [0.20.2] - 2026-10-03
 
 - [Feature] The team list shows each team's **rating** in a *Rating*

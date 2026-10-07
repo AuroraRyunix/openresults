@@ -25,8 +25,10 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/openresults"
 import topbar from "../vendor/topbar"
 
-// Loaded by one page only: the hall display (`OpenResultsWeb.HallLive`, root
-// layout `hall_root.html.heex`). Every other public page ships no bundle.
+// Loaded by the LiveView pages only: the hall display (`OpenResultsWeb.HallLive`,
+// root layout `hall_root.html.heex`) and the live boards (`BoardsLive` and
+// `GameLive`, root layout `live_root.html.heex`). Every other public page
+// ships no bundle.
 //
 // No CSRF token: the public side has no session for one to be checked
 // against, and the socket is declared without session connect-info for
@@ -38,6 +40,34 @@ const liveSocket = new LiveSocket("/live", Socket, {
   params: csrfMeta ? {_csrf_token: csrfMeta.getAttribute("content")} : {},
   hooks: {...colocatedHooks},
 })
+
+// The live-board pages use the site's own themes, saved by the same picker
+// the static pages carry (`openresults:theme`). They have no inline script, so
+// the saved choice is applied here, as soon as this bundle runs.
+//
+// "No choice yet" is left as the server wrote it: paper. `system` is the
+// absence of `data-theme`, as in the stylesheet.
+const applyStoredTheme = () => {
+  const root = document.documentElement
+  if (root.dataset.liveShell !== "1") return
+
+  // What the theme picker's CSS waits for (`html.has-js`): the picker is a
+  // control that needs this script, so it stays hidden until the script ran.
+  root.classList.add("has-js")
+
+  let saved = null
+  try { saved = localStorage.getItem("openresults:theme") } catch (_) { return }
+  if (!saved) return
+
+  if (saved === "system") {
+    root.removeAttribute("data-theme")
+    root.setAttribute("data-theme-source", "system")
+  } else {
+    root.setAttribute("data-theme", saved)
+    root.setAttribute("data-theme-source", "user")
+  }
+}
+applyStoredTheme()
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})

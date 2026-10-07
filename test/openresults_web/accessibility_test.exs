@@ -33,7 +33,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
     "/t/:slug/player/:no/board",
     "/t/:slug/feed.xml",
     "/t/:slug/events",
-    "/sitemap.xml"
+    "/sitemap.xml",
+    # A PGN file, not a document.
+    "/t/:slug/live/:round/:board/pgn"
   ]
 
   setup do
@@ -51,6 +53,27 @@ defmodule OpenResultsWeb.AccessibilityTest do
       SnapshotPayloads.swiss()
       |> put_in(["tournament", "registration_open"], false)
       |> publish(unique_slug("closed"))
+
+    # A game in progress on board 1 of round 5, and one finished on board 2:
+    # the live pages are walked with something on them.
+    {:ok, _} =
+      OpenResults.LiveBoards.ingest(swiss, %{
+        "round" => 5,
+        "board" => 1,
+        "moves" => ~w(e4 e5 Nf3 Nc6),
+        "white_ms" => 300_000,
+        "black_ms" => 290_000,
+        "running" => "white"
+      })
+
+    {:ok, _} =
+      OpenResults.LiveBoards.ingest(swiss, %{
+        "round" => 5,
+        "board" => 2,
+        "moves" => ~w(f3 e5 g4 Qh4#),
+        "status" => "finished",
+        "result" => "0-1"
+      })
 
     team_rr = publish(SnapshotPayloads.team_round_robin(), unique_slug("team-rr"))
     team_swiss = publish(SnapshotPayloads.team_swiss(), unique_slug("team-swiss"))
@@ -183,6 +206,32 @@ defmodule OpenResultsWeb.AccessibilityTest do
 
       "/terms" ->
         ["/terms", "/terms?lang=nl", "/terms?lang=fr"]
+
+      "/t/:slug/live" ->
+        [
+          "/t/#{world.swiss}/live",
+          "/t/#{world.swiss}/live?lang=nl&theme=night",
+          "/t/#{world.before_round_one}/live",
+          "/t/#{world.team_swiss}/live?lang=fr",
+          "/t/no-such-tournament/live"
+        ]
+
+      "/t/:slug/live/:round" ->
+        [
+          "/t/#{world.swiss}/live/5",
+          "/t/#{world.swiss}/live/1",
+          "/t/#{world.swiss}/live/4",
+          "/t/#{world.team_swiss}/live/2"
+        ]
+
+      "/t/:slug/live/:round/:board" ->
+        [
+          "/t/#{world.swiss}/live/5/1",
+          "/t/#{world.swiss}/live/5/2?lang=fr",
+          "/t/#{world.swiss}/live/5/3?lang=nl",
+          "/t/#{world.swiss}/live/5/99",
+          "/t/#{world.team_swiss}/live/1/1"
+        ]
 
       "/t/:slug/register" ->
         [

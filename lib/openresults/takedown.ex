@@ -44,6 +44,7 @@ defmodule OpenResults.Takedown do
   and can no longer be found to retry. All or nothing.
   """
 
+  alias OpenResults.LiveBoards
   alias OpenResults.Registrations
   alias OpenResults.Repo
   alias OpenResults.Snapshots
@@ -75,6 +76,12 @@ defmodule OpenResults.Takedown do
         # those are the contract's response body, and they count what a
         # takedown is FOR, which is the published data.
         Tournaments.delete_row(slug)
+
+        # The games reported from the hall and the tournament's delay setting.
+        # Not in the counts - those are the response body's contract - and
+        # not optional: a takedown that left the moves of a named game behind
+        # would be the half-takedown this module exists to prevent.
+        LiveBoards.delete_all_for(slug)
 
         # Each context deletes its own rows. The alternative - one query per
         # table written here - would put `snapshots` and `registrations` schema

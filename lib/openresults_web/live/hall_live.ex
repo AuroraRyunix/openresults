@@ -48,10 +48,14 @@ defmodule OpenResultsWeb.HallLive do
 
   use OpenResultsWeb, :live_view
 
+  import OpenResultsWeb.LiveBoardsComponents, only: [piece_sprite: 1, tile: 1]
+
+  alias OpenResults.LiveBoards
   alias OpenResults.Snapshots
   alias OpenResults.TournamentEvents
   alias OpenResults.Tournaments
   alias OpenResultsWeb.Hall
+  alias OpenResultsWeb.LiveBoardsData
   alias OpenResultsWeb.TournamentHTML
 
   @doc """
@@ -67,7 +71,10 @@ defmodule OpenResultsWeb.HallLive do
     locale = Map.get(session, "locale") || OpenResultsWeb.Locale.default()
     Gettext.put_locale(OpenResultsWeb.Gettext, locale)
 
-    if connected?(socket), do: TournamentEvents.subscribe(slug)
+    if connected?(socket) do
+      TournamentEvents.subscribe(slug)
+      LiveBoards.subscribe(slug)
+    end
 
     projector? = socket.assigns[:live_action] == :projector
     choice = theme_choice(params["theme"])
@@ -85,6 +92,7 @@ defmodule OpenResultsWeb.HallLive do
         # `?views=` says; the hall display narrows by it.
         only: if(projector?, do: [:pairings], else: Hall.parse_views(params["views"])),
         snapshot_id: nil,
+        payload: nil,
         available?: false,
         data: nil,
         settings: nil,
@@ -133,8 +141,30 @@ defmodule OpenResultsWeb.HallLive do
 
   def handle_info({:advance, cycle}, %{assigns: %{cycle: cycle, paused?: false}} = socket) do
     socket = if stale?(socket), do: load(socket, false), else: socket
-    {:noreply, socket |> step(1) |> schedule()}
+    # Rows are sent once, by `step/2`: a stream reset twice in one handler
+    # would carry the first page's rows into the second page's markup.
+    {:noreply, socket |> refresh_live(false) |> step(1) |> clear_if_empty() |> schedule()}
   end
+
+  # A game on a board changed. The delay is applied by reading, not by
+  # sending late - see `OpenResults.LiveBoards` - so with one set the read
+  # that shows the change is simply scheduled for when it becomes visible.
+  def handle_info({:live_board, slug, _round, _board}, %{assigns: %{slug: slug}} = socket) do
+    delay_ms = :timer.minutes(LiveBoards.delay_minutes(slug))
+
+    if delay_ms == 0 do
+      {:noreply, socket |> refresh_live() |> ensure_timer()}
+    else
+      Process.send_after(self(), :live_refresh, delay_ms + 50)
+      {:noreply, socket}
+    end
+  end
+
+  def handle_info(:live_refresh, socket),
+    do: {:noreply, socket |> refresh_live() |> ensure_timer()}
+
+  def handle_info({:live_delay, _slug}, socket),
+    do: {:noreply, socket |> refresh_live() |> ensure_timer()}
 
   # A timer from before a pause, a step or a new round: its page is gone.
   def handle_info({:advance, _old_cycle}, socket), do: {:noreply, socket}
@@ -187,7 +217,10 @@ defmodule OpenResultsWeb.HallLive do
 
   defp apply_snapshot(socket, snapshot, initial?) do
     settings = snapshot.payload |> Hall.settings(socket.assigns.only) |> screen_settings(socket)
-    data = Hall.build(snapshot.payload, settings)
+
+    data =
+      snapshot.payload |> Hall.build(settings) |> put_live(snapshot.payload, socket.assigns.slug)
+
     now = now()
     slides = Hall.slides(data, settings)
 
@@ -205,6 +238,7 @@ defmodule OpenResultsWeb.HallLive do
     |> assign(
       available?: true,
       snapshot_id: snapshot.id,
+      payload: snapshot.payload,
       settings: settings,
       data: data,
       arrivals: Hall.arrivals(socket.assigns.arrivals, data, now, initial?),
@@ -219,6 +253,51 @@ defmodule OpenResultsWeb.HallLive do
   # The projector view shows the pairings whether or not the arbiter put them
   # in the hall display's cycle: it is a screen of its own, and what it may
   # show is decided by the display rules `Hall.build/2` already applies.
+  # The games being played on this round's boards, as tiles.
+  defp put_live(%{round: nil} = data, _payload, _slug), do: Map.put(data, :live, [])
+
+  defp put_live(data, payload, slug) do
+    tiles =
+      payload
+      |> LiveBoardsData.tiles(slug, data.round.number, plies: false)
+      |> Enum.filter(&(LiveBoardsData.live?(&1) and &1.view.ply > 0))
+
+    Map.put(data, :live, tiles)
+  end
+
+  # Re-reads the live games and rebuilds the cycle around them. Sends rows
+  # again only when the picture on screen can have changed: a live page
+  # always (a clock may have moved), another page only if the set of games or
+  # a board's position did.
+  defp refresh_live(socket, rows? \\ true)
+
+  defp refresh_live(%{assigns: %{data: nil}} = socket, _rows?), do: socket
+
+  defp refresh_live(socket, rows?) do
+    %{data: old, payload: payload, slug: slug, settings: settings} = socket.assigns
+    data = put_live(old, payload, slug)
+    slides = Hall.slides(data, settings)
+    live_page? = match?({:live, _page}, current_slide(socket.assigns))
+
+    if not live_page? and
+         Enum.map(data.live, &{&1.id, &1.signature}) ==
+           Enum.map(old.live, &{&1.id, &1.signature}) do
+      assign(socket, data: data)
+    else
+      socket
+      |> assign(
+        data: data,
+        slides: slides,
+        index: keep_place(socket.assigns.slides, socket.assigns.index, slides)
+      )
+      |> then(fn socket -> if rows?, do: put_rows(socket), else: socket end)
+    end
+  end
+
+  # `step/2` leaves a cycle with no slides alone; its rows still have to go.
+  defp clear_if_empty(%{assigns: %{slides: []}} = socket), do: put_rows(socket)
+  defp clear_if_empty(socket), do: socket
+
   defp screen_settings(settings, %{assigns: %{projector?: true}}),
     do: %{settings | views: [:pairings]}
 
@@ -350,6 +429,7 @@ defmodule OpenResultsWeb.HallLive do
               data={@data}
               streams={@streams}
               standings_top={@settings.standings_top}
+              slug={@slug}
             />
         <% end %>
       </main>
@@ -400,12 +480,14 @@ defmodule OpenResultsWeb.HallLive do
   defp view_name({:names, _page}), do: gettext("Find your board")
   defp view_name({:results, _page}), do: gettext("Results")
   defp view_name({:standings, _page}), do: gettext("Standings")
+  defp view_name({:live, _page}), do: gettext("Live boards")
   defp view_name({:announcement, _page}), do: gettext("Announcement")
 
   attr :slide, :any, required: true
   attr :data, :map, required: true
   attr :streams, :any, required: true
   attr :standings_top, :integer, required: true
+  attr :slug, :string, default: nil
 
   defp slide(%{slide: {:pairings, _}} = assigns) do
     assigns = assign(assigns, :matches?, Hall.matches?(assigns.data))
@@ -642,6 +724,23 @@ defmodule OpenResultsWeb.HallLive do
           </tr>
         </tbody>
       </table>
+    </section>
+    """
+  end
+
+  defp slide(%{slide: {:live, _}} = assigns) do
+    ~H"""
+    <section id="hall-live" class="hall-view hall-live">
+      <.piece_sprite />
+      <div id="hall-rows" class="hall-live-grid" phx-update="stream">
+        <.tile
+          :for={{_id, tile} <- @streams.rows}
+          tile={tile}
+          slug={@slug}
+          link?={false}
+          class="lb-tile-hall"
+        />
+      </div>
     </section>
     """
   end

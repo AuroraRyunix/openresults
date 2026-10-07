@@ -33,7 +33,7 @@ defmodule OpenResultsWeb.HallTest do
     test "an OpenPairings that sends no hall settings gets the defaults" do
       settings = Hall.settings(SnapshotPayloads.swiss())
 
-      assert settings.views == [:pairings, :names, :results, :standings]
+      assert settings.views == [:pairings, :names, :results, :standings, :live]
       assert settings.page_seconds == 15
       assert settings.standings_top == 10
       assert settings.hold_new_round?
@@ -55,7 +55,7 @@ defmodule OpenResultsWeb.HallTest do
         })
         |> Hall.settings()
 
-      assert settings.views == [:pairings, :standings, :announcement]
+      assert settings.views == [:pairings, :standings, :live, :announcement]
       assert settings.page_seconds == 30
       assert settings.standings_top == 20
       refute settings.hold_new_round?

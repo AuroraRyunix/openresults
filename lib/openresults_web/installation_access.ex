@@ -16,6 +16,13 @@ defmodule OpenResultsWeb.InstallationAccess do
   | `:history` | `GET /api/tournaments/:slug/history` | path slug | yes | yes | - |
   | `:registrations` | `GET /api/tournaments/:slug/registrations` | path slug | yes | yes | - |
   | `:delete` | `DELETE /api/tournaments/:slug` | path slug | **no** | **no** | - |
+  | `:live` | `POST /api/tournaments/:slug/live` | path slug | yes | yes | its own budget, block, pause |
+
+  `:live` is a write, but not a publish: a hall relay posts a board every few
+  seconds, so it has its own generous per-minute budget (`@live_per_minute`
+  per installation) instead of the publish budget, and it skips the storage
+  floor and size cap - a board update is a few hundred bytes. The operator's
+  pause and an address block still stop it.
 
   An action this module does not know is the anonymous 401 - a typo in the
   router must fail closed, not open.
@@ -57,9 +64,10 @@ defmodule OpenResultsWeb.InstallationAccess do
   alias OpenResultsWeb.ClientAddress
   alias OpenResultsWeb.Plugs.IngestAuth
 
-  @actions [:mint, :publish, :history, :registrations, :delete]
+  @actions [:mint, :publish, :history, :registrations, :delete, :live]
   @writes [:mint, :publish]
-  @refused_while_suspended [:mint, :publish, :history, :registrations]
+  @refused_while_suspended [:mint, :publish, :history, :registrations, :live]
+  @live_per_minute 1200
 
   @doc "The actions a route may opt in to."
   def actions, do: @actions
@@ -112,15 +120,28 @@ defmodule OpenResultsWeb.InstallationAccess do
     end
   end
 
+  defp budget(%Installation{id: id}, :live) do
+    case RateLimit.take({:installation_live, id},
+           limit: @live_per_minute,
+           window_ms: :timer.minutes(1)
+         ) do
+      :ok ->
+        :ok
+
+      {:denied, retry_in_ms} ->
+        {:error, :rate_limited, %{retry_after: ApiError.retry_seconds(retry_in_ms)}}
+    end
+  end
+
   defp budget(_installation, _action), do: :ok
 
-  defp address_block(address, action) when action in @writes do
+  defp address_block(address, action) when action in @writes or action == :live do
     if AddressBlocks.blocked?(address), do: {:error, :address_blocked}, else: :ok
   end
 
   defp address_block(_address, _action), do: :ok
 
-  defp pause(action) when action in @writes do
+  defp pause(action) when action in @writes or action == :live do
     if Settings.get(:public_publishing_paused), do: {:error, :publishing_paused}, else: :ok
   end
 
@@ -179,6 +200,10 @@ defmodule OpenResultsWeb.InstallationAccess do
       _no_slug ->
         :ok
     end
+  end
+
+  defp ownership(conn, installation, :live) do
+    Tournaments.authorize_owner(conn.path_params["slug"], installation, :publish)
   end
 
   defp ownership(conn, installation, action) when action in [:history, :registrations] do

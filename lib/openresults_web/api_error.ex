@@ -40,6 +40,14 @@ defmodule OpenResultsWeb.ApiError do
       {503,
        "this server is low on disk space; installation keys may publish again when it has room, and may still delete"},
     rate_limited: {429, "too many requests; wait `retry_after` seconds"},
+    tournament_not_published:
+      {404, "nothing has been published under this slug yet; publish the tournament first"},
+    invalid_request: {422, "the board update is malformed"},
+    invalid_fen: {422, "a FEN in the board update is not a legal position"},
+    invalid_moves: {422, "a move in the board update is not legal"},
+    ply_mismatch: {422, "`ply` does not match the number of `moves`"},
+    fen_mismatch: {422, "`fen` is not the position `moves` lead to"},
+    moves_conflict: {409, "the moves disagree with those already held for this board"},
     not_configured:
       {404, "this server does not relay a Belgian (KBSB/FRBE) roster; ask the operator"}
   }

@@ -138,6 +138,15 @@ is one of these. Nothing else identifies a player.
 optional, all frequently absent in club play. A missing key and a `null` mean
 the same thing: not known.
 
+**`tournament.live_boards`** - `true` when the arbiter says the tournament has
+live boards (a hall relay reporting moves and clocks, see
+`docs/live-boards-api.md`). Optional and additive; absent or anything but
+`true` means no link. The static pages show a "Live boards" link on an
+explicit `true` only, and never on whether a game has been reported, because
+they are cached per snapshot. The moves themselves never travel in a
+snapshot. `tournament.hall.live: false` leaves the live boards out of the hall
+display's cycle.
+
 **`tournament.categories`** - the tournament's category vocabulary (e.g.
 `["U1800", "Women"]`), in the arbiter's own order - the order they defined on
 the Categories page. **Gated**: present only when the arbiter's "Categories"

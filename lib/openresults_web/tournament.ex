@@ -126,6 +126,17 @@ defmodule OpenResultsWeb.Tournament do
   def crosstable?(payload), do: show?(payload, "pairings") and show?(payload, "crosstable")
 
   @doc """
+  Whether the arbiter says this tournament has live boards -
+  `tournament.live_boards: true`, which OpenPairings will send once it knows
+  about a hall relay. The pages link to `/t/:slug/live` only on this word, and
+  on an EXPLICIT `true`: those pages are cached per snapshot, so a link that
+  appeared when the first game was reported would be stale in the cache until
+  the next publish. The live pages themselves work with or without it, for
+  any tournament that has published.
+  """
+  def live_boards?(payload), do: Map.get(info(payload), "live_boards") == true
+
+  @doc """
   Whether the arbiter is accepting entries for this tournament.
 
   **An absent field means open**, which is the one place in this module where
