@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-07
+
 - [Feature] **Live boards.** A hall relay can report the games on the boards
   move by move, and spectators watch them as they are played. A new ingest
   route, `POST /api/tournaments/:slug/live`, takes a board's moves, clocks and
