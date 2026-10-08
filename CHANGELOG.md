@@ -28,6 +28,8 @@ Each entry is tagged so a version can be skimmed:
 ## [Unreleased]
 
 - [Feature] Relay keys. A hall relay is a box in a room full of strangers, and until now it carried the operator token or an installation key, either of which can rewrite the whole tournament. An admin can now make a key per tournament (Tournaments, the tournament, Relay keys): it is shown once, kept as a fingerprint, listed with its last use and revocable. It opens `POST /api/tournaments/:slug/live` for that one tournament and nothing else - another slug is a 403, and publishing, history, deleting and the admin panel get the refusal a stranger gets. It replaces the tournament key on that route, has a budget of 1200 requests a minute of its own, and creating and revoking are in the action log without the secret. A takedown removes the tournament's keys. The older credentials still work on the live endpoint; `docs/live-boards-api.md` now recommends this one.
+  A transfer to another installation revokes the tournament's relay keys: the
+  new owner starts without the old owner's boxes in the hall.
 
 ## [0.21.0] - 2026-10-07
 

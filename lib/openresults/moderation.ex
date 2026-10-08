@@ -388,9 +388,15 @@ defmodule OpenResults.Moderation do
 
           case Tournaments.transfer(slug, target) do
             {:ok, tournament} ->
+              # A new owner starts without the old owner's hall relays.
+              # `transfer_all/3` (the same organiser, restored from backup)
+              # keeps them; it does not come through here.
+              revoked = OpenResults.RelayKeys.revoke_all_for(slug, email)
+
               log!(email, "transfer", "tournament", slug, %{
                 from: previous && previous.installation_id,
-                to: target
+                to: target,
+                relay_keys_revoked: revoked
               })
 
               tournament

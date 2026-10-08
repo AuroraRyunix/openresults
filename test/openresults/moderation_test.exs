@@ -247,6 +247,20 @@ defmodule OpenResults.ModerationTest do
   end
 
   describe "transfer/3" do
+    test "revokes the tournament's relay keys: the new owner starts without the old owner's hall boxes" do
+      {_from, slug} = published_by_installation()
+      {to, _to_key} = installation!()
+
+      {:ok, %{relay_key: kept_alive, key: secret}} =
+        OpenResults.RelayKeys.create(slug, "Hall A", "organiser@example.org")
+
+      assert {:ok, _} = OpenResults.RelayKeys.authenticate(secret)
+      assert {:ok, _} = Moderation.transfer(slug, to.id, @actor)
+
+      assert %{revoked_at: %DateTime{}} = OpenResults.RelayKeys.get(slug, kept_alive.id)
+      assert %Action{action: "transfer", details: %{"relay_keys_revoked" => 1}} = last_action()
+    end
+
     test "rebinds ownership and clears the stored key, so the target's next keyed publish claims it" do
       {from, slug} = published_by_installation()
       {to, _to_key} = installation!()

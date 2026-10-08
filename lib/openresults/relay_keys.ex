@@ -157,6 +157,23 @@ defmodule OpenResults.RelayKeys do
     :ok
   end
 
+  @doc """
+  Revokes every live key of a tournament - what a transfer to another
+  installation does. The box in the hall belonged to the old owner; handing
+  the new one a tournament that a stranger's Raspberry Pi can still post
+  into would be an odd welcome present.
+  """
+  @spec revoke_all_for(String.t(), String.t(), DateTime.t()) :: non_neg_integer()
+  def revoke_all_for(slug, revoked_by, now \\ DateTime.utc_now()) do
+    {count, _} =
+      Repo.update_all(
+        from(k in RelayKey, where: k.tournament_slug == ^slug and is_nil(k.revoked_at)),
+        set: [revoked_at: now, revoked_by: revoked_by]
+      )
+
+    count
+  end
+
   @doc "Deletes every key of a tournament - a takedown leaves no credential behind."
   @spec delete_all_for(String.t()) :: non_neg_integer()
   def delete_all_for(slug) do
