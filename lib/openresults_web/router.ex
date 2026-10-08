@@ -281,8 +281,10 @@ defmodule OpenResultsWeb.Router do
     # `OpenResultsWeb.LiveBoardController` and docs/live-boards-api.md. A write
     # like a publish, so behind the same gate; its own budget for an
     # installation key, because it is called every few seconds.
+    #
+    # The one route a relay key (`OpenResults.RelayKeys`) is accepted on.
     post "/tournaments/:slug/live", LiveBoardController, :create,
-      private: %{installation_access: :live}
+      private: %{installation_access: :live, relay_access: true}
 
     # History is a WRITE-side privilege, not a read-side one. An earlier
     # snapshot can hold a round or board the arbiter has since retracted, so
@@ -369,6 +371,14 @@ defmodule OpenResultsWeb.Router do
     # `OpenResults.LiveBoards`. Its own pair, like every change here.
     get "/tournaments/:slug/live-delay", TournamentController, :confirm_live_delay
     post "/tournaments/:slug/live-delay", TournamentController, :live_delay
+
+    # A tournament's relay keys: the list, and the confirmed pairs that make
+    # and revoke one. `new` comes before `:id` so it is not read as an id.
+    get "/tournaments/:slug/relay-keys", RelayKeyController, :index
+    get "/tournaments/:slug/relay-keys/new", RelayKeyController, :confirm_create
+    post "/tournaments/:slug/relay-keys/new", RelayKeyController, :create
+    get "/tournaments/:slug/relay-keys/:id/revoke", RelayKeyController, :confirm_revoke
+    post "/tournaments/:slug/relay-keys/:id/revoke", RelayKeyController, :revoke
 
     get "/installations", InstallationController, :index
     get "/installations/:id", InstallationController, :show

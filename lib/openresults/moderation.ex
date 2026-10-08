@@ -298,6 +298,72 @@ defmodule OpenResults.Moderation do
   end
 
   @doc """
+  Makes a relay key for a tournament - `OpenResults.RelayKeys`. Returns the
+  key, the only time it is available. Logged with the key's id and label; the
+  secret is never in the log.
+  """
+  @spec create_relay_key(String.t(), term(), actor()) ::
+          {:ok, %{relay_key: OpenResults.RelayKeys.RelayKey.t(), key: String.t()}}
+          | {:error, :not_found | :too_many}
+  def create_relay_key(slug, label, actor) when is_binary(slug) do
+    email = actor!(actor)
+
+    if Tournaments.get(slug) == nil do
+      {:error, :not_found}
+    else
+      transaction(fn ->
+        label = relay_label(label)
+
+        case OpenResults.RelayKeys.create(slug, label, email) do
+          {:ok, %{relay_key: relay_key} = made} ->
+            log!(email, "relay_key_create", "tournament", slug, %{
+              id: relay_key.id,
+              label: label,
+              hint: relay_key.hint
+            })
+
+            made
+
+          {:error, reason} ->
+            Repo.rollback(reason)
+        end
+      end)
+    end
+  end
+
+  @doc "Revokes a relay key of a tournament. Logged; the key stops working at once."
+  @spec revoke_relay_key(String.t(), term(), actor()) ::
+          {:ok, OpenResults.RelayKeys.RelayKey.t()} | {:error, :not_found | :already_revoked}
+  def revoke_relay_key(slug, id, actor) when is_binary(slug) do
+    email = actor!(actor)
+
+    transaction(fn ->
+      case OpenResults.RelayKeys.revoke(slug, id, email) do
+        {:ok, relay_key} ->
+          log!(email, "relay_key_revoke", "tournament", slug, %{
+            id: relay_key.id,
+            label: relay_key.label,
+            hint: relay_key.hint
+          })
+
+          relay_key
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp relay_label(label) when is_binary(label) do
+    case label |> String.trim() |> String.slice(0, 80) do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp relay_label(_not_text), do: nil
+
+  @doc """
   Rebinds a tournament to another installation and clears its stored
   tournament key, so that installation's next keyed publish claims it - what
   break-glass is used for today when an arbiter's laptop dies. Status is

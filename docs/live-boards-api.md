@@ -16,8 +16,8 @@ board is in the published snapshot.
 
 ```
 POST /api/tournaments/:slug/live
-Authorization: Bearer <ingest token or installation key>
-X-OpenResults-Key: <the tournament's key, if it has been claimed>
+Authorization: Bearer <relay key, ingest token or installation key>
+X-OpenResults-Key: <the tournament's key, if it has been claimed - not for a relay key>
 Content-Type: application/json
 ```
 
@@ -26,7 +26,22 @@ Content-Type: application/json
 
 ### Credentials
 
-The same two credentials as a publish (`docs/public-publishing.md`), checked
+**A relay key is the credential for a hall relay.** The other two can rewrite
+the tournament; a relay is a box in a playing hall that can be lost or stolen.
+
+- a **relay key** (`orrk_...`), made per tournament by an admin in the panel
+  (Tournaments, the tournament, Relay keys). It is shown once, when made, and
+  the server keeps only a fingerprint; list, last use and revoking are on the
+  same page. It authorises **this route for that one tournament and nothing
+  else** - not another slug (`403 relay_key_wrong_tournament`), not a publish,
+  history, registrations, delete or the admin panel (the anonymous
+  `401 unauthorized`, as for any credential the route does not take). A
+  revoked key is `403 relay_key_revoked`. It stands in for the tournament key:
+  send no `X-OpenResults-Key` with it. Budget: 1200 requests a minute per key,
+  `429 rate_limited` with `Retry-After` beyond it; a paused server
+  (`publishing_paused`) and a blocked address are refused as for a publish.
+
+The other two credentials are the same as a publish (`docs/public-publishing.md`), checked
 by the same plug:
 
 - the operator's ingest token, or
@@ -34,7 +49,7 @@ by the same plug:
   (`403 not_owner` otherwise; `403 installation_suspended` / `installation_revoked`
   as for a publish).
 
-And, exactly as a publish, **the tournament's own key** in `X-OpenResults-Key`
+With either of those, and exactly as a publish, **the tournament's own key** in `X-OpenResults-Key`
 when the slug has been claimed (`403 key_required` / `403 key_mismatch`). The
 relay is one more machine allowed to speak for the tournament; it is not a way
 round who may.

@@ -4,11 +4,14 @@ defmodule OpenResultsWeb.LiveBoardController do
   boards. The contract is `docs/live-boards-api.md`; the rules of what is
   kept and what is ignored are `OpenResults.LiveBoards`'s.
 
-  Authenticated like a publish: the ingest plug on the pipeline decides which
+  Authenticated like a publish, or with a relay key: the ingest plug on the pipeline decides which
   credential this is (the operator token, or an installation key that owns the
   slug), and the tournament's own key, if the slug has been claimed, has to
   come in `x-openresults-key` as well - the relay is one more machine that is
-  allowed to speak for the tournament, not a way round who is.
+  allowed to speak for the tournament, not a way round who is. A relay key
+  (`OpenResults.RelayKeys`) is that tournament's own, bound to this slug by
+  the plug, and replaces the header - the box in the hall should not have to
+  hold the tournament's key to report a board.
 
   One board per request, or `{"boards": [...]}` for up to #{64}. A batch answers
   200 with one result per board, because one illegal move must not hide that
@@ -94,6 +97,11 @@ defmodule OpenResultsWeb.LiveBoardController do
       do: :ok,
       else: {:error, :tournament_not_published}
   end
+
+  # A relay key is bound to this slug already (`OpenResultsWeb.RelayAccess`)
+  # and is what the relay holds INSTEAD of the tournament's key, so it does
+  # not also need one.
+  defp authorize_key(%{assigns: %{credential: {:relay, _relay_key}}}, _slug), do: :ok
 
   defp authorize_key(conn, slug) do
     key =

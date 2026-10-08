@@ -125,6 +125,7 @@ defmodule OpenResultsWeb.Admin.TournamentHTML do
         Unhide
       </a>
       <a href={~p"/admin/tournaments/#{@tournament.slug}/live-delay"}>Live board delay</a>
+      <a href={~p"/admin/tournaments/#{@tournament.slug}/relay-keys"}>Relay keys</a>
       <a href={~p"/admin/tournaments/#{@tournament.slug}/transfer"}>Transfer</a>
       <a href={~p"/admin/tournaments/#{@tournament.slug}/delete"} class="is-danger">Delete</a>
     </nav>

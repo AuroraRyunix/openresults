@@ -28,6 +28,12 @@ defmodule OpenResultsWeb.Plugs.IngestAuth do
   stranger - only the key's holder can receive it - and it tells the arbiter
   holding it which of two very different situations they are in.
 
+  A third, the **relay key** (`orrk_...`, `OpenResults.RelayKeys`), is
+  accepted on exactly the routes that say `private: %{relay_access: true}` -
+  today `POST /api/tournaments/:slug/live` - and only for its own slug. It
+  is refused with the anonymous 401 everywhere else, by the same rule as
+  below.
+
   ## Default-deny for installation keys
 
   The router puts this plug on the pipeline rather than on each action so
@@ -51,7 +57,9 @@ defmodule OpenResultsWeb.Plugs.IngestAuth do
 
   alias OpenResults.Installations
   alias OpenResults.PublicPublishing
+  alias OpenResults.RelayKeys
   alias OpenResultsWeb.InstallationAccess
+  alias OpenResultsWeb.RelayAccess
 
   @unauthorized Jason.encode!(%{error: "unauthorized", detail: "a valid credential is required"})
 
@@ -78,6 +86,13 @@ defmodule OpenResultsWeb.Plugs.IngestAuth do
           _not_opted_in ->
             unauthorized(conn)
         end
+
+      relay_key = relay_key(presented) ->
+        # Narrower than an installation key and checked the same way: the
+        # route has to say it takes one.
+        if conn.private[:relay_access] == true,
+          do: RelayAccess.authorize(conn, relay_key),
+          else: unauthorized(conn)
 
       true ->
         if configured_token() == :error do
@@ -107,6 +122,17 @@ defmodule OpenResultsWeb.Plugs.IngestAuth do
       installation
     else
       _not_an_installation -> nil
+    end
+  end
+
+  # A relay key lives with its tournament, not with public publishing, so
+  # it does not wait for that switch.
+  defp relay_key(presented) do
+    with true <- RelayKeys.key?(presented),
+         {:ok, relay_key} <- RelayKeys.authenticate(presented) do
+      relay_key
+    else
+      _not_a_relay_key -> nil
     end
   end
 

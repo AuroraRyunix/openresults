@@ -46,6 +46,7 @@ defmodule OpenResults.Takedown do
 
   alias OpenResults.LiveBoards
   alias OpenResults.Registrations
+  alias OpenResults.RelayKeys
   alias OpenResults.Repo
   alias OpenResults.Snapshots
   alias OpenResults.TournamentKeys
@@ -82,6 +83,9 @@ defmodule OpenResults.Takedown do
         # not optional: a takedown that left the moves of a named game behind
         # would be the half-takedown this module exists to prevent.
         LiveBoards.delete_all_for(slug)
+
+        # And the credentials made for the relays of those games.
+        RelayKeys.delete_all_for(slug)
 
         # Each context deletes its own rows. The alternative - one query per
         # table written here - would put `snapshots` and `registrations` schema

@@ -106,6 +106,40 @@ defmodule OpenResultsWeb.DefaultDenyTest do
     end
   end
 
+  describe "relay keys" do
+    test "exactly one route opts in to one: the live endpoint" do
+      assert routes() |> Enum.filter(& &1.relay) |> Enum.map(&{&1.verb, &1.path}) ==
+               [{:post, "/api/tournaments/:slug/live"}]
+    end
+
+    test "every other ingest route refuses a valid relay key with the anonymous 401", %{
+      slug: slug
+    } do
+      {:ok, %{key: relay}} =
+        OpenResults.Moderation.create_relay_key(slug, "box", %{email: "a@example.org"})
+
+      for route <- routes(), :ingest in route.pipe_through, route.relay != true do
+        conn =
+          build_conn()
+          |> put_req_header("authorization", "Bearer #{relay}")
+          |> put_req_header("content-type", "application/json")
+          |> dispatch(@endpoint, route.verb, String.replace(route.path, ":slug", slug), "{}")
+
+        assert json_response(conn, 401) == @unauthorized,
+               "#{route.verb} #{route.path} let a relay key in"
+      end
+    end
+
+    test "on a route that did not opt in, even the right key is the anonymous 401", %{slug: slug} do
+      {:ok, %{key: relay}} =
+        OpenResults.Moderation.create_relay_key(slug, "box", %{email: "a@example.org"})
+
+      conn = later(:get, "/api/tournaments/#{slug}/something-new", relay)
+      assert conn.status == 401
+      assert Jason.decode!(conn.resp_body) == @unauthorized
+    end
+  end
+
   describe "a route that did not opt in" do
     test "refuses a valid, active installation key on its own tournament with the anonymous 401",
          %{key: key, slug: slug} do
@@ -169,7 +203,8 @@ defmodule OpenResultsWeb.DefaultDenyTest do
         verb: route.verb,
         path: route.path,
         pipe_through: metadata.pipe_through,
-        access: conn.private[:installation_access]
+        access: conn.private[:installation_access],
+        relay: conn.private[:relay_access]
       }
     end
   end

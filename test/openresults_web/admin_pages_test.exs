@@ -43,6 +43,12 @@ defmodule OpenResultsWeb.AdminPagesTest do
   # revoked installation breaks here.
   defp pages(route, world) do
     case route.path do
+      "/admin/tournaments/:slug/relay-keys/:id" <> rest ->
+        {:ok, %{relay_key: relay_key}} =
+          OpenResults.Moderation.create_relay_key(world.listed, "box", %{email: "a@example.org"})
+
+        ["/admin/tournaments/#{world.listed}/relay-keys/#{relay_key.id}" <> rest]
+
       "/admin/tournaments/:slug" <> rest ->
         for slug <- [world.pending, world.listed, world.hidden, world.unpublished],
             do: "/admin/tournaments/#{slug}" <> rest

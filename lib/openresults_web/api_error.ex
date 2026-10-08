@@ -28,6 +28,8 @@ defmodule OpenResultsWeb.ApiError do
     installation_key_required:
       {403, "tournaments are minted for an installation; call this with an installation key"},
     not_owner: {403, "this tournament was not minted for this installation"},
+    relay_key_revoked: {403, "this relay key has been revoked; ask the organiser for a new one"},
+    relay_key_wrong_tournament: {403, "this relay key belongs to a different tournament"},
     tournament_hidden:
       {403,
        "this tournament has been hidden by the operator; it can be deleted but not published"},
