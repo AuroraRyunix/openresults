@@ -337,6 +337,33 @@ defmodule OpenResultsWeb.TournamentTest do
       assert Tournament.scores_before(flag(swiss, 2, false), 3)[1] == nil
     end
 
+    test "a late entrant's not-joined round counts as zero, not as a gap", %{swiss: swiss} do
+      late = %{"no" => 99, "name" => "Late, Entrant"}
+
+      add_bye = fn payload, round, row ->
+        update_in(payload, ["rounds"], fn rounds ->
+          Enum.map(rounds, fn r ->
+            if r["number"] == round, do: Map.update(r, "byes", [row], &[row | &1]), else: r
+          end)
+        end)
+      end
+
+      joined_in_2 =
+        swiss
+        |> update_in(["players"], &(&1 ++ [late]))
+        |> add_bye.(2, %{"player" => 99, "kind" => "full-point", "points" => 1.0})
+
+      # Missing from round 1 altogether: nobody can say what that round was worth.
+      assert Tournament.scores_before(joined_in_2, 3)[99] == nil
+
+      # Published as not yet joined: worth nothing, and the total carries on.
+      published =
+        add_bye.(joined_in_2, 1, %{"player" => 99, "kind" => "not-joined", "points" => 0.0})
+
+      assert Tournament.scores_before(published, 3)[99] == 1.0
+      assert OpenResultsWeb.TournamentHTML.bye_kind("not-joined") == "not yet joined"
+    end
+
     test "a player's card stops at a withheld round inside the standings", %{swiss: swiss} do
       payload = swiss |> through_last_round() |> flag(3, false)
 

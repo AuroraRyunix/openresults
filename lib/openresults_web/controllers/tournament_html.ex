@@ -3614,6 +3614,10 @@ defmodule OpenResultsWeb.TournamentHTML do
   # app now sends what happened; this is where it gets a name.
   def bye_kind("vacated-seat"), do: gettext("seat vacated")
 
+  # A round played before a late entrant joined: worth nothing, and named so
+  # that the zero beside it reads as "was not here yet" and not as a loss.
+  def bye_kind("not-joined"), do: gettext("not yet joined")
+
   def bye_kind(kind) when is_binary(kind), do: kind
   def bye_kind(_absent), do: gettext("bye")
 end
