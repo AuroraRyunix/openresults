@@ -30,6 +30,15 @@ comments and whitespace were stripped from the files, the drawings are
 unchanged. The table from FIDE's federation codes to the files is this
 project's (`lib/openresults_web/flags.ex`).
 
+One file there is not from flag-icons: `fide.svg`, drawn for players listed
+under FIDE itself (code FID). It is "FIDE text on white" by Wikimedia
+Commons user M5, dedicated to the public domain under CC0 1.0, set here in
+the 4x3 box of the other flags (`priv/static/flags/LICENSE-fide.txt`). It
+is the word FIDE in lettering, not FIDE's logo, which is not freely
+licensed and is not shipped. "FIDE" is the name and a trademark of the
+Federation Internationale des Echecs, used only to mark the federation a
+player is listed under; no endorsement is implied.
+
 The three games in `priv/live_sim` are public-domain games played before 1900
 and in 1910 (the moves of a game are not protected), transcribed here for the
 development simulator.

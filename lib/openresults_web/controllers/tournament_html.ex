@@ -3660,6 +3660,10 @@ defmodule OpenResultsWeb.TournamentHTML do
   # that the zero beside it reads as "was not here yet" and not as a loss.
   def bye_kind("not-joined"), do: gettext("not yet joined")
 
+  # No board and no bye: withdrawn, or taken off a board by hand. Worth
+  # nothing, and said out loud so the zero is not mistaken for a lost game.
+  def bye_kind("not-paired"), do: gettext("not paired")
+
   def bye_kind(kind) when is_binary(kind), do: kind
   def bye_kind(_absent), do: gettext("bye")
 end

@@ -4,7 +4,7 @@ defmodule OpenResultsWeb.FlagsTest do
   themselves (plain SVG, licensed, within budget, served with a long cache),
   and the rule for when a page draws one - only when the snapshot's
   `display.flags` is `true`, never where the federation is hidden, never for
-  a code with no country behind it.
+  a code this site does not know. A player under FIDE's own flag gets FIDE's.
   """
 
   use OpenResultsWeb.ConnCase, async: false
@@ -72,8 +72,17 @@ defmodule OpenResultsWeb.FlagsTest do
       assert Flags.path(" bel ") == "/flags/be.svg"
     end
 
-    test "no flag for the FIDE flag, an unknown code or junk" do
-      for code <- ["FID", "XXX", "DE", "", "../../etc/passwd", nil, 7, %{}] do
+    test "FIDE's own flag for a player listed under it" do
+      assert Flags.path("FID") == "/flags/fide.svg"
+      assert Flags.path("FIDE") == "/flags/fide.svg"
+      assert Flags.path(" fid ") == "/flags/fide.svg"
+      # Which federation a player is under is the snapshot's to say.
+      assert Flags.path("RUS") == "/flags/ru.svg"
+      assert Flags.path("BLR") == "/flags/by.svg"
+    end
+
+    test "no flag for an unknown code or junk" do
+      for code <- ["XXX", "DE", "", "../../etc/passwd", nil, 7, %{}] do
         assert Flags.path(code) == nil
       end
     end
@@ -89,7 +98,7 @@ defmodule OpenResultsWeb.FlagsTest do
       mapped = Flags.table() |> Map.values() |> Enum.uniq() |> Enum.sort()
 
       assert mapped == shipped
-      assert Enum.all?(Map.keys(Flags.table()), &(&1 =~ ~r/^[A-Z]{3}$/))
+      assert Enum.all?(Map.keys(Flags.table()) -- ["FIDE"], &(&1 =~ ~r/^[A-Z]{3}$/))
     end
   end
 
@@ -131,6 +140,20 @@ defmodule OpenResultsWeb.FlagsTest do
       assert notice =~ "priv/static/flags/LICENSE"
     end
 
+    test "the FIDE flag is lettering under CC0, says so, and says whose name it is" do
+      dir = Application.app_dir(:openresults, @dir)
+      note = File.read!(Path.join(dir, "LICENSE-fide.txt"))
+      assert note =~ "CC0"
+      assert note =~ "File:FIDE text on white.svg"
+      assert note =~ "trademark"
+
+      notice = File.read!("NOTICE")
+      assert notice =~ "priv/static/flags/LICENSE-fide.txt"
+      assert notice =~ "trademark"
+
+      assert File.read!(Path.join(dir, "fide.svg")) =~ ~s(viewBox="0 0 640 480")
+    end
+
     test "are served as images with a long cache", %{conn: conn} do
       conn = get(conn, "/flags/be.svg")
       assert response(conn, 200) =~ "<svg"
@@ -167,7 +190,10 @@ defmodule OpenResultsWeb.FlagsTest do
       refute fed("NED", false) =~ "<img"
       assert fed("NED", false) =~ "NED"
 
-      refute fed("FID", true) =~ "<img"
+      refute fed("XXX", true) =~ "<img"
+      assert fed("XXX", true) =~ "XXX"
+
+      assert fed("FID", true) =~ ~s(src="/flags/fide.svg")
       assert fed("FID", true) =~ "FID"
 
       refute fed(nil, true) =~ "<img"
@@ -222,7 +248,7 @@ defmodule OpenResultsWeb.FlagsTest do
       assert count(document, "td .fed") == 0
     end
 
-    test "a player under the FIDE flag keeps the code and gets no picture", %{conn: conn} do
+    test "a player under the FIDE flag gets FIDE's, and keeps the code", %{conn: conn} do
       slug =
         publish!(fn payload ->
           update_in(payload["players"], fn players ->
@@ -231,7 +257,8 @@ defmodule OpenResultsWeb.FlagsTest do
         end)
 
       document = doc(conn, ~p"/t/#{slug}/player/1")
-      assert count(document, "img.flag") == 0
+      assert count(document, ~s(td .fed img.flag[src="/flags/fide.svg"])) > 0
+      assert count(document, ~s|img.flag:not([src="/flags/fide.svg"])|) == 0
       assert document |> LazyHTML.query("td .fed") |> LazyHTML.text() =~ "FID"
     end
   end

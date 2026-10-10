@@ -869,7 +869,7 @@ msgid "an earlier round is not public"
 msgstr "une ronde antérieure n'est pas publique"
 
 #: lib/openresults_web/controllers/tournament_html.ex:1059
-#: lib/openresults_web/controllers/tournament_html.ex:3664
+#: lib/openresults_web/controllers/tournament_html.ex:3668
 #: lib/openresults_web/controllers/tournament_html/team.html.heex:106
 #: lib/openresults_web/live/hall_live.ex:567
 #, elixir-autogen, elixir-format
@@ -2909,5 +2909,9 @@ msgstr "Tournois de %{event}"
 #: lib/openresults_web/controllers/event_html.ex:32
 #, elixir-autogen, elixir-format
 msgid "Round %{number} of %{count}"
-
 msgstr "Ronde %{number} sur %{count}"
+
+#: lib/openresults_web/controllers/tournament_html.ex:3665
+#, elixir-autogen, elixir-format
+msgid "not paired"
+msgstr "non apparié"

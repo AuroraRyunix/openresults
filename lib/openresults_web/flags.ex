@@ -14,9 +14,14 @@ defmodule OpenResultsWeb.Flags do
   A federation is FIDE's three-letter code, which is not ISO 3166 (`GER`,
   `NED`, `SUI`, and `ENG`/`SCO`/`WLS`, which ISO does not have at all). The
   table below maps the codes FIDE uses to the file that draws them. A code
-  that is not in it draws **no flag** and keeps its text: `FID` (a player
-  under the FIDE flag has, by definition, no country to draw), a federation
-  that no longer exists, a typo. A wrong flag is worse than none.
+  that is not in it draws **no flag** and keeps its text: a federation that
+  no longer exists, a typo. A wrong flag is worse than none.
+
+  `FID` - a player FIDE lists under its own flag - gets one too: `fide.svg`,
+  the word FIDE on a white field. It is lettering and not FIDE's logo, which
+  is nobody's to hand out (`priv/static/flags/LICENSE-fide.txt`). `RUS` and
+  `BLR` keep their national flags: the snapshot says which federation a
+  player is under, and one who plays under FIDE's flag arrives as `FID`.
 
   ## When
 
@@ -35,7 +40,8 @@ defmodule OpenResultsWeb.Flags do
   use Phoenix.Component
 
   # FIDE federation code -> the file under priv/static/flags (ISO 3166-1
-  # alpha-2, or flag-icons' own names for the home nations).
+  # alpha-2, or flag-icons' own names for the home nations). `fide` is the
+  # one file that is not flag-icons' and not a country.
   @table ~w(
     AFG:af AHO:cw ALB:al ALG:dz AND:ad ANG:ao ANT:ag ARG:ar ARM:am ARU:aw AUS:au AUT:at
     AZE:az BAH:bs BAN:bd BAR:bb BDI:bi BEL:be BEN:bj BER:bm BHU:bt BIH:ba BIZ:bz BLR:by
@@ -60,6 +66,7 @@ defmodule OpenResultsWeb.Flags do
            [fide, file] = String.split(pair, ":")
            {fide, file}
          end)
+         |> Map.merge(%{"FID" => "fide", "FIDE" => "fide"})
 
   @doc "FIDE code -> file name (without `.svg`), for every federation with a flag."
   def table, do: @table

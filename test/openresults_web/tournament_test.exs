@@ -364,6 +364,43 @@ defmodule OpenResultsWeb.TournamentTest do
       assert OpenResultsWeb.TournamentHTML.bye_kind("not-joined") == "not yet joined"
     end
 
+    test "a not-paired round counts as zero, not as a gap", %{swiss: swiss} do
+      # Player 1's round 2, replayed as "no board and no bye": the board goes
+      # and a not-paired row takes its place.
+      unpaired =
+        update_in(swiss, ["rounds"], fn rounds ->
+          Enum.map(rounds, fn
+            %{"number" => 2} = round ->
+              round
+              |> Map.update!("boards", fn boards ->
+                Enum.reject(boards, &(1 in [&1["white"], &1["black"]]))
+              end)
+              |> Map.update("byes", [], fn byes -> Enum.reject(byes, &(&1["player"] == 1)) end)
+
+            round ->
+              round
+          end)
+        end)
+
+      # Nothing said about the round: the total cannot be carried past it.
+      assert Tournament.scores_before(unpaired, 3)[1] == nil
+
+      row = %{"player" => 1, "kind" => "not-paired", "points" => 0.0}
+
+      published =
+        update_in(unpaired, ["rounds"], fn rounds ->
+          Enum.map(rounds, fn r ->
+            if r["number"] == 2, do: Map.update(r, "byes", [row], &[row | &1]), else: r
+          end)
+        end)
+
+      # Said: round 2 was worth nothing, and the score before round 3 is
+      # what it was before round 2.
+      assert Tournament.scores_before(published, 3)[1] == Tournament.scores_before(swiss, 2)[1]
+      assert Tournament.scores_before(published, 3)[1] != nil
+      assert OpenResultsWeb.TournamentHTML.bye_kind("not-paired") == "not paired"
+    end
+
     test "a player's card stops at a withheld round inside the standings", %{swiss: swiss} do
       payload = swiss |> through_last_round() |> flag(3, false)
 

@@ -1,0 +1,19 @@
+fide.svg - the flag drawn for players registered under FIDE itself
+(federation code FID).
+
+Source: Wikimedia Commons, "File:FIDE text on white.svg"
+  https://commons.wikimedia.org/wiki/File:FIDE_text_on_white.svg
+Author: Commons user M5 (own work, 2025-03-14)
+Licence: Creative Commons CC0 1.0 Universal, Public Domain Dedication
+  https://creativecommons.org/publicdomain/zero/1.0/
+
+Changes: the 3:2 drawing was set, unaltered, in the 4:3 box the other
+flags use (white field, the lettering centred), and its inline styles
+were rewritten as plain attributes.
+
+This is the word "FIDE" in lettering, not FIDE's logo. The logo (the
+knight) is not freely licensed - Wikipedia holds it as a non-free file
+for its own article on FIDE and nowhere else - so it is not shipped
+here. "FIDE" is the name and a trademark of the Federation
+Internationale des Echecs; it appears only to say which federation a
+player is listed under, and implies no endorsement of this software.

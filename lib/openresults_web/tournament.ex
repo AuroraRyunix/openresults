@@ -144,8 +144,8 @@ defmodule OpenResultsWeb.Tournament do
 
   @doc """
   Whether the arbiter says this tournament has live boards -
-  `tournament.live_boards: true`, which OpenPairings will send once it knows
-  about a hall relay. The pages link to `/t/:slug/live` only on this word, and
+  `tournament.live_boards: true`, which OpenPairings sends when the arbiter
+  ticks "Live boards" in the publishing options. The pages link to `/t/:slug/live` only on this word, and
   on an EXPLICIT `true`: those pages are cached per snapshot, so a link that
   appeared when the first game was reported would be stale in the cache until
   the next publish. The live pages themselves work with or without it, for

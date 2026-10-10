@@ -27,6 +27,27 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **A flag for players listed under FIDE.** A federation code of
+  `FID` used to get the code and a blank where the flag goes, on the theory
+  that a player without a country has nothing to draw. They do now: a white
+  flag with the word FIDE. It is lettering from Wikimedia Commons under CC0
+  and not FIDE's knight, because the knight is a non-free logo that nobody
+  may hand out, however often it turns up on other sites. `RUS` and `BLR`
+  keep their national flags - the snapshot says which federation a player is
+  under, and one who plays under FIDE's arrives as `FID`. The licence note
+  is `priv/static/flags/LICENSE-fide.txt`.
+- [Feature] **"not paired" has a name.** A player with no board and no bye
+  in a round - withdrawn, or taken off a board by hand - arrives from
+  OpenPairings as the bye kind `not-paired`, worth 0. It is printed as "not
+  paired" ("niet gepaard", "non apparié") instead of the raw word, and the
+  running score counts the round as the zero it is rather than giving up at
+  the gap.
+- [Change] **The "Live boards" link now has something to ask for it.**
+  The public pages have linked to the live boards on
+  `tournament.live_boards: true` since the live pages shipped; OpenPairings
+  only now has the tick that sends it. Nothing changed here but the
+  documentation, which no longer says "will".
+
 - [Feature] **An event of several tournaments.** When an arbiter's app says
   a tournament is one section of an event (`tournament.group` in the
   snapshot - OpenPairings' tournament groups), its pages start with a row
