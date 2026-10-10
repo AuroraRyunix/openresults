@@ -69,6 +69,10 @@ defmodule OpenResults.Application do
       # same reason as the caches above. See
       # `OpenResults.Tournaments.StatusCache`.
       OpenResults.Tournaments.StatusCache,
+      # Owns the ETS table of per-slug epochs that `Revalidate` folds into a
+      # grouped tournament's ETag. Before the endpoint, like the caches
+      # above. See `OpenResults.TournamentGroups.Epochs`.
+      OpenResults.TournamentGroups.Epochs,
       # The server settings saved in the admin panel, and the public notice,
       # in ETS: limits are read on every publish, and the notice on every
       # page. Before the endpoint, like the caches above, and before

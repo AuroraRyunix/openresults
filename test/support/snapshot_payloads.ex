@@ -25,6 +25,15 @@ defmodule OpenResults.SnapshotPayloads do
   def swiss, do: load!("snapshot_swiss.json")
 
   @doc """
+  The swiss fixture as one section of an event: the same tournament under
+  another slug and name ("Gent Spring U20 2026"), with the `tournament.group`
+  block an arbiter's app sends once a sibling is published too - it names
+  `swiss/0`'s slug as that sibling. See `docs/snapshot-schema.md`,
+  "`tournament.group`", and `OpenResultsWeb.EventGroupTest`.
+  """
+  def swiss_grouped, do: load!("snapshot_swiss_grouped.json")
+
+  @doc """
   A keizer tournament, whose standings rows carry `value` and `score` instead
   of a positional tiebreak list.
   """

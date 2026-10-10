@@ -69,6 +69,10 @@ defmodule OpenResults.Takedown do
   """
   @spec purge(String.t()) :: counts()
   def purge(slug) do
+    # Asked before the row goes: the row is where the claim is stored, and
+    # the siblings' tab strips still name this tournament.
+    siblings = OpenResults.TournamentGroups.sibling_slugs(slug)
+
     {:ok, counts} =
       Repo.transaction(fn ->
         # The tournament's row goes too - its status and, for a slug minted
@@ -99,6 +103,7 @@ defmodule OpenResults.Takedown do
 
     # After the commit, so the read path learns what was committed.
     Tournaments.forget(slug)
+    OpenResults.TournamentGroups.touch(siblings)
 
     counts
   end

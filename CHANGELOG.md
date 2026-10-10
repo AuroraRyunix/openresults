@@ -27,6 +27,121 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **An event of several tournaments.** When an arbiter's app says
+  a tournament is one section of an event (`tournament.group` in the
+  snapshot - OpenPairings' tournament groups), its pages start with a row
+  of tabs, "Open | U20 | U12", the open one marked. A tab opens the same
+  page of the other section when it has one - standings to standings, round
+  3 to round 3, the cross-table to the cross-table - and its overview when
+  it does not. The event's name leads to a new page, `/e/<id>`, that lists
+  the sections as cards: label and name, how many players, the round it is
+  in, how many rounds are played, and whether it is live, upcoming or
+  finished. The front page gathers an event's tournaments under its name.
+  A snapshot without the block renders exactly as before, and the hall
+  display, the projector and the live boards - full-screen views - carry no
+  tabs.
+- [Security] **A snapshot's word about another tournament is not taken.**
+  With public publishing anybody can send a snapshot, so "I am part of
+  event X, and so are these slugs" proves nothing. A sibling is shown only
+  when it is public on this server, its own newest snapshot names the same
+  event, and it has the same publisher - the same installation, or both the
+  operator's. The event page belongs to the publisher that claimed the id
+  first. A tournament moderation hid, one taken down, and one that left the
+  event disappear from the others' tabs at once, without waiting for their
+  arbiter's app to send again: each tournament page's ETag now carries an
+  epoch that moves when a sibling changes, so neither the page cache nor a
+  reader's browser keeps a strip that names something no longer there. A
+  section not listed on the front page is never linked from one that is.
+  Migration `add_event_to_tournaments` (two nullable columns and an index;
+  runs at boot).
+- [Feature] **Federation flags.** Where the arbiter's app asks for them
+  (`display.flags` in the snapshot - OpenPairings' "Federation flags" tick,
+  on unless unticked), a small flag is drawn beside a player's federation
+  code: the starting list, the "Nat" column of a player's card, the entry
+  list, the hall display, and on the live boards the broadcast's player
+  bars, the All boards tiles and the projector tiles (flag only on the last
+  two - a tile has no room for the code). A snapshot that does not mention
+  flags gets none, so nothing already published changes until its arbiter's
+  app is updated. A player under the FIDE flag, or with a code that names
+  no country, keeps the code and gets no picture: a wrong flag is worse
+  than none. The flags are flag-icons' (MIT), 215 static SVG files of 1.4 MB
+  together, served from `/flags/` with a month's cache and loaded lazily, so
+  a list of two hundred players fetches each country once and only the ones
+  on screen. FIDE's codes are mapped to them by a table of this site's own
+  (`GER`, `NED`, `SUI`, and `ENG`/`SCO`/`WLS`, which ISO has never heard
+  of).
+- [Fix] **A capped entry form counts the entry that arrived in the same
+  instant as the snapshot.** The form adds the entries received "after" the
+  last snapshot to the arbiter's count; "after" was strict, and a server
+  clock ticks coarsely enough (a millisecond on some hosts) for an entry and
+  a snapshot to carry the same stamp. That entry was then in neither count
+  and a full field took one more. It is "at or after" now - which is also
+  why one test failed now and then on a fast machine.
+- [Feature] **A projector view of the games you pick.** "Projector" on the
+  broadcast and the All boards pages opens a list of the round's boards to
+  tick (all of them, none, or a few), an option to remove finished games
+  automatically (on), and a link that opens
+  `/t/:slug/live/:round/projector?boards=1,3,5&auto=1&pieces=chessnut` in a
+  new tab - an address the hall PC can bookmark; no list means every board,
+  and `&theme=night` (or any site theme) pins the colours for that screen.
+  The page is the games and nothing else: no header, no moves, no buttons
+  to step through anything. Each tile is Black's bar, the position with the
+  last move lit, White's bar; a bar is the name, title, Elo, the points the
+  player brought into the round and the clock, highlighted while it runs.
+  The tiles fill the window - the page works out how many columns give the
+  largest boards for this window and this many games, again on every
+  resize, on full screen (`f`, or the button that disappears once you are
+  in it) and whenever a tile goes, and the type grows with the board. In the
+  automatic mode forfeits are never shown, a game that ends shows its result
+  across the board for half a minute before its tile makes room for the
+  others, and when the last one has gone the screen says so and lists the
+  results. Without it, finished games stay put with their result. The old
+  `/t/:slug/projector` pairings screen is unchanged. A phone gets one board
+  per row and scrolls; a projector never has to.
+- [Change] **The live pages are a broadcast now.** `/t/:slug/live/:round`
+  is three columns: on the left the round pills, a search box and every
+  game of the round (board, both players, the result as `1-0` or `½-½`,
+  live games marked; a team round's boards under their match, "1 Team A
+  2½-1½ Team B"); in the middle one game large, a bar above and below the
+  board with the player's name, title, federation and rating, the clock in a
+  box and what that side scored once there is a result, coordinates on the
+  board's edge, the last move lit and a full-screen button; on the right the
+  event (name, dates, place, round) and the moves as a table in figurine
+  notation drawn with the chosen piece set, the current move highlighted and
+  kept in view, with a "Game info" tab beside it. The page opens on the
+  first game in progress; `/t/:slug/live/:round/:board` opens on that board,
+  so every link to one game still works, and picking a game from the list
+  swaps the middle without reloading anything. `/t/:slug/live` goes to the
+  newest round. There is no evaluation bar, because there is no engine, and
+  a bar that pretends otherwise would be lying in a large font.
+- [Change] **"All boards" is the grid of every board of a round**, at
+  `/t/:slug/live/:round/all`, one click from the broadcast and back. Tiles,
+  clocks, badges and the hall display's live view got the same treatment:
+  a boxed clock that fills when it runs, a live badge with a beating dot
+  (still, for anyone who asked their system for less motion).
+- [Change] On a phone the columns stack: rounds, the game list folded
+  behind a button, the board the full width, the moves under it. Nothing
+  scrolls sideways at 375px.
+- [Fix] **A forfeited board no longer waits for a game that is never
+  coming.** A board the arbiter published as `1-0FF`, `0-1FF` or `0-0FF`
+  has nobody sitting at it, so the relay sends nothing, and the page used to
+  read that as "Not started" with the starting position until the end of
+  time. The published result now wins: the board says "Forfeit" (or "Double
+  forfeit"), shows `1-0 FF`, and draws a faded empty board with "Not played -
+  forfeit" instead of pieces that were never moved. A board with a published
+  result and no relay game is "Game over", not "Not started". In a round
+  whose results are withheld a forfeit is only "Game over", like everything
+  else there.
+- [Feature] **Two real piece sets, chosen by the viewer.** The live boards
+  are drawn with Cburnett (the default; Colin M.L. Burnett, BSD 3-clause)
+  or Chessnut (Alexis Luengas, Apache 2.0), replacing the homemade
+  silhouettes. A "Pieces" picker on the live pages remembers the choice in
+  the browser, as the colour theme does (still no new cookie);
+  `?pieces=chessnut` in a URL wins, which is how a hall screen with no
+  picker gets one, and a name that is not one of the two draws the default.
+  Each set is one cached static SVG sprite
+  under `priv/static/pieces/` next to its licence, never compiled into the
+  code; the notices are in `NOTICE`.
 - [Fix] A round a late entrant played before joining now has a name: "not yet joined", worth nothing. OpenPairings 0.81.0 sends it, so "points before this round" keeps counting for those players instead of showing a dash.
 
 ## [0.22.0] - 2026-10-08

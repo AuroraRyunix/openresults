@@ -101,11 +101,21 @@ defmodule OpenResults.Snapshots do
       received_at = Keyword.get_lazy(opts, :received_at, &DateTime.utc_now/0)
       key = Keyword.get(opts, :key)
 
+      # Read before the publish, to tell a new snapshot from an unchanged
+      # repeat afterwards - see `TournamentGroups.record/3`.
+      id_before = latest_id(slug)
+
       result =
         case Keyword.get(opts, :installation) do
           nil -> ingest_as_operator(slug, payload, key, received_at)
           installation -> ingest_as_installation(slug, payload, key, received_at, installation)
         end
+
+      # Which event this tournament now says it belongs to, and the pages of
+      # the tournaments shown beside it: their tab strips are drawn from this
+      # one's state. After the commit, like the announcement below.
+      with {:ok, %Snapshot{id: id}} <- result,
+           do: OpenResults.TournamentGroups.record(slug, payload, id != id_before)
 
       # After the commit and after `LatestIdCache` has the new id, so a hall
       # display re-reading on this message finds the document it announces.

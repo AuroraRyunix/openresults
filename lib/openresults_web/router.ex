@@ -150,9 +150,18 @@ defmodule OpenResultsWeb.Router do
     live_session :live_boards,
       root_layout: {OpenResultsWeb.Layouts, :live_root},
       session: {OpenResultsWeb.HallLive, :session, []} do
-      live "/t/:slug/live", BoardsLive, :index
-      live "/t/:slug/live/:round", BoardsLive, :round
-      live "/t/:slug/live/:round/:board", GameLive, :game
+      # The broadcast: one game large, the round's games listed beside it.
+      # `/live` goes to the newest round; `/live/:round` features its first
+      # game in progress, `/live/:round/:board` that board. `/all` is the
+      # grid of every board, and comes first so it is not read as a board.
+      live "/t/:slug/live", BroadcastLive, :index
+      live "/t/:slug/live/:round/all", BoardsLive, :round
+      # The chosen games of a round, nothing else, for a projector: the
+      # selection travels in the query (`?boards=1,3&auto=1`) so a hall PC
+      # can bookmark it. Before `/:board` for the same reason as `/all`.
+      live "/t/:slug/live/:round/projector", ProjectorLive, :show
+      live "/t/:slug/live/:round", BroadcastLive, :round
+      live "/t/:slug/live/:round/:board", BroadcastLive, :game
     end
 
     # A game as a PGN file. Not behind `Revalidate` either: it is built from
@@ -171,6 +180,13 @@ defmodule OpenResultsWeb.Router do
     # by name. Not in the scope above: there is no single tournament, and so
     # no slug, for `Revalidate` to key an ETag against.
     get "/players/:fide_id", PlayerHistoryController, :show
+
+    # An event: the tournaments that are sections of it, as cards. `:id` is
+    # the random id the arbiter's app minted for the group, not a slug - so
+    # `Visibility` and `Revalidate` have nothing to key on, and the page is
+    # rendered per request from the members' own current snapshots. See
+    # `OpenResultsWeb.EventController`.
+    get "/e/:id", EventController, :show
 
     # What changed here, release by release - see
     # `OpenResultsWeb.ChangelogController` for why this sits beside

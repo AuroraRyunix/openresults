@@ -50,12 +50,37 @@
   </div>
 
   <div :if={@snapshots != []} data-index-panel>
-    <section :for={{kind, snapshots} <- @groups} :if={snapshots != []} data-group={kind}>
+    <section :for={{kind, entries} <- @groups} :if={entries != []} data-group={kind}>
       <h2>{group_title(kind)}</h2>
 
       <ul class="tournaments">
+        <%!-- An event: its name, and its tournaments under it by label. One
+              row as far as the search is concerned - `data-name` holds the
+              event's name and every section's, so typing either finds it. --%>
         <li
-          :for={snapshot <- snapshots}
+          :for={{:event, event, members} <- entries}
+          class="event-entry"
+          data-event={event.id}
+          data-name={
+            Enum.join(
+              [event.name | Enum.map(members, fn {_l, s} -> Tournament.name(s.payload) end)],
+              " "
+            )
+          }
+        >
+          <a href={~p"/e/#{event.id}"}>{event.name}</a>
+          <span class="details event-sections">
+            <a
+              :for={{label, snapshot} <- members}
+              href={~p"/t/#{snapshot.tournament_slug}"}
+              title={Tournament.name(snapshot.payload)}
+            >
+              {label}
+            </a>
+          </span>
+        </li>
+        <li
+          :for={{:tournament, snapshot} <- entries}
           data-name={Tournament.name(snapshot.payload)}
           data-city={
             Tournament.show?(snapshot.payload, "city") &&

@@ -468,5 +468,10 @@ defmodule OpenResults.Tournaments do
 
     Page.forget(slug)
     OpenResults.TournamentEvents.changed(slug)
+
+    # A tournament hidden or shown again is on its siblings' tab strips too.
+    # (A deleted row cannot say who they were - `Takedown.purge/1` asks
+    # before it deletes.)
+    OpenResults.TournamentGroups.touch_siblings(slug)
   end
 end

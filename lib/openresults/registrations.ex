@@ -120,8 +120,14 @@ defmodule OpenResults.Registrations do
   end
 
   @doc """
-  How many entries arrived for `slug` after `since` - by this server's own
-  clock, which stamped both the entries and the snapshot.
+  How many entries arrived for `slug` at or after `since` - by this server's
+  own clock, which stamped both the entries and the snapshot.
+
+  "At or after", not "after": an entry stamped with the very instant of the
+  snapshot cannot be in that snapshot's count (the arbiter's machine counted
+  before it sent), and clocks tick coarsely enough - a millisecond on some
+  hosts - for the two stamps to be equal. Leaving such an entry out would let
+  one more person into a full field.
 
   What the form adds to a snapshot's `taken` before deciding a capped field
   is full: entries that arrived after the arbiter's machine last published
@@ -130,7 +136,7 @@ defmodule OpenResults.Registrations do
   @spec count_since(String.t(), DateTime.t()) :: non_neg_integer()
   def count_since(slug, %DateTime{} = since) when is_binary(slug) do
     Repo.aggregate(
-      from(r in Registration, where: r.tournament_slug == ^slug and r.received_at > ^since),
+      from(r in Registration, where: r.tournament_slug == ^slug and r.received_at >= ^since),
       :count
     )
   end

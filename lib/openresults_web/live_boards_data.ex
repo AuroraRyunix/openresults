@@ -20,6 +20,7 @@ defmodule OpenResultsWeb.LiveBoardsData do
   """
 
   alias OpenResults.LiveBoards
+  alias OpenResultsWeb.Flags
   alias OpenResultsWeb.Tournament
 
   @doc "Whether this tournament's pairings - and so its live boards - are public."
@@ -70,20 +71,26 @@ defmodule OpenResultsWeb.LiveBoardsData do
       in_match =
         if Tournament.team_event?(payload), do: Tournament.board_matches(round), else: %{}
 
+      teams = if in_match == %{}, do: %{}, else: Tournament.teams_by_no(payload)
+
       for board <- Tournament.boards(round), is_integer(Map.get(board, "board")) do
         no = Map.get(board, "board")
         game = Map.get(games, no)
         view = game && LiveBoards.view(game, delay_ms, now_ms)
+        match = Map.get(in_match, no)
 
         %{
           id: "live-#{number}-#{no}",
           round: number,
           board: no,
-          label: label(board, Map.get(in_match, no)),
+          label: label(board, match),
+          match: match && match.match,
+          team_names: team_names(teams, match),
           white: person(players, Map.get(board, "white"), show),
           black: person(players, Map.get(board, "black"), show),
           official: if(results?, do: string(board, "result")),
           results?: results?,
+          unplayed: unplayed(string(board, "result"), results?),
           view: view,
           signature: signature(view)
         }
@@ -91,6 +98,14 @@ defmodule OpenResultsWeb.LiveBoardsData do
     else
       []
     end
+  end
+
+  defp team_names(_teams, nil), do: []
+
+  defp team_names(teams, %{match: match}) do
+    for key <- ["team_a", "team_b"],
+        team = Map.get(teams, Map.get(match, key)),
+        do: Tournament.team_label(team)
   end
 
   defp label(board, nil), do: Tournament.board_label(board)
@@ -137,12 +152,123 @@ defmodule OpenResultsWeb.LiveBoardsData do
 
   def result(_tile), do: nil
 
+  @doc """
+  Whether the arbiter has published this board as never played - a forfeit
+  (`1-0FF`, `0-1FF`) or a double forfeit (`0-0FF`) - and so whether the relay
+  will ever send a game for it: `:forfeit`, `:double_forfeit`, `:withheld`
+  (unplayed, but the round's results are not public, so the page may say the
+  game is over and nothing about who won it), or `nil` for a game that is, or
+  will be, played.
+
+  Read off the published token, never off the relay: a board nobody sits at
+  sends nothing, and "nothing has been sent" used to read as "not started"
+  until the end of time.
+  """
+  def unplayed(token, results?) when is_binary(token) do
+    kind =
+      cond do
+        token == "0-0FF" -> :double_forfeit
+        String.ends_with?(token, "FF") -> :forfeit
+        true -> nil
+      end
+
+    if kind && not results?, do: :withheld, else: kind
+  end
+
+  def unplayed(_no_result, _results?), do: nil
+
+  @doc """
+  What each side scored, as a reader writes it: `{"1", "0"}`, `{"½", "½"}`,
+  from the tile's result (`result/1`), or `nil` while there is none.
+  """
+  def scores(tile) do
+    with {token, _provisional?} <- result(tile),
+         [white, black] <- token |> Tournament.result_parts() |> elem(0) |> split_token() do
+      {glyph(white), glyph(black)}
+    else
+      _none -> nil
+    end
+  end
+
+  defp split_token(nil), do: nil
+  defp split_token(base), do: String.split(base, "-", parts: 2)
+
+  @doc "A result token as it is printed: `1/2-1/2` is `½-½`; a forfeit's `FF` is left to a badge."
+  def result_text(token) when is_binary(token) do
+    case token |> Tournament.result_parts() |> elem(0) |> split_token() do
+      [white, black] -> glyph(white) <> "-" <> glyph(black)
+      _other -> token
+    end
+  end
+
+  def result_text(_none), do: nil
+
+  defp glyph("1/2"), do: "½"
+  defp glyph(other), do: other
+
+  @doc """
+  The tournament's facts for a live page's info panel - each `nil` where the
+  arbiter's ticks keep it off the pages: `%{name, dates, city, round_date}`.
+  """
+  def event_info(payload, round_number) do
+    info = Tournament.info(payload)
+    dates? = Tournament.show?(payload, "dates")
+    round = (round_number && Tournament.round(payload, round_number)) || %{}
+
+    %{
+      name: Tournament.name(payload),
+      start_date: if(dates?, do: string(info, "start_date")),
+      end_date: if(dates?, do: string(info, "end_date")),
+      city: if(Tournament.show?(payload, "city"), do: string(info, "city")),
+      round_date: if(dates?, do: string(round, "date"))
+    }
+  end
+
+  @doc """
+  The heading of a team match for the pairing list: `%{id, kind: :match,
+  number, a, b, score}` - `score` `{a, b}` in game points, `nil` while the
+  round's results are withheld or the match has none yet.
+  """
+  def match_header(payload, round_number, %{} = match, results?) do
+    teams = Tournament.teams_by_no(payload)
+
+    score =
+      case {results?, Map.get(match, "game_points")} do
+        {true, %{"a" => a, "b" => b}} when is_number(a) and is_number(b) -> {points(a), points(b)}
+        _withheld_or_undecided -> nil
+      end
+
+    %{
+      id: "lb-match-#{round_number}-#{Map.get(match, "number")}",
+      kind: :match,
+      number: Map.get(match, "number"),
+      a: Tournament.team_label(Map.get(teams, Map.get(match, "team_a"))),
+      b: Tournament.team_label(Map.get(teams, Map.get(match, "team_b"))),
+      score: score
+    }
+  end
+
+  # 2.5 as a scoreboard writes it: "2½". Whole numbers stay whole.
+  defp points(n) when is_number(n) do
+    whole = trunc(n)
+    half? = n - whole >= 0.5
+
+    cond do
+      half? and whole == 0 -> "½"
+      half? -> "#{whole}½"
+      true -> "#{whole}"
+    end
+  end
+
   @doc "Whether the game is on the boards right now."
   def live?(%{view: %{status: "live"}}), do: true
   def live?(_tile), do: false
 
   defp show(payload) do
-    Map.new(~w(rating title federation), &{String.to_atom(&1), Tournament.show?(payload, &1)})
+    ~w(rating title federation)
+    |> Map.new(&{String.to_atom(&1), Tournament.show?(payload, &1)})
+    # Absent means off for this one - see `Tournament.flags?/1`.
+    |> Map.put(:flags, Tournament.flags?(payload))
   end
 
   defp person(_players, nil, _show), do: nil
@@ -155,7 +281,8 @@ defmodule OpenResultsWeb.LiveBoardsData do
       name: string(player, "name") || "#" <> to_string(no),
       title: if(show.title, do: string(player, "title")),
       rating: if(show.rating, do: positive(Map.get(player, "rating"))),
-      federation: if(show.federation, do: string(player, "federation"))
+      federation: if(show.federation, do: string(player, "federation")),
+      flag: if(show.federation, do: Flags.path(string(player, "federation"), show.flags))
     }
   end
 

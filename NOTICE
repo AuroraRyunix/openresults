@@ -4,11 +4,31 @@ Copyright (c) the OpenResults authors. Licensed as stated in LICENSE.
 Third-party material
 --------------------
 
-The chess pieces on the live-board pages (`OpenResultsWeb.LiveBoardsComponents`,
-`piece_sprite/1`) are this project's own drawings: plain geometric silhouettes
-made for it, released under the same licence as the rest of the code. They are
-not taken from, traced from or modelled on any other piece set, and no
-third-party piece artwork is shipped or loaded from anywhere.
+The chess pieces on the live-board pages are third-party artwork, shipped
+as separate static files in `priv/static/pieces/` (one SVG sprite per set,
+each beside its licence text) and loaded by URL, not compiled into the
+code. The art keeps its own licence; the Elastic License 2.0 of this
+project does not apply to it.
+
+  - cburnett: "Cburnett" pieces by Colin M.L. Burnett, from Wikimedia
+    Commons (File:Chess_klt45.svg and siblings). Offered by the author
+    under GFDL, CC BY-SA 3.0, GPLv2+ and BSD 3-clause; used here under the
+    BSD 3-clause licence. `priv/static/pieces/cburnett/LICENSE`.
+  - chessnut: "Chessnut" pieces by Alexis Luengas
+    (github.com/LexLuengas/chessnut-pieces), as packaged by lichess, under
+    the Apache License 2.0. `priv/static/pieces/chessnut/LICENSE`.
+
+The twelve files of each set were packed into one sprite (one <symbol> per
+piece, ids prefixed so they cannot collide); the drawings are unchanged.
+
+The flags beside federation codes are from flag-icons by Panayiotis
+Lipiridis (github.com/lipis/flag-icons, the 4x3 set), under the MIT
+License, shipped as separate static files in `priv/static/flags/` beside
+the licence text (`priv/static/flags/LICENSE`) and loaded by URL, not
+compiled into the code. Only the flags of FIDE's federations are included;
+comments and whitespace were stripped from the files, the drawings are
+unchanged. The table from FIDE's federation codes to the files is this
+project's (`lib/openresults_web/flags.ex`).
 
 The three games in `priv/live_sim` are public-domain games played before 1900
 and in 1910 (the moves of a game are not protected), transcribed here for the

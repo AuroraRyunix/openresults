@@ -48,7 +48,7 @@ defmodule OpenResultsWeb.HallLive do
 
   use OpenResultsWeb, :live_view
 
-  import OpenResultsWeb.LiveBoardsComponents, only: [piece_sprite: 1, tile: 1]
+  import OpenResultsWeb.LiveBoardsComponents, only: [tile: 1]
 
   alias OpenResults.LiveBoards
   alias OpenResults.Snapshots
@@ -84,6 +84,9 @@ defmodule OpenResultsWeb.HallLive do
       |> assign(
         slug: slug,
         locale: locale,
+        # No picker on a hall screen: `?pieces=chessnut` in its URL, or what
+        # that browser remembered.
+        pieces: OpenResultsWeb.Pieces.choose(params, get_connect_params(socket)),
         projector?: projector?,
         theme_choice: choice || "black",
         theme_from_url?: choice != nil,
@@ -430,6 +433,7 @@ defmodule OpenResultsWeb.HallLive do
               streams={@streams}
               standings_top={@settings.standings_top}
               slug={@slug}
+              pieces={@pieces}
             />
         <% end %>
       </main>
@@ -488,6 +492,7 @@ defmodule OpenResultsWeb.HallLive do
   attr :streams, :any, required: true
   attr :standings_top, :integer, required: true
   attr :slug, :string, default: nil
+  attr :pieces, :string, default: "cburnett"
 
   defp slide(%{slide: {:pairings, _}} = assigns) do
     assigns = assign(assigns, :matches?, Hall.matches?(assigns.data))
@@ -731,13 +736,13 @@ defmodule OpenResultsWeb.HallLive do
   defp slide(%{slide: {:live, _}} = assigns) do
     ~H"""
     <section id="hall-live" class="hall-view hall-live">
-      <.piece_sprite />
       <div id="hall-rows" class="hall-live-grid" phx-update="stream">
         <.tile
           :for={{_id, tile} <- @streams.rows}
           tile={tile}
           slug={@slug}
           link?={false}
+          pieces={@pieces}
           class="lb-tile-hall"
         />
       </div>
@@ -760,7 +765,9 @@ defmodule OpenResultsWeb.HallLive do
     <span :if={@person} class="hall-person">
       <span :if={@person.title} class="hall-person-title">{@person.title}</span>
       <span class="hall-person-name">{@person.name}</span>
-      <span :if={@person.federation} class="hall-person-meta">{@person.federation}</span>
+      <span :if={@person.federation} class="hall-person-meta">
+        <Flags.flag :if={@person[:flag]} src={@person.flag} />{@person.federation}
+      </span>
       <span :if={@person.rating} class="hall-person-meta">{@person.rating}</span>
     </span>
     <span :if={is_nil(@person)} class="hall-quiet">-</span>

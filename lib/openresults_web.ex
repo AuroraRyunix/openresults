@@ -17,7 +17,7 @@ defmodule OpenResultsWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico favicon.svg robots.txt)
+  def static_paths, do: ~w(assets fonts images pieces favicon.ico favicon.svg robots.txt)
 
   def router do
     quote do
@@ -89,6 +89,7 @@ defmodule OpenResultsWeb do
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS
+      alias OpenResultsWeb.Flags
       alias OpenResultsWeb.Layouts
 
       # Routes generation with the ~p sigil

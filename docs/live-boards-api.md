@@ -2,9 +2,12 @@
 
 What a hall relay (Alnasl, reading the physical boards) implements to put the
 games of a round in front of spectators, move by move. The spectator pages
-are `/t/:slug/live`, `/t/:slug/live/:round` and `/t/:slug/live/:round/:board`
-(and a live view of the hall display); this document is the one write path
-behind them.
+are the broadcast at `/t/:slug/live/:round` and `/t/:slug/live/:round/:board`
+(`/t/:slug/live` goes to the newest round), the grid of every board at
+`/t/:slug/live/:round/all`, and a live view of the hall display; this
+document is the one write path behind them. A board the arbiter published as
+a forfeit (`1-0FF`, `0-1FF`, `0-0FF`) is shown as one whatever a relay
+sends for it.
 
 The moves and clocks of a game never travel in the snapshot. The snapshot
 (`docs/snapshot-schema.md`) says who plays whom on which board, and what the

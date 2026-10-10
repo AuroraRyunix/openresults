@@ -725,6 +725,7 @@
       "deputy": true,
       "federation": true,
       "fide_badge": true,
+      "flags": true,
       "pairing_scores": true,
       "pairings": true,
       "player_cards": true,

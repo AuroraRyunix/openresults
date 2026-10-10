@@ -67,6 +67,12 @@ defmodule OpenResultsWeb.TournamentController do
 
     grouped = Enum.group_by(shown, &Tournament.status(&1.payload))
 
+    # The tournaments that are sections of one event stand together under
+    # its name - see `OpenResultsWeb.EventGroup`. Decided over the whole page,
+    # so an event with one section finished and one running is named in both
+    # parts.
+    memberships = OpenResultsWeb.EventGroup.memberships(shown)
+
     render(conn, :index,
       page_title: gettext("Tournaments"),
       page_description: Meta.index(),
@@ -77,7 +83,10 @@ defmodule OpenResultsWeb.TournamentController do
       # Live first (the most immediately relevant), then upcoming, then
       # finished - and in that fixed order regardless of how many of each
       # there are, so the page's shape does not shuffle between visits.
-      groups: for(kind <- [:live, :upcoming, :finished], do: {kind, Map.get(grouped, kind, [])})
+      groups:
+        for kind <- [:live, :upcoming, :finished] do
+          {kind, OpenResultsWeb.EventGroup.gather(Map.get(grouped, kind, []), memberships)}
+        end
     )
   end
 

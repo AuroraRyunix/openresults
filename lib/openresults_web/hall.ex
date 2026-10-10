@@ -37,6 +37,7 @@ defmodule OpenResultsWeb.Hall do
 
   use Gettext, backend: OpenResultsWeb.Gettext
 
+  alias OpenResultsWeb.Flags
   alias OpenResultsWeb.Tournament
 
   @boards_per_page 12
@@ -202,6 +203,8 @@ defmodule OpenResultsWeb.Hall do
       ~w(pairings standings byes rating title federation dates),
       &{String.to_atom(&1), Tournament.show?(payload, &1)}
     )
+    # Absent means off for this one - see `Tournament.flags?/1`.
+    |> Map.put(:flags, Tournament.flags?(payload))
   end
 
   defp round_info(_payload, nil, _show), do: nil
@@ -255,7 +258,8 @@ defmodule OpenResultsWeb.Hall do
       name: string(player, "name") || gettext("Player %{number}", number: no),
       title: if(show.title, do: string(player, "title")),
       rating: if(show.rating, do: positive(Map.get(player, "rating"))),
-      federation: if(show.federation, do: string(player, "federation"))
+      federation: if(show.federation, do: string(player, "federation")),
+      flag: if(show.federation, do: Flags.path(string(player, "federation"), show.flags))
     }
   end
 

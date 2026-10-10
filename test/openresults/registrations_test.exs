@@ -4,6 +4,22 @@ defmodule OpenResults.RegistrationsTest do
   alias OpenResults.Registrations
   alias OpenResults.SnapshotPayloads
 
+  describe "count_since/2" do
+    test "counts an entry stamped with the very instant asked about" do
+      payload = SnapshotPayloads.registration()
+      slug = payload["tournament_slug"]
+      at = ~U[2026-02-01 10:00:00.000000Z]
+
+      {:ok, _} = Registrations.ingest(payload, received_at: at)
+
+      # A snapshot stored in the same clock tick did not count this entry:
+      # the arbiter's machine counted before it sent.
+      assert Registrations.count_since(slug, at) == 1
+      assert Registrations.count_since(slug, DateTime.add(at, 1, :microsecond)) == 0
+      assert Registrations.count_since(slug, DateTime.add(at, -1, :second)) == 1
+    end
+  end
+
   describe "ingest/2" do
     test "accepts and holds an entry whole" do
       payload = SnapshotPayloads.registration()

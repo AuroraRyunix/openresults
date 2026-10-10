@@ -108,6 +108,23 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  Whether a flag is drawn beside a federation code.
+
+  **Absent means off**, unlike `show?/2`: `display.flags` must be `true`. A
+  snapshot from an arbiter's app that predates the key has not asked for
+  pictures on its pages, and a page that looked one way yesterday should
+  not grow them because this server was upgraded. Also off wherever the
+  federation itself is hidden - there is no code to draw a flag for. See
+  `OpenResultsWeb.Flags`.
+  """
+  def flags?(payload) do
+    case payload |> info() |> Map.get("display") do
+      %{"flags" => true} -> show?(payload, "federation")
+      _absent_off_or_junk -> false
+    end
+  end
+
+  @doc """
   Whether the cross-table page is offered at all.
 
   Two ticks, and both have to be on.

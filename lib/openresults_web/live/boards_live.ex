@@ -1,7 +1,9 @@
 defmodule OpenResultsWeb.BoardsLive do
   @moduledoc """
-  A round's live boards: a grid of small boards with names, clocks, the last
-  move and the result, each linking to the game. `GET /t/:slug/live[/:round]`.
+  A round's live boards, all of them: a grid of small boards with names,
+  clocks, the last move and the result, each opening that game in the
+  broadcast (`OpenResultsWeb.BroadcastLive`). `GET /t/:slug/live/:round/all` -
+  the "All boards" view; the round's own address is the broadcast.
 
   ## Why this is a LiveView and not a cached page
 
@@ -37,6 +39,7 @@ defmodule OpenResultsWeb.BoardsLive do
   alias OpenResults.TournamentEvents
   alias OpenResults.Tournaments
   alias OpenResultsWeb.LiveBoardsData
+  alias OpenResultsWeb.ProjectorPicker
   alias OpenResultsWeb.Tournament
 
   @tick :timer.seconds(15)
@@ -57,6 +60,7 @@ defmodule OpenResultsWeb.BoardsLive do
       |> assign(
         slug: slug,
         locale: locale,
+        pieces: OpenResultsWeb.Pieces.choose(params, get_connect_params(socket)),
         round_param: params["round"],
         snapshot_id: nil,
         payload: nil,
@@ -72,6 +76,7 @@ defmodule OpenResultsWeb.BoardsLive do
       )
       |> stream_configure(:tiles, dom_id: & &1.id)
       |> stream(:tiles, [])
+      |> ProjectorPicker.init()
       |> load()
 
     {:ok, socket, layout: false}
@@ -161,6 +166,23 @@ defmodule OpenResultsWeb.BoardsLive do
     |> assign(sigs: signatures(tiles), delay: LiveBoards.delay_minutes(slug))
   end
 
+  # --- the viewer ---
+
+  # A new set means every tile's markup changes, so the grid is sent again;
+  # the picker has already remembered the choice in the browser.
+  @impl true
+  def handle_event("pieces", %{"set" => set}, socket) do
+    case OpenResultsWeb.Pieces.known(set) do
+      nil -> {:noreply, socket}
+      set -> {:noreply, socket |> assign(:pieces, set) |> load()}
+    end
+  end
+
+  def handle_event("projector_" <> _ = event, params, socket),
+    do: {:noreply, ProjectorPicker.handle_event(event, params, socket)}
+
+  def handle_event(_event, _params, socket), do: {:noreply, socket}
+
   # --- messages ----------------------------------------------------------------
 
   @impl true
@@ -203,10 +225,30 @@ defmodule OpenResultsWeb.BoardsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <.piece_sprite />
-    <.shell locale={@locale} path={current_path(@slug, @round_param)} slug={@slug} title={@title}>
-      <h1 id="lb-title">{gettext("Live boards")}</h1>
-      <p :if={@round_heading} id="lb-round" class="details">
+    <.shell
+      locale={@locale}
+      path={current_path(@slug, @round_param)}
+      slug={@slug}
+      title={@title}
+      pieces={@pieces}
+      wide={true}
+    >
+      <header class="lb-bc-head">
+        <div class="lb-bc-heading">
+          <p class="lb-eyebrow">
+            <span class="lb-live-dot" aria-hidden="true"></span>{gettext("Live boards")}
+          </p>
+          <h1 id="lb-title" class="lb-bc-title">
+            <a href={~p"/t/#{@slug}"}>{@title}</a>
+          </h1>
+        </div>
+        <div :if={@round} class="lb-head-tools">
+          <.view_switch slug={@slug} round={@round} current={:all} />
+          <ProjectorPicker.button />
+        </div>
+      </header>
+      <ProjectorPicker.picker picker={@projector} slug={@slug} round={@round} pieces={@pieces} />
+      <p :if={@round_heading} id="lb-round" class="details lb-grid-details">
         <span>{@round_heading}</span>
         <span :if={@delay > 0} id="lb-delay">
           {ngettext(
@@ -217,15 +259,19 @@ defmodule OpenResultsWeb.BoardsLive do
         </span>
       </p>
 
-      <nav :if={length(@rounds) > 1} id="lb-rounds" class="rounds" aria-label={gettext("Rounds")}>
-        <.link
-          :for={n <- @rounds}
-          navigate={~p"/t/#{@slug}/live/#{n}"}
-          class={["chip", n == @round && "current"]}
-          aria-current={n == @round && "page"}
-        >
-          {n}
-        </.link>
+      <nav :if={length(@rounds) > 1} class="lb-grid-rounds" aria-label={gettext("Rounds")}>
+        <ul id="lb-rounds" class="lb-pills">
+          <li :for={n <- @rounds}>
+            <.link
+              navigate={~p"/t/#{@slug}/live/#{n}/all"}
+              class={["lb-pill", n == @round && "is-current"]}
+              aria-current={n == @round && "page"}
+              aria-label={@payload && Tournament.round_heading(@payload, n)}
+            >
+              {n}
+            </.link>
+          </li>
+        </ul>
       </nav>
 
       <p :if={is_nil(@payload)} id="lb-unavailable" class="empty">
@@ -239,7 +285,7 @@ defmodule OpenResultsWeb.BoardsLive do
       </p>
 
       <div id="lb-grid" class="lb-grid" phx-update="stream">
-        <.tile :for={{_id, tile} <- @streams.tiles} tile={tile} slug={@slug} />
+        <.tile :for={{_id, tile} <- @streams.tiles} tile={tile} slug={@slug} pieces={@pieces} />
       </div>
 
       <:foot>
@@ -252,5 +298,5 @@ defmodule OpenResultsWeb.BoardsLive do
   end
 
   defp current_path(slug, nil), do: "/t/#{slug}/live"
-  defp current_path(slug, round), do: "/t/#{slug}/live/#{round}"
+  defp current_path(slug, round), do: "/t/#{slug}/live/#{round}/all"
 end

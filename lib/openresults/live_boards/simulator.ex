@@ -59,7 +59,9 @@ defmodule OpenResults.LiveBoards.Simulator do
          "moves" => [],
          "white_ms" => initial,
          "black_ms" => initial,
-         "running" => "white"
+         "running" => "white",
+         # A rerun starts the game over instead of being ignored as older.
+         "replace" => true
        })}
 
     {updates, _clocks} =

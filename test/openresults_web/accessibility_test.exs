@@ -75,6 +75,27 @@ defmodule OpenResultsWeb.AccessibilityTest do
         "result" => "0-1"
       })
 
+    # Two sections of one event, so the tab strip, the event page and the
+    # front page's gathered entry are walked with something in them.
+    event = "a11y" <> Integer.to_string(System.unique_integer([:positive]))
+    event_open = unique_slug("event-open")
+    event_u20 = unique_slug("event-u20")
+
+    for {slug, label, position, other, other_label} <- [
+          {event_open, "Open", 1, event_u20, "U20"},
+          {event_u20, "U20", 2, event_open, "Open"}
+        ] do
+      SnapshotPayloads.swiss()
+      |> put_in(["tournament", "group"], %{
+        "id" => event,
+        "name" => "Spring Festival",
+        "label" => label,
+        "position" => position,
+        "siblings" => [%{"slug" => other, "label" => other_label, "name" => other_label}]
+      })
+      |> publish(slug)
+    end
+
     team_rr = publish(SnapshotPayloads.team_round_robin(), unique_slug("team-rr"))
     team_swiss = publish(SnapshotPayloads.team_swiss(), unique_slug("team-swiss"))
 
@@ -92,7 +113,9 @@ defmodule OpenResultsWeb.AccessibilityTest do
        team_rr: team_rr,
        team_swiss: team_swiss,
        team_no: team_no,
-       fide_id: fide_id
+       fide_id: fide_id,
+       event: event,
+       event_open: event_open
      }}
   end
 
@@ -198,6 +221,18 @@ defmodule OpenResultsWeb.AccessibilityTest do
       "/t/:slug/board-prizes" ->
         ["/t/#{world.team_rr}/board-prizes", "/t/#{world.team_swiss}/board-prizes"]
 
+      # The event page, and - listed here because it is the same feature - a
+      # tournament page with the event's tab strip on it.
+      "/e/:id" ->
+        [
+          "/e/#{world.event}",
+          "/e/#{world.event}?lang=nl",
+          "/e/#{world.event}?lang=fr",
+          "/e/nobody-claims-this",
+          "/t/#{world.event_open}",
+          "/t/#{world.event_open}/round/1?lang=nl"
+        ]
+
       "/players/:fide_id" ->
         ["/players/#{world.fide_id}", "/players/999999999"]
 
@@ -207,18 +242,34 @@ defmodule OpenResultsWeb.AccessibilityTest do
       "/terms" ->
         ["/terms", "/terms?lang=nl", "/terms?lang=fr"]
 
+      # A published round redirects to it (the broadcast, walked below), so
+      # what renders here is the 404.
       "/t/:slug/live" ->
+        ["/t/no-such-tournament/live"]
+
+      "/t/:slug/live/:round/all" ->
         [
-          "/t/#{world.swiss}/live",
-          "/t/#{world.swiss}/live?lang=nl&theme=night",
-          "/t/#{world.before_round_one}/live",
-          "/t/#{world.team_swiss}/live?lang=fr",
-          "/t/no-such-tournament/live"
+          "/t/#{world.swiss}/live/5/all",
+          "/t/#{world.swiss}/live/5/all?lang=nl&theme=night",
+          "/t/#{world.before_round_one}/live/5/all",
+          "/t/#{world.team_swiss}/live/2/all?lang=fr",
+          "/t/#{world.swiss}/live/4/all"
+        ]
+
+      "/t/:slug/live/:round/projector" ->
+        [
+          "/t/#{world.swiss}/live/5/projector",
+          "/t/#{world.swiss}/live/5/projector?boards=1,3&auto=0&lang=nl&theme=night",
+          "/t/#{world.team_swiss}/live/2/projector?lang=fr",
+          "/t/#{world.swiss}/live/1/projector",
+          "/t/#{world.swiss}/live/42/projector"
         ]
 
       "/t/:slug/live/:round" ->
         [
           "/t/#{world.swiss}/live/5",
+          "/t/#{world.swiss}/live/5?lang=nl&theme=night",
+          "/t/#{world.team_swiss}/live/2?lang=fr",
           "/t/#{world.swiss}/live/1",
           "/t/#{world.swiss}/live/4",
           "/t/#{world.team_swiss}/live/2"

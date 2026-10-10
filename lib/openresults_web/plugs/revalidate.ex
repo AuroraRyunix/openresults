@@ -343,11 +343,17 @@ defmodule OpenResultsWeb.Plugs.Revalidate do
   defp digest(conn, visibility) do
     notice = OpenResultsWeb.Plugs.PublicNotice.version(conn)
 
+    # A tournament shown as one section of an event prints its siblings' tabs,
+    # which move when THEY publish or are hidden, not when this one does. The
+    # epoch is what moves this tag then; 0, from one ETS miss, for a
+    # tournament beside nothing. See `OpenResults.TournamentGroups`.
+    epoch = OpenResults.TournamentGroups.epoch(conn.params["slug"])
+
     :hmac
     |> :crypto.mac(
       :sha256,
       secret(),
-      :erlang.term_to_binary({conn.request_path, conn.query_string, visibility, notice})
+      :erlang.term_to_binary({conn.request_path, conn.query_string, visibility, notice, epoch})
     )
     |> binary_part(0, 16)
     |> Base.url_encode64(padding: false)

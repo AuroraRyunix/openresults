@@ -1,0 +1,1085 @@
+{
+  "players": [
+    {
+      "categories": [
+        "A"
+      ],
+      "category": "A",
+      "club": "SF Berlin",
+      "federation": "GER",
+      "fide_id": 1503014,
+      "name": "Müller, Jörg",
+      "no": 1,
+      "rating": 2601,
+      "title": "GM"
+    },
+    {
+      "categories": [
+        "A"
+      ],
+      "category": "A",
+      "club": "ŠK Beograd",
+      "federation": "SRB",
+      "fide_id": 2503014,
+      "name": "Đurić, Nikola",
+      "no": 2,
+      "rating": 2455,
+      "title": "IM"
+    },
+    {
+      "categories": [
+        "A"
+      ],
+      "category": "A",
+      "club": "Gonzaga CC",
+      "federation": "IRL",
+      "fide_id": 3503014,
+      "name": "Ó Súilleabháin, Séamus",
+      "no": 3,
+      "rating": 2312,
+      "title": "FM"
+    },
+    {
+      "categories": [
+        "A"
+      ],
+      "category": "A",
+      "club": "KSz Polonia",
+      "federation": "POL",
+      "fide_id": null,
+      "name": "Łukasiewicz, Paweł",
+      "no": 4,
+      "rating": 2208,
+      "title": null
+    },
+    {
+      "categories": [
+        "A"
+      ],
+      "category": "A",
+      "club": "KGSRL",
+      "federation": "BEL",
+      "fide_id": 4503014,
+      "name": "Vandenberghe, Françoise",
+      "no": 5,
+      "rating": 2104,
+      "title": "WFM"
+    },
+    {
+      "categories": [
+        "B"
+      ],
+      "category": "B",
+      "club": "CS Universitatea",
+      "federation": "ROU",
+      "fide_id": 5503014,
+      "name": "Ștefănescu, Ioana",
+      "no": 6,
+      "rating": 2033,
+      "title": "WIM"
+    },
+    {
+      "categories": [
+        "B"
+      ],
+      "category": "B",
+      "club": "Wasa SK",
+      "federation": "SWE",
+      "fide_id": null,
+      "name": "Ångström, Åsa",
+      "no": 7,
+      "rating": 1955,
+      "title": null
+    },
+    {
+      "categories": [
+        "B"
+      ],
+      "category": "B",
+      "club": "TR Reykjavík",
+      "federation": "ISL",
+      "fide_id": 6503014,
+      "name": "Björnsson, Sævar",
+      "no": 8,
+      "rating": 1866,
+      "title": null
+    },
+    {
+      "categories": [
+        "B"
+      ],
+      "category": "B",
+      "club": "Cercle d'Échecs",
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "De Smet, Jean-Baptiste",
+      "no": 9,
+      "rating": 1742,
+      "title": null
+    },
+    {
+      "categories": [
+        "B"
+      ],
+      "category": "B",
+      "club": null,
+      "federation": "VIE",
+      "fide_id": null,
+      "name": "Nguyễn, Thị Hà",
+      "no": 10,
+      "rating": null,
+      "title": null
+    }
+  ],
+  "published_at": "2026-08-29T00:00:00Z",
+  "rounds": [
+    {
+      "boards": [
+        {
+          "black": 6,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 7
+        },
+        {
+          "black": 8,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 3
+        },
+        {
+          "black": 4,
+          "board": 4,
+          "label": "4",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0FF",
+          "white": 9
+        },
+        {
+          "black": 10,
+          "board": 5,
+          "label": "5",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0U",
+          "white": 5
+        }
+      ],
+      "byes": [],
+      "date": "2026-03-01",
+      "number": 1,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 1,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 2
+        },
+        {
+          "black": 3,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 6
+        },
+        {
+          "black": 7,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1FF",
+          "white": 5
+        },
+        {
+          "black": 9,
+          "board": 4,
+          "label": "4",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 8
+        }
+      ],
+      "byes": [
+        {
+          "kind": "pairing-allocated",
+          "player": 4,
+          "points": 1.0
+        },
+        {
+          "kind": "absent",
+          "player": 10,
+          "points": 0.0
+        }
+      ],
+      "date": "2026-03-02",
+      "number": 2,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 3,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 0.0,
+            "white": 0.5
+          },
+          "result": "1/2-0",
+          "white": 4
+        },
+        {
+          "black": 5,
+          "board": 3,
+          "label": "3",
+          "result": null,
+          "white": 8
+        }
+      ],
+      "byes": [
+        {
+          "kind": "half-point",
+          "player": 6,
+          "points": 0.5
+        },
+        {
+          "kind": "zero-point",
+          "player": 9,
+          "points": 0.0
+        }
+      ],
+      "date": "2026-03-03",
+      "number": 3,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 1,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 2
+        },
+        {
+          "black": 5,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 3
+        },
+        {
+          "black": 6,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 4
+        },
+        {
+          "black": 7,
+          "board": 4,
+          "label": "4",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 8
+        },
+        {
+          "black": 9,
+          "board": 5,
+          "label": "5",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 10
+        }
+      ],
+      "byes": [],
+      "date": "2026-03-05",
+      "number": 5,
+      "results_public": true
+    }
+  ],
+  "schema": "openresults/snapshot",
+  "source": {
+    "app": "openpairings",
+    "version": "0.0.0-fixture"
+  },
+  "standings": {
+    "after_round": 2,
+    "manual_incomplete": false,
+    "manual_order": false,
+    "manual_stale": false,
+    "rows": [
+      {
+        "category": "B",
+        "player": 9,
+        "points": 2.0,
+        "rank": 1,
+        "tiebreaks": [
+          1.0,
+          1.5,
+          1.5,
+          3.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "kind": "virtual",
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 8,
+                "round": 2,
+                "value": 0.5
+              }
+            ],
+            "total": 1.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "virtual",
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "kind": "cut",
+                "opponent": 8,
+                "round": 2,
+                "value": 0.5
+              }
+            ],
+            "total": 1.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "kind": "virtual",
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 8,
+                "round": 2,
+                "value": 0.5
+              }
+            ],
+            "total": 1.5
+          }
+        }
+      },
+      {
+        "category": "A",
+        "player": 2,
+        "points": 1.5,
+        "rank": 2,
+        "tiebreaks": [
+          1.5,
+          2.5,
+          1.75,
+          2.5
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 7,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 2.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 7,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 1.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 7,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 0.75
+              }
+            ],
+            "total": 1.75
+          }
+        }
+      },
+      {
+        "category": "A",
+        "player": 1,
+        "points": 1.5,
+        "rank": 3,
+        "tiebreaks": [
+          1.5,
+          1.5,
+          0.75,
+          2.5
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 1.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 6,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 1.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 0.75
+              }
+            ],
+            "total": 0.75
+          }
+        }
+      },
+      {
+        "category": "A",
+        "player": 3,
+        "points": 1.5,
+        "rank": 4,
+        "tiebreaks": [
+          0.5,
+          0.5,
+          0.25,
+          2.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 8,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "opponent": 6,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 8,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "kind": "cut",
+                "opponent": 6,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 8,
+                "round": 1,
+                "value": 0.25
+              },
+              {
+                "opponent": 6,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.25
+          }
+        }
+      },
+      {
+        "category": "B",
+        "player": 7,
+        "points": 1.0,
+        "rank": 5,
+        "tiebreaks": [
+          1.5,
+          2.5,
+          1.0,
+          1.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 2.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "kind": "cut",
+                "opponent": 5,
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.0
+          }
+        }
+      },
+      {
+        "category": "A",
+        "player": 4,
+        "points": 1.0,
+        "rank": 6,
+        "tiebreaks": [
+          1.0,
+          2.0,
+          1.0,
+          1.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "kind": "virtual",
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 2.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 9,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "kind": "virtual",
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.0
+          }
+        }
+      },
+      {
+        "category": "A",
+        "player": 5,
+        "points": 1.0,
+        "rank": 7,
+        "tiebreaks": [
+          0.5,
+          1.5,
+          0.5,
+          2.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 10,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 1.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 10,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "kind": "cut",
+                "opponent": 7,
+                "round": 2,
+                "value": 1.0
+              }
+            ],
+            "total": 0.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 10,
+                "round": 1,
+                "value": 0.5
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.5
+          }
+        }
+      },
+      {
+        "category": "B",
+        "player": 8,
+        "points": 0.5,
+        "rank": 8,
+        "tiebreaks": [
+          2.0,
+          3.5,
+          0.75,
+          1.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 3,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 9,
+                "round": 2,
+                "value": 2.0
+              }
+            ],
+            "total": 3.5
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 3,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 9,
+                "round": 2,
+                "value": 2.0
+              }
+            ],
+            "total": 2.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 3,
+                "round": 1,
+                "value": 0.75
+              },
+              {
+                "opponent": 9,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.75
+          }
+        }
+      },
+      {
+        "category": "B",
+        "player": 6,
+        "points": 0.0,
+        "rank": 9,
+        "tiebreaks": [
+          1.5,
+          3.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 3.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "kind": "cut",
+                "opponent": 1,
+                "round": 1,
+                "value": 1.5
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 1.5
+              }
+            ],
+            "total": 1.5
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "category": "B",
+        "player": 10,
+        "points": 0.0,
+        "rank": 10,
+        "tiebreaks": [
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "working": {
+          "BH": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 1.0
+          },
+          "BHC1": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "kind": "cut",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 1.0
+          },
+          "SB": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "kind": "virtual",
+                "round": 2,
+                "value": 0.0
+              }
+            ],
+            "total": 0.0
+          }
+        }
+      }
+    ],
+    "tiebreaks": [
+      {
+        "code": "BHC1",
+        "label": "Buchholz Cut-1"
+      },
+      {
+        "code": "BH",
+        "label": "Buchholz"
+      },
+      {
+        "code": "SB",
+        "label": "Sonneborn-Berger"
+      },
+      {
+        "code": "PS",
+        "label": "Progressive score"
+      }
+    ],
+    "tiebreaks_withheld": false
+  },
+  "tournament": {
+    "arbiter": "Jorian Burssens",
+    "categories": [
+      "A",
+      "B"
+    ],
+    "city": "Ghent",
+    "deputy": null,
+    "display": {
+      "arbiter": true,
+      "byes": true,
+      "category": true,
+      "city": true,
+      "club": true,
+      "dates": true,
+      "deputy": true,
+      "federation": true,
+      "fide_badge": true,
+      "flags": true,
+      "pairing_scores": true,
+      "pairings": true,
+      "player_cards": true,
+      "rating": true,
+      "rounds_played": false,
+      "standings": true,
+      "tiebreak_working": true,
+      "tiebreaks": true,
+      "time_control": true,
+      "title": true
+    },
+    "end_date": "2026-03-05",
+    "federation": "BEL",
+    "fide_rated": true,
+    "group": {
+      "id": "5c1f0e9a7b3d2c4e6f",
+      "label": "U20",
+      "name": "Gent Spring Festival 2026",
+      "position": 2,
+      "siblings": [
+        {
+          "label": "Open",
+          "name": "Gent Spring Open 2026",
+          "slug": "gent-spring-open-2026"
+        }
+      ]
+    },
+    "hall": {
+      "hold_new_round": true,
+      "names": true,
+      "page_seconds": 15,
+      "pairings": true,
+      "results": true,
+      "standings": true,
+      "standings_top": 10
+    },
+    "listed": true,
+    "match_format": false,
+    "name": "Gent Spring U20 2026",
+    "registration": {
+      "list_public": false,
+      "taken": 10
+    },
+    "registration_open": true,
+    "rounds_count": 5,
+    "scoring": {
+      "bye": 1.0,
+      "draw": 0.5,
+      "forfeit_loss": 0.0,
+      "forfeit_win": 1.0,
+      "loss": 0.0,
+      "presence": null,
+      "win": 1.0
+    },
+    "slug": "gent-spring-u20-2026",
+    "start_date": "2026-03-01",
+    "system": "swiss",
+    "tempo": "standard",
+    "time_control": null
+  },
+  "version": 1
+}

@@ -323,6 +323,54 @@ counts until it is played, `{ "white": "draw", "black": "draw" }`, each
 otherwise for the player who asked to postpone. The points it is worth are
 already in `boards[].points`.
 
+**`tournament.group`** (OpenPairings' tournament groups, added 2026-10-10,
+additive) - the event this tournament is one section of, when the arbiter
+grouped it with others AND at least one of those is published too:
+
+```json
+"group": {
+  "id": "5c1f0e9a7b3d2c4e6f",
+  "name": "Gent Spring Festival 2026",
+  "label": "U20",
+  "position": 2,
+  "siblings": [
+    {"slug": "gent-spring-open-2026", "label": "Open", "name": "Gent Spring Open 2026"}
+  ]
+}
+```
+
+`id` is a random id the arbiter's app minted for the group (6-64 characters
+of `A-Z a-z 0-9 _ -`); it is the event's address here, `/e/<id>`, and says
+nothing about that app's own rows. `name` is the event's name. `label` is
+this tournament's short name in the event ("Open", "U20"); `position` its
+place, from 1, among itself and `siblings`. `siblings` are the OTHER
+sections, in the event's order, each by its public `slug`, `label` and
+`name`. Contract fixture: `test/fixtures/snapshot_swiss_grouped.json`.
+
+Absent means the tournament is in no event, which is every snapshot before
+this date - and every grouped tournament whose siblings are not published:
+the arbiter's app names only siblings that are on this server, and sends no
+block at all when there are none. A block that is not this shape is read as
+absent, whole.
+
+**What this server does with it, and what it does not believe.** The block
+becomes a tab strip at the top of the tournament's pages (each tab opens the
+same page of the sibling when it has one - standings to standings, round 3
+to round 3 - and its overview when not), an event page at `/e/<id>` listing
+the sections as cards, and one entry under the event's name on the front
+page. But a snapshot is a claim by whoever published it, so a sibling is
+shown only when this server's own facts agree: it is public here (published,
+not hidden), **its own** newest snapshot carries the same `id`, and it has
+the same publisher (the same installation, or both published with the
+operator token). A sibling that fails any of those is not shown anywhere -
+not greyed out, not counted. A section that is not `listed` is never linked
+from one that is. The event page belongs to the publisher that claimed the
+`id` first; it answers 404 unless at least two sections can be shown. See
+`OpenResults.TournamentGroups` and `OpenResultsWeb.EventGroup`.
+
+The hall display, the projector and the live-board pages are full-screen
+views and carry no strip.
+
 **`tournament.hall`** - the arbiter's settings for the hall display
 (`/t/<slug>/hall`, see `docs/public-extras.md`). Added 2026-09-30. **Absent
 means the defaults**, and so does any key that is absent, out of range or of
@@ -444,6 +492,18 @@ nothing. Whether the arbiter shows the column on their OWN screen is a preferenc
 their browser and has no bearing on this, in either direction. Withheld means
 absent, so a tournament that turns it off looks, from here, exactly like one
 that never had it.
+
+**`tournament.display.flags`** (OpenPairings' "Federation flags" tick,
+added 2026-10-10, additive) - `true` asks for a small flag beside each
+player's federation code. **Absent means off**, the one display key read
+that way here: every other key hides something the arbiter already
+publishes, this one adds a picture, and a snapshot from an app that has
+never heard of flags has not asked for any. Anything but `true` is off.
+Also off wherever `display.federation` is `false` - no code, no flag. The
+flag is chosen from the player's `federation` (FIDE's three-letter code) by
+a table this site keeps (`OpenResultsWeb.Flags`); a code that is not in it -
+`FID`, a federation that no longer exists, a typo - is printed without one.
+OpenPairings sends `true` unless the arbiter unticks it.
 
 **`standings.manual_order`** - whether the arbiter set `rows[].rank` by hand
 instead of computing it from the tiebreaks. Added 2026-08-29. Absent means

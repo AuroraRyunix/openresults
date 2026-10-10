@@ -20,6 +20,35 @@ defmodule OpenResultsWeb.TournamentHTML do
   embed_templates "tournament_html/*"
 
   @doc """
+  The tabs of an event's tournaments, at the top of each one's pages - see
+  `OpenResultsWeb.EventGroup.strip/3`. The current tournament is text, not a
+  link to the page already open.
+  """
+  attr :event, :map, required: true
+
+  def event_tabs(assigns) do
+    ~H"""
+    <nav
+      id="event-tabs"
+      class="event-tabs"
+      aria-label={gettext("Tournaments of %{event}", event: @event.name)}
+    >
+      <a id="event-link" class="event-name" href={~p"/e/#{@event.id}"}>{@event.name}</a>
+      <ul>
+        <li :for={tab <- @event.tabs}>
+          <span :if={tab.current?} class="event-tab current" aria-current="true" title={tab.name}>
+            {tab.label}
+          </span>
+          <a :if={not tab.current?} class="event-tab" href={tab.href} title={tab.name}>
+            {tab.label}
+          </a>
+        </li>
+      </ul>
+    </nav>
+    """
+  end
+
+  @doc """
   The tournament's name, its details, and the round strip.
 
   The strip lists every round the tournament has and not only the published
@@ -59,9 +88,16 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:info, Tournament.info(payload))
       |> assign(:slots, slots)
       |> assign(:show, display_rules(payload))
+      # Read here rather than handed in by eleven templates: the strip is
+      # part of the masthead, and which page this is (`current`) is known
+      # only where the masthead is drawn. It reads other tournaments, which
+      # a component otherwise never does - `Revalidate`'s epoch is what keeps
+      # the cached page honest about that.
+      |> assign(:event, OpenResultsWeb.EventGroup.strip(payload, assigns.slug, assigns.current))
 
     ~H"""
     <header class="masthead">
+      <.event_tabs :if={@event} event={@event} />
       <%!-- Read by the root layout's refresher: while any round's results
             are coming in it polls twice as often. Derived from the snapshot
             alone, so the page cache keyed by snapshot stays right. --%>
@@ -1338,7 +1374,9 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <td :if={@show.rating} class="num">{dash(player["rating"])}</td>
 
-            <td :if={@show.federation}>{dash(player["federation"])}</td>
+            <td :if={@show.federation}>
+              <Flags.fed code={player["federation"]} on={@show.flags} />
+            </td>
 
             <td :if={@show.club}>{dash(player["club"])}</td>
           </tr>
@@ -2903,7 +2941,9 @@ defmodule OpenResultsWeb.TournamentHTML do
 
                 <td class="num">{entry.opponent_no}</td>
 
-                <td :if={@show.federation}>{dash(entry.opponent && entry.opponent["federation"])}</td>
+                <td :if={@show.federation}>
+                  <Flags.fed code={entry.opponent && entry.opponent["federation"]} on={@show.flags} />
+                </td>
 
                 <td :if={@show.title}>{dash(entry.opponent && entry.opponent["title"])}</td>
 
@@ -2989,6 +3029,8 @@ defmodule OpenResultsWeb.TournamentHTML do
          city dates arbiter deputy time_control fide_badge tiebreaks pairing_scores),
       &{String.to_atom(&1), Tournament.show?(payload, &1)}
     )
+    # Not a `show?/2` key: absent means off - see `Tournament.flags?/1`.
+    |> Map.put(:flags, Tournament.flags?(payload))
   end
 
   @doc """

@@ -34,10 +34,25 @@ import topbar from "../vendor/topbar"
 // against, and the socket is declared without session connect-info for
 // exactly that reason (see `OpenResultsWeb.Endpoint`). A page that does carry
 // the meta tag still sends it.
+// The piece set a viewer picked on a live-board page (`openresults:pieces`),
+// sent with the connection so the page draws it from the first patch on. The
+// server only accepts names of sets it ships; anything else is ignored.
+function storedPieces() {
+  try {
+    const set = localStorage.getItem("openresults:pieces")
+    return /^[a-z]{1,20}$/.test(set || "") ? {pieces: set} : {}
+  } catch (_) {
+    return {}
+  }
+}
+
 const csrfMeta = document.querySelector("meta[name='csrf-token']")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: csrfMeta ? {_csrf_token: csrfMeta.getAttribute("content")} : {},
+  params: {
+    ...(csrfMeta ? {_csrf_token: csrfMeta.getAttribute("content")} : {}),
+    ...storedPieces(),
+  },
   hooks: {...colocatedHooks},
 })
 

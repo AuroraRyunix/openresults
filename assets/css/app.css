@@ -341,6 +341,156 @@ a.chip:hover {
   font-weight: 600;
 }
 
+/* ---- an event of several tournaments ----
+   The tab strip at the top of each tournament's pages
+   (`TournamentHTML.event_tabs/1`): the event's name, then its tournaments
+   by label, the open one marked. It wraps rather than scrolls, so a phone
+   shows every section without a sideways swipe nobody knows to make. */
+.event-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.875rem;
+}
+
+.event-tabs .event-name {
+  color: var(--quiet);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.event-tabs .event-name:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.event-tabs ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-tab {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.35rem;
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+a.event-tab:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.event-tab.current {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+/* The event's own page: a card per tournament. */
+.event-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.9rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.event-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  transition: border-color 0.12s ease;
+}
+
+.event-card:hover {
+  border-color: var(--accent);
+}
+
+.event-card-link {
+  display: block;
+  text-decoration: none;
+}
+
+.event-card-label {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.event-card-name {
+  display: block;
+  color: var(--quiet);
+  font-size: 0.875rem;
+}
+
+.event-card-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+  font-size: 0.8125rem;
+  color: var(--quiet);
+}
+
+.event-badge {
+  padding: 0 0.45rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.25rem;
+  color: var(--ink);
+}
+
+.event-badge-live {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.event-card-facts {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.event-card-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.event-card-facts dt {
+  color: var(--quiet);
+}
+
+.event-card-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* An event on the front page: its sections on the line under its name. */
+.tournaments .event-sections a {
+  margin-right: 0.75rem;
+  font-weight: 400;
+  text-decoration: underline;
+}
+
 /* A round the arbiter has not published. Shown, not hidden: a strip that
    listed only the published rounds would make a withheld round look like a
    tournament one round shorter. */
@@ -3921,13 +4071,6 @@ a.xt-opp:hover {
    site's palette and nothing else.
    --------------------------------------------------------------------------- */
 
-.lb-sprite {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
 .lb-board {
   --lb-light: #ecdfc3;
   --lb-dark: #a8855c;
@@ -3950,32 +4093,68 @@ a.xt-opp:hover {
   fill: var(--lb-last);
 }
 
-.lb-pc-w {
-  --lb-eye: #1d1b18;
-  fill: #fbfaf5;
-  stroke: #1d1b18;
-  stroke-width: 1.5;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+/* The pieces carry their own colours (the sets' own art, see
+   `OpenResultsWeb.Pieces`); nothing here restyles them. */
+.lb-pc {
+  pointer-events: none;
 }
 
-.lb-pc-b {
-  --lb-eye: #f4f1e8;
-  fill: #2b2825;
-  stroke: #f4f1e8;
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+/* A knight in the piece picker, on a light square so it reads in every theme
+   the way it does on the board. */
+.pieces-picker-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+  border-radius: 3px;
+  background: #ecdfc3;
 }
 
-.lb-eye {
-  fill: var(--lb-eye);
-  stroke: none;
-}
-
+/* Coordinates inside the edge squares, each in the colour of the square it
+   is not on - the way a printed diagram does it, and the board stays square. */
 .lb-coords text {
-  font-size: 0.32px;
-  fill: var(--quiet);
+  font-size: 0.22px;
+  font-weight: 700;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.lb-coords .on-dark {
+  fill: var(--lb-light);
+}
+
+.lb-coords .on-light {
+  fill: var(--lb-dark);
+}
+
+/* A board nobody played on: the squares, faded, and no pieces. */
+.lb-board-muted {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+
+.lb-board-frame {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 8px 24px -12px rgba(0, 0, 0, 0.35);
+}
+
+.lb-board-caption {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+}
+
+.lb-board-caption span {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .lb-page .lb-crumbs {
@@ -3987,38 +4166,151 @@ a.xt-opp:hover {
   margin-bottom: 0.4rem;
 }
 
+/* The broadcast takes the screen: three columns want the width a table
+   page does not. */
+.lb-page.lb-page-wide {
+  max-width: 120rem;
+}
+
+/* ---- the heading both live pages share ---- */
+
+.lb-bc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.lb-bc-heading {
+  min-width: 0;
+}
+
+.lb-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.2rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lb-page h1.lb-bc-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 1rem + 1vw, 1.9rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.lb-bc-title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.lb-bc-title a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+}
+
+.lb-switch {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--quiet);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.lb-switch-opt {
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.lb-switch-opt:hover {
+  text-decoration: underline;
+}
+
+.lb-switch-opt.is-current {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* The live dot: the one thing on the page that moves on its own. */
+.lb-live-dot {
+  display: inline-block;
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: lb-beat 1.6s ease-in-out infinite;
+}
+
+@keyframes lb-beat {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
 /* ---- the round: a grid of tiles ---- */
+
+.lb-grid-details {
+  margin: 0 0 0.75rem;
+}
+
+.lb-grid-rounds {
+  margin-bottom: 0.25rem;
+}
 
 .lb-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   gap: 1rem;
   margin-top: 1.25rem;
 }
 
 .lb-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.45rem;
   min-width: 0;
-  padding: 0.6rem 0.7rem 0.7rem;
+  padding: 0.75rem 0.8rem 0.8rem;
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--panel);
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lb-tile:hover,
 .lb-tile:focus-within {
   border-color: var(--accent);
+  box-shadow: 0 10px 28px -18px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
 }
 
 .lb-tile.lb-status-live {
-  border-left: 3px solid var(--accent);
+  border-color: var(--accent);
+  box-shadow: inset 0 3px 0 var(--accent);
 }
 
 .lb-tile.lb-status-waiting .lb-tile-board-link {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .lb-tile-head,
@@ -4031,36 +4323,74 @@ a.xt-opp:hover {
   font-size: 0.8125rem;
 }
 
+.lb-tile-board {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .lb-tile-foot {
-  min-height: 1.25rem;
+  min-height: 1.5rem;
 }
 
 .lb-tile-board-link {
   display: block;
-  border-radius: 4px;
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .lb-badge {
-  padding: 0.05rem 0.5rem;
-  border: 1px solid var(--rule);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--quiet);
   border-radius: 999px;
+  color: var(--quiet);
   font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-.lb-badge.lb-status-live,
-.lb-tile.lb-status-live .lb-badge {
+.lb-badge.lb-status-live {
   border-color: var(--accent);
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.lb-badge.lb-status-finished {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.lb-badge.lb-status-forfeit,
+.lb-badge.lb-status-double_forfeit {
+  border-style: dashed;
+  color: var(--ink);
 }
 
 .lb-result {
   color: var(--ink);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lb-ff {
+  display: inline-block;
+  margin-left: 0.3em;
+  padding: 0 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.35;
+  text-decoration: none;
+  vertical-align: 0.12em;
 }
 
 .lb-provisional {
@@ -4068,7 +4398,12 @@ a.xt-opp:hover {
   font-weight: 400;
 }
 
-.lb-last-move {
+.lb-last-move,
+.lb-unplayed-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
@@ -4099,11 +4434,13 @@ a.xt-opp:hover {
 
 .lb-title {
   margin-right: 0.3rem;
-  font-weight: 600;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .lb-rating {
   margin-left: 0.35rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .lb-dot {
@@ -4122,60 +4459,550 @@ a.xt-opp:hover {
   background: #111111;
 }
 
+/* The clock: a box of digits, as on the table. */
 .lb-clock {
   flex: none;
-  min-width: 3.7rem;
-  padding: 0.1rem 0.45rem;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
+  min-width: 3.9rem;
+  padding: 0.12rem 0.5rem;
+  border: 1px solid var(--quiet);
+  border-radius: 5px;
   background: var(--bg);
   color: var(--ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.9375rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   text-align: center;
 }
 
 .lb-clock.is-running {
   border-color: var(--accent);
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
   font-weight: 700;
 }
 
 .lb-clock.is-low {
   text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 
-/* ---- one game ---- */
+/* ---- the broadcast: list, board, moves ---- */
 
-.lb-game-layout {
+.lb-bc {
   display: grid;
-  grid-template-columns: minmax(0, 38rem) minmax(15rem, 1fr);
+  grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr) minmax(17rem, 24rem);
+  grid-template-areas: "rail stage side";
   gap: 1.5rem;
   align-items: start;
-  margin-top: 1rem;
 }
 
-.lb-board-column {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+.lb-bc > * {
   min-width: 0;
 }
 
-.lb-board-large {
-  margin: 0.15rem 0;
+.lb-rail {
+  grid-area: rail;
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.lb-game-details .lb-badge {
-  margin-right: 0.25rem;
+.lb-stage {
+  grid-area: stage;
+}
+
+.lb-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.lb-panel {
+  padding: 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.lb-panel-label {
+  margin: 0 0 0.5rem;
+  color: var(--quiet);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lb-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lb-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--quiet);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.lb-pill:hover {
+  border-color: var(--accent);
+}
+
+.lb-pill.is-current {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* The toggle exists for the narrow layouts only; on a wide screen the list
+   is always out. */
+.lb-drawer-toggle {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--quiet);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lb-chevron {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
+.lb-drawer-toggle[aria-expanded="true"] .lb-chevron {
+  transform: rotate(-135deg);
+}
+
+.lb-rail-panel {
+  padding: 0.6rem;
+}
+
+.lb-search {
+  margin: 0 0 0.5rem;
+}
+
+.lb-search input {
+  width: 100%;
+  min-height: 2.6rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--quiet);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.lb-search input::placeholder {
+  color: var(--quiet);
+  opacity: 1;
+}
+
+.lb-pairings {
+  max-height: calc(100vh - 15rem);
+  min-height: 10rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.lb-pairings-empty {
+  display: none;
+  padding: 0.75rem;
+  color: var(--quiet);
+}
+
+.lb-pairings-empty:only-child {
+  display: block;
+}
+
+.lb-pairing-match {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--rule);
+}
+
+.lb-pairing-match:nth-child(2) {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.lb-match-head {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.45rem 0.5rem;
+  font-weight: 700;
+}
+
+.lb-match-no {
+  color: var(--quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-match-team {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-match-team-b {
+  text-align: right;
+}
+
+.lb-match-score {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lb-row:hover {
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.lb-row.is-current {
+  background: var(--bg);
+  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--accent);
+}
+
+.lb-row-bd {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--quiet);
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-row-bd .lb-live-dot {
+  color: var(--accent);
+}
+
+.lb-row-players {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.lb-row-player {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.lb-row-player .lb-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+}
+
+.lb-row-player .lb-title,
+.lb-row-player .lb-rating {
+  margin: 0;
+}
+
+.lb-row-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.lb-row-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  min-width: 1.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-row-score .lb-ff {
+  margin: 0;
+  font-size: 0.625rem;
+}
+
+.lb-row-live {
+  color: var(--accent);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lb-row-none {
+  color: var(--quiet);
+  font-weight: 400;
+}
+
+/* The featured game. The board is the hero: as large as the screen's height
+   allows, never wider than its column. */
+
+.lb-stage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.lb-page h2.lb-stage-title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.lb-stage-result {
+  font-size: 1.25rem;
+}
+
+.lb-stage-spacer {
+  flex: 1 1 auto;
+}
+
+.lb-stage-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: -0.25rem 0 0.75rem;
+  color: var(--quiet);
+  font-size: 0.9375rem;
+}
+
+.lb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--quiet);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.lb-icon-btn:hover {
+  border-color: var(--accent);
+}
+
+.lb-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The featured game fills the height the screen has left below its own top
+   edge - measured by the page's hook into --lb-stage-top, so it is right on
+   any screen, at any zoom, whatever wraps above it. Inside, the board takes
+   whatever the heading, the two player bars and the step buttons leave:
+   the column is a size container, and the board is the smaller of its width
+   and its height after the bars. No constant in here knows a screen size. */
+.lb-game {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--lb-stage-top, 12rem) - 1rem);
+  height: calc(100dvh - var(--lb-stage-top, 12rem) - 1rem);
+  min-height: 26rem;
+}
+
+.lb-board-column {
+  --lb-bar-h: 3.8rem;
+  --lb-gap: 0.5rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lb-gap);
+  width: 100%;
+}
+
+.lb-board-column > * {
+  flex: none;
+  width: min(100cqw, 100cqh - 2 * var(--lb-bar-h) - 2 * var(--lb-gap));
+}
+
+.lb-board-column > .lb-bar {
+  height: var(--lb-bar-h);
+  box-sizing: border-box;
+}
+
+.lb-bar {
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--panel);
+  transition: border-color 0.2s ease;
+}
+
+.lb-bar.is-to-move {
+  border-color: var(--accent);
+}
+
+.lb-bar .lb-dot {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.lb-bar-who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lb-bar-name,
+.lb-bar-meta {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-bar-name {
+  font-size: clamp(1.05rem, 0.8rem + 0.8vw, 1.5rem);
+  line-height: 1.2;
+}
+
+.lb-bar-name .lb-person {
+  font-weight: 700;
+}
+
+.lb-bar-name .lb-title {
+  font-size: 0.75em;
+}
+
+.lb-bar-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.1rem;
+  color: var(--quiet);
+  font-size: 0.875rem;
+}
+
+.lb-bar-meta .lb-rating {
+  margin: 0;
+  font-size: inherit;
+}
+
+/* A federation's flag (`OpenResultsWeb.Flags`): third-party art loaded as
+   an image, sized in em so it follows whatever text it sits in - a table
+   cell, a hall screen, a projector tile. The hairline is for the flags that
+   are mostly white, which would otherwise have no edge on a white page. */
+.flag {
+  display: inline-block;
+  width: 1.3333em;
+  height: 1em;
+  margin-inline-end: 0.4em;
+  vertical-align: -0.14em;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent);
+  object-fit: cover;
+}
+
+.fed {
+  white-space: nowrap;
+}
+
+.lb-fed {
+  padding: 0 0.3rem;
+  border: 1px solid var(--quiet);
+  border-radius: 3px;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.lb-clock.lb-clock-big {
+  min-width: 6.5rem;
+  padding: 0.3rem 0.75rem;
+  border-width: 2px;
+  border-radius: 8px;
+  font-size: clamp(1.25rem, 0.9rem + 1vw, 1.9rem);
+  line-height: 1.15;
+}
+
+.lb-bar-score {
+  flex: none;
+  min-width: 1.6ch;
+  font-size: clamp(1.5rem, 1rem + 1.4vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-board-large {
+  margin: 0;
 }
 
 .lb-controls {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.4rem;
-  margin-top: 0.4rem;
+  margin-top: 0.75rem;
 }
 
 .lb-btn {
@@ -4186,7 +5013,7 @@ a.xt-opp:hover {
   min-height: 2.75rem;
   padding: 0.3rem 0.8rem;
   border: 1px solid var(--quiet);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--panel);
   color: var(--ink);
   font: inherit;
@@ -4194,11 +5021,12 @@ a.xt-opp:hover {
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .lb-btn-text {
   font-size: 0.9375rem;
+  font-weight: 600;
 }
 
 .lb-btn:hover:not(:disabled) {
@@ -4214,85 +5042,328 @@ a.xt-opp:hover {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--bg);
-  font-weight: 600;
 }
 
-.lb-moves-title {
-  margin-top: 0;
-}
+/* The side: the event, then the game's moves and facts. */
 
-.lb-moves {
-  max-height: 28rem;
+.lb-event-name {
   margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-  background: var(--panel);
-  list-style: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
-.lb-move-row {
-  display: grid;
-  grid-template-columns: 2.75rem 1fr 1fr;
-  align-items: center;
+.lb-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.9rem;
+  margin: 0.25rem 0 0;
+  color: var(--quiet);
+  font-size: 0.875rem;
+}
+
+.lb-moves-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.lb-tabs {
+  display: flex;
   border-bottom: 1px solid var(--rule);
 }
 
-.lb-move-row:last-child {
-  border-bottom: 0;
+.lb-tab {
+  flex: 1 1 0;
+  min-height: 2.9rem;
+  padding: 0.6rem 0.9rem;
+  border: 0;
+  background: none;
+  color: var(--quiet);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.lb-move-number {
+.lb-tab:hover {
+  color: var(--ink);
+}
+
+.lb-tab.is-current {
+  color: var(--ink);
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+.lb-tab:focus-visible {
+  outline-offset: -3px;
+}
+
+.lb-tabpanel[hidden] {
+  display: none;
+}
+
+.lb-quiet-line {
+  margin: 0;
+  padding: 1rem;
+  color: var(--quiet);
+}
+
+.lb-moves-scroll {
+  /* Ends level with the board column: the event panel, the tabs and the two
+     buttons below take the rest of the screen's height. */
+  max-height: max(16rem, calc(100vh - 29rem));
+  max-height: max(16rem, calc(100dvh - 29rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+table.lb-moves {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1.125rem;
+}
+
+.lb-moves th,
+.lb-moves td {
+  padding: 0;
+  border: 0;
+  text-align: left;
+}
+
+.lb-moves thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--quiet);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lb-moves tbody tr:nth-child(even) {
+  background: var(--bg);
+}
+
+.lb-moves td {
+  width: 44%;
+  padding: 0.1rem 0.15rem;
+}
+
+.lb-moves .lb-move-number,
+.lb-moves thead .lb-move-number {
+  width: 3rem;
   padding-right: 0.5rem;
   color: var(--quiet);
+  font-size: 0.9375rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
 .lb-move {
-  min-height: 2.25rem;
-  padding: 0.3rem 0.6rem;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.25rem 0.55rem;
   border: 0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: none;
   color: var(--ink);
   font: inherit;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
 
 button.lb-move:hover {
-  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--quiet);
 }
 
 .lb-move.is-current {
   background: var(--accent);
   color: var(--bg);
+}
+
+.lb-fig {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The piece in a move: the set's white piece whatever the side, because a
+   black piece on a dark panel is a black blot - the column already says
+   whose move it was. Sized to the type. */
+.lb-fig-pc {
+  width: 1.3em;
+  height: 1.3em;
+  margin: -0.15em 0.02em -0.15em -0.15em;
+}
+
+.lb-moves tfoot td.lb-moves-result {
+  padding: 0.6rem;
+  border-top: 1px solid var(--rule);
+  font-weight: 800;
+  text-align: center;
+}
+
+.lb-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 1rem;
+}
+
+.lb-facts dt {
+  color: var(--quiet);
   font-weight: 600;
+}
+
+.lb-facts dd {
+  margin: 0;
 }
 
 .lb-game-links {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin: 1rem 0 0;
+  margin: 0;
+  padding: 0.75rem;
+  border-top: 1px solid var(--rule);
 }
 
-@media (max-width: 52rem) {
-  .lb-game-layout {
-    grid-template-columns: minmax(0, 1fr);
+/* Full screen: the board and its players, on the page's own ground. */
+.lb-stage:fullscreen {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100dvh;
+  padding: 2vh 3vw;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.lb-stage:fullscreen .lb-game {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+/* A laptop: the list folds into a button above the board, the moves stay
+   beside it. */
+@media (max-width: 80rem) {
+  .lb-bc {
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+    grid-template-areas:
+      "rail rail"
+      "stage side";
   }
 
-  .lb-moves {
-    max-height: 16rem;
+  .lb-rail {
+    position: static;
+  }
+
+  .lb-rounds-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.9rem;
+    padding: 0.6rem 0.85rem;
+  }
+
+  .lb-rounds-panel .lb-panel-label {
+    margin: 0;
+  }
+
+  .lb-drawer-toggle {
+    display: flex;
+  }
+
+  .lb-rail-panel {
+    display: none;
+  }
+
+  .lb-rail-panel.is-open {
+    display: block;
+  }
+
+  .lb-pairings {
+    max-height: 24rem;
+  }
+}
+
+/* A phone: one column - the rounds, the list behind its button, the board
+   the full width, the moves under it. */
+@media (max-width: 52rem) {
+  .lb-bc {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "rail"
+      "stage"
+      "side";
+    gap: 1rem;
+  }
+
+  .lb-game {
+    height: auto;
+    min-height: 0;
+  }
+
+  .lb-board-column {
+    container-type: inline-size;
+    width: 100%;
+  }
+
+  .lb-board-column > * {
+    width: 100cqw;
+  }
+
+  .lb-bar {
+    gap: 0.5rem;
+    padding: 0.45rem 0.55rem;
+  }
+
+  .lb-clock.lb-clock-big {
+    min-width: 5rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .lb-moves-scroll {
+    max-height: 22rem;
+  }
+
+  .lb-switch-opt {
+    padding: 0.4rem 0.75rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lb-tile,
-  .lb-btn {
+  .lb-btn,
+  .lb-row,
+  .lb-pill,
+  .lb-tab,
+  .lb-bar,
+  .lb-switch-opt,
+  .lb-chevron,
+  .lb-icon-btn {
     transition: none;
+  }
+
+  .lb-tile:hover,
+  .lb-tile:focus-within {
+    transform: none;
+  }
+
+  .lb-live-dot {
+    animation: none;
   }
 }
 
@@ -4358,6 +5429,21 @@ button.lb-move:hover {
   font-size: 1.15vw;
 }
 
+.lb-tile-hall .lb-badge {
+  gap: 0.4vw;
+  padding: 0.15vw 0.7vw;
+  font-size: 0.95vw;
+}
+
+.lb-tile-hall .lb-live-dot {
+  width: 0.6vw;
+  height: 0.6vw;
+}
+
+.lb-tile-hall .lb-tile-board {
+  font-size: 1.3vw;
+}
+
 .lb-tile-hall .lb-dot {
   width: 1.1vw;
   height: 1.1vw;
@@ -4367,4 +5453,559 @@ button.lb-move:hover {
   min-width: 5.6vw;
   padding: 0.15vw 0.5vw;
   font-size: 1.8vw;
+}
+
+/* ---------------------------------------------------------------------------
+   The projector: the chosen games of a round, each as large as the window
+   allows (`OpenResultsWeb.ProjectorLive`), and the dialog that chooses them
+   (`OpenResultsWeb.ProjectorPicker`).
+
+   The window is a column: a quiet heading line, then the stage. The stage is
+   a grid whose column and row counts the page's hook works out from the
+   window and the number of tiles (--proj-cols/--proj-rows on the root
+   element; the server's 16:9 guess until then). Every cell is a size
+   container, and the tile inside it is a board of side --b - the smaller of
+   the cell's width and its height over the tile's proportions - with every
+   other length and every font a fraction of --b. So the type grows with the
+   board and no rule here knows a screen size.
+
+   --proj-cap, --proj-bar and --proj-gap ARE the tile's proportions: the hook
+   reads them from here, and `ProjectorLive`'s @tile_ratio repeats their sum
+   for the server's first guess.
+   --------------------------------------------------------------------------- */
+
+.lb-head-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lb-projector-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--quiet);
+  background: var(--panel);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lb-projector-btn:hover {
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
+.lb-projector-btn .lb-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.lb-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.lb-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(34rem, 100%);
+  max-height: calc(100dvh - 2rem);
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5);
+}
+
+.lb-picker form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lb-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.lb-page .lb-picker-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.lb-picker-lead {
+  margin: 0;
+  color: var(--quiet);
+  font-size: 0.9rem;
+}
+
+.lb-picker-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-picker-quick > span {
+  flex: 1 1 auto;
+  color: var(--quiet);
+}
+
+.lb-picker-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  list-style: none;
+}
+
+.lb-picker-list li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.lb-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+.lb-picker-row:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.lb-picker-row input,
+.lb-picker-auto input {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--accent);
+}
+
+.lb-picker-bd {
+  flex: none;
+  min-width: 2.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-picker-names {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0 0.4rem;
+  min-width: 0;
+}
+
+.lb-picker-vs {
+  color: var(--quiet);
+}
+
+.lb-picker-auto {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.lb-picker-auto input {
+  margin-top: 0.2rem;
+}
+
+.lb-picker-auto small {
+  display: block;
+  color: var(--quiet);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.lb-picker-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lb-btn.lb-btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* ---- the projector itself ---- */
+
+.proj {
+  --proj-cap: 0.06;
+  --proj-bar: 0.12;
+  --proj-gap: 0.015;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.3rem, 0.8vmin, 0.9rem);
+  padding: clamp(0.4rem, 1vmin, 1.1rem);
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.proj-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  min-width: 0;
+  color: var(--quiet);
+  font-size: clamp(0.8rem, 0.55rem + 0.6vmin, 1.15rem);
+  line-height: 1.2;
+}
+
+.proj-head > * {
+  white-space: nowrap;
+}
+
+.proj h1.proj-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.proj-round {
+  font-weight: 600;
+}
+
+.proj-spacer {
+  flex: 1 1 auto;
+}
+
+.proj-fs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25em;
+  height: 2.25em;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.proj-fs:hover,
+.proj-fs:focus-visible {
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+.proj-fs[hidden],
+:root:fullscreen .proj-fs {
+  display: none;
+}
+
+.proj-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+
+.proj-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--proj-cols, var(--proj-cols-guess, 1)), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--proj-rows, var(--proj-rows-guess, 1)), minmax(0, 1fr));
+  gap: clamp(0.4rem, 1.2vmin, 1.5rem);
+}
+
+/* Too many boards for the window to show at a readable size: a phone. The
+   hook picks the columns and the row height, and the stage scrolls. */
+:root[data-proj-mode="scroll"] .proj-stage {
+  overflow-y: auto;
+}
+
+:root[data-proj-mode="scroll"] .proj-grid {
+  height: auto;
+  grid-template-rows: none;
+  grid-auto-rows: var(--proj-row-h, 22rem);
+}
+
+.proj.is-ended .proj-grid {
+  display: none;
+}
+
+.proj-cell {
+  container-type: size;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.proj-tile {
+  --b: min(100cqw, 100cqh / (1 + var(--proj-cap) + 2 * var(--proj-bar) + 3 * var(--proj-gap)));
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--b) * var(--proj-gap));
+  width: var(--b);
+  animation: proj-in 0.35s ease-out both;
+}
+
+@keyframes proj-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.proj-cap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  height: calc(var(--b) * var(--proj-cap));
+  margin: 0;
+  color: var(--quiet);
+  font-size: calc(var(--b) * 0.036);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.proj-bd {
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.proj-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 600;
+}
+
+.proj-state .lb-live-dot {
+  width: 0.6em;
+  height: 0.6em;
+}
+
+.proj-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  height: calc(var(--b) * var(--proj-bar));
+  padding: 0 0.5em 0 0.55em;
+  border: max(1px, calc(var(--b) * 0.003)) solid var(--rule);
+  border-radius: calc(var(--b) * 0.018);
+  background: var(--panel);
+  font-size: calc(var(--b) * 0.046);
+  line-height: 1.15;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.proj-bar.is-to-move {
+  border-color: var(--accent);
+  box-shadow: inset 0.22em 0 0 var(--accent);
+}
+
+.proj-bar .lb-dot {
+  width: 0.6em;
+  height: 0.6em;
+}
+
+.proj-who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.proj-name,
+.proj-meta {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proj-name .lb-person {
+  font-weight: 700;
+}
+
+.proj-name .lb-title {
+  margin-right: 0.3em;
+  font-size: 0.8em;
+}
+
+.proj-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9em;
+  margin-top: 0.08em;
+  color: var(--ink);
+  font-size: 0.74em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.proj-k {
+  color: var(--quiet);
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.proj-meta .unreported {
+  color: var(--quiet);
+}
+
+.proj-bar .lb-clock.proj-clock {
+  min-width: 4.3ch;
+  padding: 0.12em 0.35em;
+  border-width: max(1px, 0.06em);
+  border-radius: 0.22em;
+  font-size: 1.32em;
+  line-height: 1.1;
+}
+
+.proj-board {
+  position: relative;
+  width: var(--b);
+  height: var(--b);
+  border-radius: calc(var(--b) * 0.008);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 8px 24px -14px rgba(0, 0, 0, 0.4);
+}
+
+/* A result across the board: large, on a band that leaves the final
+   position readable around it. */
+.proj-result {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  pointer-events: none;
+}
+
+.proj-result > span {
+  padding: 0.12em 0.5em;
+  border: max(2px, 0.03em) solid var(--accent);
+  border-radius: 0.18em;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  color: var(--ink);
+  font-size: calc(var(--b) * 0.15);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.55);
+}
+
+.proj-result .lb-result {
+  font-size: inherit;
+}
+
+.proj-result .lb-ff {
+  font-size: 0.4em;
+  vertical-align: middle;
+}
+
+.proj-result-note > span {
+  font-size: calc(var(--b) * 0.055);
+  font-weight: 700;
+  border-color: var(--rule);
+}
+
+/* Leaving: the half minute between a result and the tile's removal. */
+.proj-tile.is-leaving .proj-bar {
+  opacity: 0.85;
+}
+
+.proj-empty {
+  margin: 2rem auto;
+  max-width: 40rem;
+  color: var(--quiet);
+  font-size: clamp(1rem, 0.8rem + 1vmin, 1.6rem);
+  text-align: center;
+}
+
+.proj-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 3vmin, 2.5rem);
+  height: 100%;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.proj h2#proj-end-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 1rem + 2.4vmin, 3.2rem);
+  font-weight: 700;
+}
+
+.proj-end-table {
+  border-collapse: collapse;
+  font-size: clamp(1rem, 0.7rem + 1.6vmin, 2.2rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.proj-end-table th,
+.proj-end-table td {
+  padding: 0.35em 0.7em;
+  border-bottom: 1px solid var(--rule);
+}
+
+.proj-end-bd {
+  color: var(--quiet);
+  text-align: right;
+}
+
+.proj-end-white {
+  text-align: right;
+}
+
+.proj-end-black {
+  text-align: left;
+}
+
+.proj-end-result {
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proj-tile {
+    animation: none;
+  }
+
+  .proj-bar,
+  .proj-fs {
+    transition: none;
+  }
 }

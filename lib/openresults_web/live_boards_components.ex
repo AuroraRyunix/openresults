@@ -8,12 +8,15 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
 
   Server-rendered SVG from a FEN, never from a script: a position is a few
   hundred bytes of markup, the page works while the socket reconnects, and a
-  tile that has not changed costs nothing to keep. The pieces are drawn once
-  per page in `piece_sprite/1` and placed with `<use>`, so a round of sixty
-  boards does not repeat the shapes sixty times.
+  tile that has not changed costs nothing to keep. The pieces are not in the
+  markup at all: each is a `<use>` of a symbol in the chosen set's sprite
+  (`OpenResultsWeb.Pieces`), one cached static file per set, so a round of
+  sixty boards does not repeat the shapes sixty times and the browser fetches
+  them once.
 
-  The pieces are this project's own drawings - plain geometric silhouettes -
-  and carry no third-party licence. See `NOTICE`.
+  The piece art is third-party (Cburnett, Chessnut), shipped as
+  separate static files with their own licences and never compiled into this
+  module. See `NOTICE` and `priv/static/pieces/`.
 
   ## The clocks
 
@@ -27,58 +30,7 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
 
   alias OpenResults.Chess
   alias OpenResultsWeb.LiveBoardsData
-
-  # --- the pieces --------------------------------------------------------------
-
-  @doc """
-  The six shapes in both colours, as `<symbol>`s. Once per page; everything
-  else refers to them by id (`lb-wk`, `lb-bp`...).
-  """
-  def piece_sprite(assigns) do
-    ~H"""
-    <svg class="lb-sprite" width="0" height="0" aria-hidden="true" focusable="false">
-      <defs>
-        <symbol :for={colour <- ["w", "b"]} id={"lb-#{colour}k"} viewBox="0 0 45 45">
-          <path d="M22.5 5.5v7M19 9h7" fill="none" />
-          <path d="M22.5 13c-6.500 0-11.500 4.600-11.500 10.700 0 3.600 1.700 6 4 7.300L14 37h17l-1-6c2.300-1.300 4-3.700 4-7.300C34 17.600 29 13 22.500 13z" />
-          <path d="M11.500 37h22v3.500h-22z" />
-          <path d="M16 26.500h13" fill="none" />
-        </symbol>
-        <symbol :for={colour <- ["w", "b"]} id={"lb-#{colour}q"} viewBox="0 0 45 45">
-          <path d="M9.500 37 7.500 16.500l7.700 8.500L17.500 13l5 11.500L27.500 13l2.300 12 7.700-8.500L35.500 37z" />
-          <path d="M9 37h27v3.500H9z" />
-          <circle cx="7.500" cy="14" r="2.400" />
-          <circle cx="15.500" cy="10" r="2.400" />
-          <circle cx="22.500" cy="8.500" r="2.400" />
-          <circle cx="29.500" cy="10" r="2.400" />
-          <circle cx="37.500" cy="14" r="2.400" />
-        </symbol>
-        <symbol :for={colour <- ["w", "b"]} id={"lb-#{colour}r"} viewBox="0 0 45 45">
-          <path d="M11.500 18.500V10h5v3h4v-3h4v3h4v-3h5v8.500z" />
-          <path d="M14.500 18.500h16V33h-16z" />
-          <path d="M11.500 33h22v5.500h-22z" />
-          <path d="M11.500 38.500h22" fill="none" />
-        </symbol>
-        <symbol :for={colour <- ["w", "b"]} id={"lb-#{colour}b"} viewBox="0 0 45 45">
-          <path d="M22.500 9c-3.200 3-7.500 7.200-7.500 13 0 3 1.500 5 3 6.200-2.100 1.300-4 3.600-4 9.300h17c0-5.700-1.900-8-4-9.300 1.500-1.200 3-3.200 3-6.200 0-5.800-4.300-10-7.500-13z" />
-          <circle cx="22.500" cy="7" r="2.600" />
-          <path d="M22.500 15.500v6M19.500 18.500h6" fill="none" />
-          <path d="M11.500 37.500h22V40h-22z" />
-        </symbol>
-        <symbol :for={colour <- ["w", "b"]} id={"lb-#{colour}n"} viewBox="0 0 45 45">
-          <path d="M11.500 38.500c0-8.500 2.300-13.500 7.800-16.800L14 20.300 9.500 20 9 16.300l5.700-6.700.5-5 4.500 4c10 .3 17 8.300 16 25.900z" />
-          <circle cx="17" cy="14" r="1.200" class="lb-eye" />
-          <path d="M11.500 38.500h24" fill="none" />
-        </symbol>
-        <symbol :for={colour <- ["w", "b"]} id={"lb-#{colour}p"} viewBox="0 0 45 45">
-          <circle cx="22.500" cy="13" r="5" />
-          <path d="M22.500 18.500c-3.300 0-5.700 2.200-5.700 5 0 1.600.9 3 2.300 3.800-3.600 1.400-5.600 4.700-5.600 8.700h18c0-4-2-7.300-5.600-8.700 1.400-.8 2.300-2.200 2.300-3.800 0-2.800-2.400-5-5.700-5z" />
-          <path d="M11.500 36h22v3.500h-22z" />
-        </symbol>
-      </defs>
-    </svg>
-    """
-  end
+  alias OpenResultsWeb.Pieces
 
   # --- the board ---------------------------------------------------------------
 
@@ -90,11 +42,20 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
   attr :label, :string, required: true, doc: "what a screen reader says about the picture"
   attr :class, :string, default: nil
 
+  attr :set, :string,
+    default: "cburnett",
+    doc: "the piece set; one we do not ship means the default"
+
+  attr :empty, :boolean,
+    default: false,
+    doc: "squares and no pieces: a board nobody played on, which is not the starting position"
+
   def board_svg(assigns) do
     pieces =
-      case Chess.parse_fen(assigns.fen) do
-        {:ok, position} -> Chess.pieces(position)
-        {:error, _message} -> []
+      case {assigns.empty, Chess.parse_fen(assigns.fen)} do
+        {true, _fen} -> []
+        {false, {:ok, position}} -> Chess.pieces(position)
+        {false, {:error, _message}} -> []
       end
 
     assigns =
@@ -105,13 +66,14 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
       )
       |> assign(:dark, dark_squares())
       |> assign(:marked, marked(assigns.last, assigns.flip))
-      |> assign(:viewbox, if(assigns.coords, do: "-0.45 -0.15 8.6 8.6", else: "0 0 8 8"))
 
+    # Coordinates sit inside the edge squares, in the colour of the square
+    # they are not on - the board stays square and fills its column.
     ~H"""
     <svg
       id={@id}
-      class={["lb-board", @class]}
-      viewBox={@viewbox}
+      class={["lb-board", @empty && "lb-board-muted", @class]}
+      viewBox="0 0 8 8"
       role="img"
       aria-label={@label}
       preserveAspectRatio="xMidYMid meet"
@@ -120,25 +82,39 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
       <rect :for={{x, y} <- @dark} x={x} y={y} width="1" height="1" class="lb-sq-dark" />
       <rect :for={{x, y} <- @marked} x={x} y={y} width="1" height="1" class="lb-sq-last" />
       <g :if={@coords} class="lb-coords" aria-hidden="true">
-        <text :for={n <- 0..7} x={n + 0.5} y="8.12" text-anchor="middle">
+        <text
+          :for={n <- 0..7}
+          x={n + 0.95}
+          y="7.93"
+          text-anchor="end"
+          class={if(rem(n, 2) == 0, do: "on-dark", else: "on-light")}
+        >
           {file_name(n, @flip)}
         </text>
-        <text :for={n <- 0..7} x="-0.2" y={n + 0.64} text-anchor="middle">
+        <text
+          :for={n <- 0..7}
+          x="0.05"
+          y={n + 0.27}
+          class={if(rem(n, 2) == 1, do: "on-dark", else: "on-light")}
+        >
           {rank_name(n, @flip)}
         </text>
       </g>
       <use
         :for={{{x, y}, piece} <- @pieces}
-        href={"#lb-" <> piece}
+        href={Pieces.href(@set, piece_id(piece))}
         x={x}
         y={y}
         width="1"
         height="1"
-        class={["lb-pc", if(String.starts_with?(piece, "w"), do: "lb-pc-w", else: "lb-pc-b")]}
+        class="lb-pc"
       />
     </svg>
     """
   end
+
+  # `"wk"` as the sprites name it: `"wK"`.
+  defp piece_id(<<colour, kind>>), do: <<colour, String.upcase(<<kind>>)::binary>>
 
   # (file, row) of square index `i` on screen. Row 0 is the top.
   defp square(i, false), do: {rem(i, 8), div(i, 8)}
@@ -223,27 +199,34 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
   attr :slug, :string, required: true
   attr :link?, :boolean, default: true
   attr :class, :string, default: nil
+  attr :pieces, :string, default: "cburnett"
 
   def tile(assigns) do
     tile = assigns.tile
-    view = tile.view
-    result = LiveBoardsData.result(tile)
-    status = status(tile)
+    unplayed? = unplayed?(tile)
+    # A board published as never played has no position worth drawing, even
+    # if a relay sent something for it: the arbiter's word wins.
+    view = if unplayed?, do: nil, else: tile.view
+    # Nor has a game the arbiter has a result for and the relay never saw:
+    # the starting position would say it never began.
+    blank? = unplayed? or (is_nil(view) and status(tile) == :finished)
 
     assigns =
       assigns
       |> assign(:fen, if(view, do: view.fen, else: Chess.start_fen()))
       |> assign(:last, view && view.last)
       |> assign(:clocks, view && view.clocks)
-      |> assign(:result, result)
-      |> assign(:status, status)
+      |> assign(:result, LiveBoardsData.result(tile))
+      |> assign(:status, status(tile))
+      |> assign(:unplayed?, unplayed?)
+      |> assign(:blank?, blank?)
       |> assign(:last_move, view && last_move_label(view))
 
     ~H"""
     <article id={@tile.id} class={["lb-tile", "lb-status-#{@status}", @class]}>
       <header class="lb-tile-head">
         <span class="lb-tile-board">{gettext("Bd %{board}", board: @tile.label)}</span>
-        <span class="lb-badge">{status_label(@status, @result)}</span>
+        <.status_badge status={@status} />
       </header>
       <.player_line tile={@tile} colour="black" clocks={@clocks} />
       <.link
@@ -252,20 +235,93 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
         class="lb-tile-board-link"
         aria-label={tile_label(@tile)}
       >
-        <.board_svg fen={@fen} last={@last} label={tile_label(@tile)} />
+        <.tile_board tile={@tile} fen={@fen} last={@last} pieces={@pieces} unplayed?={@blank?} />
       </.link>
       <div :if={not @link?} class="lb-tile-board-link">
-        <.board_svg fen={@fen} last={@last} label={tile_label(@tile)} />
+        <.tile_board tile={@tile} fen={@fen} last={@last} pieces={@pieces} unplayed?={@blank?} />
       </div>
       <.player_line tile={@tile} colour="white" clocks={@clocks} />
       <footer class="lb-tile-foot">
         <span :if={@last_move} class="lb-last-move">{@last_move}</span>
-        <span :if={@result} class="lb-result">
-          {elem(@result, 0)}<span :if={elem(@result, 1)} class="lb-provisional"> *</span>
-        </span>
+        <span :if={@unplayed?} class="lb-unplayed-note">{unplayed_note(@tile)}</span>
+        <span :if={is_nil(@last_move) and not @unplayed?}></span>
+        <.result_mark :if={@result} result={@result} tile={@tile} />
       </footer>
     </article>
     """
+  end
+
+  attr :tile, :map, required: true
+  attr :fen, :string, required: true
+  attr :last, :any, default: nil
+  attr :pieces, :string, required: true
+  attr :unplayed?, :boolean, default: false
+
+  defp tile_board(assigns) do
+    ~H"""
+    <.board_svg
+      fen={@fen}
+      last={@last}
+      label={tile_label(@tile)}
+      set={@pieces}
+      empty={@unplayed?}
+    />
+    """
+  end
+
+  @doc """
+  A result as the pages print it - `½-½`, `1-0` - with a forfeit's `FF` as a
+  mark of its own and the relay's suggestion starred as provisional.
+  """
+  attr :result, :any, required: true, doc: "`LiveBoardsData.result/1`"
+  attr :tile, :map, required: true
+  attr :id, :string, default: nil
+  attr :class, :string, default: nil
+
+  def result_mark(assigns) do
+    {token, provisional?} = assigns.result
+
+    assigns =
+      assign(assigns,
+        text: LiveBoardsData.result_text(token),
+        provisional?: provisional?,
+        forfeit?: unplayed?(assigns.tile)
+      )
+
+    ~H"""
+    <span id={@id} class={["lb-result", @class]}>
+      {@text}<abbr :if={@forfeit?} class="lb-ff" title={gettext("forfeit")}>FF</abbr><span
+        :if={@provisional?}
+        class="lb-provisional"
+        title={gettext("not yet confirmed by the arbiter")}
+      > *</span>
+    </span>
+    """
+  end
+
+  @doc "The status as a pill: a beating dot while live, the word always."
+  attr :status, :atom, required: true
+  attr :id, :string, default: nil
+
+  def status_badge(assigns) do
+    ~H"""
+    <span id={@id} class={["lb-badge", "lb-status-#{@status}"]}>
+      <span :if={@status == :live} class="lb-live-dot" aria-hidden="true"></span>
+      {status_label(@status, nil)}
+    </span>
+    """
+  end
+
+  @doc "Whether the published pairing says this board was never played."
+  def unplayed?(tile), do: Map.get(tile, :unplayed) != nil
+
+  @doc "The line a board nobody played on carries instead of a position."
+  def unplayed_note(tile) do
+    case Map.get(tile, :unplayed) do
+      :forfeit -> gettext("Not played - forfeit")
+      :double_forfeit -> gettext("Not played - double forfeit")
+      _withheld -> gettext("Not played")
+    end
   end
 
   attr :tile, :map, required: true
@@ -288,6 +344,12 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
     <div class={["lb-player", "lb-player-#{@colour}", @running && "is-to-move"]}>
       <span class={["lb-dot", "lb-dot-#{@colour}"]} aria-hidden="true"></span>
       <span class="lb-name">
+        <Flags.flag
+          :if={@person && @person[:flag]}
+          src={@person.flag}
+          code={@person.federation}
+          label
+        />
         <span :if={@person && @person.title} class="lb-title">{@person.title}</span>
         <span class="lb-person">{(@person && @person.name) || "-"}</span>
         <span :if={@person && @person.rating} class="lb-rating">{@person.rating}</span>
@@ -302,6 +364,121 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
     """
   end
 
+  @doc """
+  One side of the featured game, as a broadcast prints it: the name large,
+  title, federation and rating small, the clock in a box, and what this side
+  scored in large type at the end once there is a result.
+  """
+  attr :tile, :map, required: true
+  attr :colour, :string, required: true
+  attr :clocks, :any, default: nil
+  attr :score, :string, default: nil
+
+  def player_bar(assigns) do
+    colour = assigns.colour
+    person = if colour == "white", do: assigns.tile.white, else: assigns.tile.black
+    ms = assigns.clocks && Map.get(assigns.clocks, String.to_existing_atom(colour))
+    running = (assigns.clocks && assigns.clocks.running == colour) || false
+
+    assigns =
+      assign(assigns,
+        person: person,
+        ms: ms,
+        running: running,
+        has_clock: assigns.clocks != nil and ms != nil
+      )
+
+    ~H"""
+    <div
+      id={"lb-bar-#{@colour}"}
+      class={["lb-player", "lb-bar", "lb-player-#{@colour}", @running && "is-to-move"]}
+    >
+      <span class={["lb-dot", "lb-dot-#{@colour}"]} aria-hidden="true"></span>
+      <span class="visually-hidden">
+        {if @colour == "white", do: gettext("White"), else: gettext("Black")}:
+      </span>
+      <div class="lb-bar-who">
+        <p class="lb-bar-name">
+          <span :if={@person && @person.title} class="lb-title">{@person.title}</span>
+          <span class="lb-person">{(@person && @person.name) || "-"}</span>
+        </p>
+        <p
+          :if={@person && (@person.rating || @person.federation)}
+          class="lb-bar-meta"
+        >
+          <span :if={@person.federation} class="lb-fed">
+            <Flags.flag :if={@person[:flag]} src={@person.flag} />{@person.federation}
+          </span>
+          <span :if={@person.rating} class="lb-rating">{@person.rating}</span>
+        </p>
+      </div>
+      <.clock
+        :if={@has_clock}
+        id={"lb-game-clock-#{@colour}"}
+        ms={@ms}
+        running={@running}
+        class="lb-clock-big"
+      />
+      <span :if={@score} id={"lb-score-#{@colour}"} class="lb-bar-score">
+        <span class="visually-hidden">{gettext("Score")}:</span>
+        {@score}
+      </span>
+    </div>
+    """
+  end
+
+  @doc """
+  A move in figurine notation: the piece as the chosen set draws it, then
+  the square - `Nf3` with a knight, a promotion with the piece it became.
+  The plain SAN is there for a screen reader and for copying.
+  """
+  attr :san, :string, required: true
+
+  attr :colour, :string,
+    default: "w",
+    doc: "the side that moved; the piece is drawn white either way, see the stylesheet"
+
+  attr :set, :string, required: true
+
+  def figurine(assigns) do
+    assigns = assign(assigns, :parts, figurine_parts(assigns.san))
+
+    ~H"""
+    <span class="visually-hidden">{@san}</span><span class="lb-fig" aria-hidden="true"><%= for part <- @parts do %>
+      <%= case part do %>
+        <% {:piece, piece} -> %>
+          <svg
+            class="lb-fig-pc"
+            aria-hidden="true"
+            viewBox="0 0 1 1"
+          ><use href={Pieces.href(@set, "w" <> piece)} width="1" height="1" /></svg>
+        <% {:text, text} -> %>
+          {text}
+      <% end %>
+    <% end %></span>
+    """
+  end
+
+  @doc false
+  def figurine_parts(san) when is_binary(san) do
+    {head, rest} =
+      case san do
+        <<p, rest::binary>> when p in ~c"KQRBN" -> {[{:piece, <<p>>}], rest}
+        _pawn_or_castling -> {[], san}
+      end
+
+    tail =
+      case Regex.run(~r/^(.*)=([QRBN])(.*)$/, rest) do
+        [_all, before, promoted, after_promotion] ->
+          [{:text, before}, {:piece, promoted}, {:text, after_promotion}]
+
+        nil ->
+          [{:text, rest}]
+      end
+
+    Enum.reject(head ++ tail, &(&1 == {:text, ""}))
+  end
+
   @doc false
   def tile_label(tile) do
     gettext("Board %{board}: %{white} against %{black}",
@@ -311,7 +488,19 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
     )
   end
 
-  @doc "`:live`, `:finished` or `:waiting` - whether anything is on the board."
+  @doc """
+  `:live`, `:finished`, `:waiting`, or - when the arbiter published the board
+  as never played - `:forfeit` or `:double_forfeit`.
+
+  The published pairing wins over the relay when it says the game was not
+  played: a forfeited board has nobody at it, the relay sends nothing, and
+  "nothing sent" read on its own says "not started" until the end of time. A
+  forfeit in a round whose results are withheld is only `:finished`, like
+  any other game there.
+  """
+  def status(%{unplayed: kind}) when kind in [:forfeit, :double_forfeit], do: kind
+  def status(%{unplayed: :withheld}), do: :finished
+  def status(%{view: nil, official: official}) when is_binary(official), do: :finished
   def status(%{view: nil}), do: :waiting
   def status(%{view: %{status: "finished"}}), do: :finished
   def status(%{view: %{ply: 0}}), do: :waiting
@@ -320,8 +509,9 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
   @doc false
   def status_label(:live, _result), do: gettext("Live")
   def status_label(:waiting, _result), do: gettext("Not started")
-
   def status_label(:finished, _result), do: gettext("Game over")
+  def status_label(:forfeit, _result), do: gettext("Forfeit")
+  def status_label(:double_forfeit, _result), do: gettext("Double forfeit")
 
   # "12. Nf3" or "12... Nf6": the move number from the position after it.
   @doc false
@@ -344,12 +534,50 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
 
   defp fullmove(_other), do: 1
 
+  @doc """
+  The two ways to watch a round - one game large, or every board small -
+  as a pair of links, the current one marked.
+  """
+  attr :slug, :string, required: true
+  attr :round, :integer, required: true
+  attr :board, :any, default: nil
+  attr :current, :atom, required: true
+
+  def view_switch(assigns) do
+    ~H"""
+    <nav id="lb-view-switch" class="lb-switch" aria-label={gettext("View")}>
+      <.link
+        id="lb-switch-broadcast"
+        navigate={
+          if @board,
+            do: ~p"/t/#{@slug}/live/#{@round}/#{@board}",
+            else: ~p"/t/#{@slug}/live/#{@round}"
+        }
+        class={["lb-switch-opt", @current == :broadcast && "is-current"]}
+        aria-current={@current == :broadcast && "page"}
+      >
+        {gettext("Featured game")}
+      </.link>
+      <.link
+        id="lb-switch-all"
+        navigate={~p"/t/#{@slug}/live/#{@round}/all"}
+        class={["lb-switch-opt", @current == :all && "is-current"]}
+        aria-current={@current == :all && "page"}
+      >
+        {gettext("All boards")}
+      </.link>
+    </nav>
+    """
+  end
+
   # --- the page shell ----------------------------------------------------------
 
   attr :locale, :string, required: true
   attr :path, :string, required: true, doc: "this page's own path, for the language links"
   attr :slug, :string, required: true
   attr :title, :string, required: true, doc: "the tournament's name"
+  attr :pieces, :string, default: "cburnett", doc: "the piece set in use, for the picker"
+  attr :wide, :boolean, default: false, doc: "the broadcast page, which uses the whole screen"
   slot :inner_block, required: true
   slot :foot
 
@@ -362,7 +590,7 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
   def shell(assigns) do
     ~H"""
     <a class="skip-link" href="#main">{gettext("Skip to content")}</a>
-    <div class="page lb-page">
+    <div class={["page lb-page", @wide && "lb-page-wide"]}>
       <header class="masthead-bar">
         <a class="brand" href={~p"/"}>
           <.logo /> OpenResults
@@ -382,11 +610,12 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
               <span class="visually-hidden">{name}</span>
             </a>
           </nav>
+          <.pieces_picker pieces={@pieces} />
           <.theme_picker />
         </div>
       </header>
       <main id="main" tabindex="-1" class="lb-main">
-        <p class="admin-crumbs lb-crumbs">
+        <p :if={not @wide} class="admin-crumbs lb-crumbs">
           <a href={~p"/t/#{@slug}"}>{@title}</a>
         </p>
         {render_slot(@inner_block)}
@@ -398,6 +627,89 @@ defmodule OpenResultsWeb.LiveBoardsComponents do
         <a class="terms-link" href={~p"/terms"}>{gettext("Terms and privacy")}</a>
       </footer>
     </div>
+    """
+  end
+
+  attr :pieces, :string, required: true
+
+  defp pieces_picker(assigns) do
+    ~H"""
+    <details
+      class="theme-picker pieces-picker"
+      id="lb-pieces-picker"
+      phx-hook=".PiecesPicker"
+      phx-update="ignore"
+      data-current={@pieces}
+    >
+      <summary
+        class="theme-picker-trigger"
+        title={gettext("Chess pieces")}
+        aria-label={gettext("Chess pieces")}
+      >
+        <svg class="pieces-picker-icon" viewBox="0 0 1 1" aria-hidden="true">
+          <use href={Pieces.href(@pieces, "wN")} width="1" height="1" />
+        </svg>
+        {gettext("Pieces")}
+      </summary>
+      <div class="theme-picker-panel" role="group" aria-label={gettext("Chess pieces")}>
+        <button
+          :for={{key, name, _designer} <- Pieces.sets()}
+          type="button"
+          class="theme-picker-item"
+          data-pieces-opt={key}
+        >
+          <svg class="pieces-picker-icon" viewBox="0 0 1 1" aria-hidden="true">
+            <use href={Pieces.href(key, "wN")} width="1" height="1" />
+          </svg>
+          {name}
+        </button>
+      </div>
+    </details>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".PiecesPicker">
+      const KEY = "openresults:pieces"
+
+      export default {
+        mounted() {
+          const trigger = this.el.querySelector("summary")
+          const icon = trigger.querySelector("use")
+          const options = [...this.el.querySelectorAll("[data-pieces-opt]")].map((o) => o.dataset.piecesOpt)
+
+          let stored = null
+          try { stored = localStorage.getItem(KEY) } catch (_) {}
+          // `?pieces=` in the URL wins over what the browser remembered, as
+          // it does on the server; the picker shows what is on the board.
+          const fromUrl = new URLSearchParams(location.search).get("pieces")
+          let current = options.includes(fromUrl) ? fromUrl
+            : options.includes(stored) ? stored : this.el.dataset.current
+
+          const mark = () => {
+            this.el.querySelectorAll("[data-pieces-opt]").forEach((o) => {
+              o.setAttribute("aria-pressed", String(o.dataset.piecesOpt === current))
+            })
+            icon.setAttribute("href", icon.getAttribute("href").replace(/\/pieces\/[a-z]+\.svg/, `/pieces/${current}.svg`))
+          }
+          mark()
+
+          this.el.addEventListener("click", (e) => {
+            const button = e.target.closest("[data-pieces-opt]")
+            if (!button) return
+            current = button.dataset.piecesOpt
+            try { localStorage.setItem(KEY, current) } catch (_) {}
+            this.pushEvent("pieces", {set: current})
+            mark()
+            this.el.removeAttribute("open")
+            trigger.focus()
+          })
+
+          this.el.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && this.el.open) {
+              this.el.removeAttribute("open")
+              trigger.focus()
+            }
+          })
+        }
+      }
+    </script>
     """
   end
 

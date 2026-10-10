@@ -21,6 +21,11 @@ defmodule OpenResults.Tournaments.Tournament do
     field :owner_email, :string
     field :owner_host, :string
 
+    # The event this tournament's newest snapshot says it is a section of,
+    # and since when - see `OpenResults.TournamentGroups`. Written at ingest.
+    field :event_id, :string
+    field :event_since, :utc_datetime_usec
+
     belongs_to :installation, OpenResults.Installations.Installation, type: :string
 
     # Filled by the moderation listings; never stored.

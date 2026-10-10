@@ -1,0 +1,50 @@
+<header class="masthead">
+  <h1>{@name}</h1>
+  <p class="details">
+    <span>
+      {ngettext("%{count} tournament", "%{count} tournaments", length(@members))}
+    </span>
+  </p>
+</header>
+
+<section>
+  <ul class="event-cards" id="event-cards">
+    <li :for={member <- @members} class="event-card" id={"event-card-#{member.slug}"}>
+      <%!-- Read by the root layout's refresher, as on a tournament's own
+            pages: a live section makes this page poll faster too. --%>
+      <span :if={Tournament.live?(member.payload)} data-results-live hidden></span>
+      <a class="event-card-link" href={~p"/t/#{member.slug}"}>
+        <span class="event-card-label">{member.label}</span>
+        <span :if={member.label != Tournament.name(member.payload)} class="event-card-name">
+          {Tournament.name(member.payload)}
+        </span>
+      </a>
+
+      <p class="event-card-status">
+        <span class={["event-badge", "event-badge-#{Tournament.status(member.payload)}"]}>
+          {TournamentHTML.group_title(Tournament.status(member.payload))}
+        </span>
+        <span :if={Tournament.live?(member.payload)} class="event-card-live">
+          {gettext("Results coming in")}
+        </span>
+      </p>
+
+      <dl class="event-card-facts">
+        <div>
+          <dt>{gettext("Players")}</dt>
+          <dd class="event-card-players">{length(Tournament.players(member.payload))}</dd>
+        </div>
+        <div :if={round_line(member.payload)}>
+          <dt>{gettext("Current round")}</dt>
+          <dd class="event-card-round">{round_line(member.payload)}</dd>
+        </div>
+        <div :if={latest_round(member.payload)}>
+          <dt>{gettext("Rounds played")}</dt>
+          <dd class="event-card-played">{rounds_played(member.payload)}</dd>
+        </div>
+      </dl>
+    </li>
+  </ul>
+
+  <p><a href={~p"/"}>{gettext("All tournaments")}</a></p>
+</section>

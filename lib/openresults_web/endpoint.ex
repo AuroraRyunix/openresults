@@ -12,6 +12,23 @@ defmodule OpenResultsWeb.Endpoint do
     websocket: true,
     longpoll: true
 
+  # The piece sprites: third-party art that changes only with a release, and
+  # that a round of sixty boards points at sixty times a page. A day's cache
+  # (the ETag still revalidates after it) instead of a request per view.
+  plug Plug.Static,
+    at: "/pieces",
+    from: {:openresults, "priv/static/pieces"},
+    only: ~w(cburnett.svg chessnut.svg),
+    cache_control_for_etags: "public, max-age=86400"
+
+  # The flags (`OpenResultsWeb.Flags`): third-party art, one small file per
+  # country, changed only by a release. A month's cache; the ETag still
+  # revalidates after it.
+  plug Plug.Static,
+    at: "/flags",
+    from: {:openresults, "priv/static/flags"},
+    cache_control_for_etags: "public, max-age=2592000"
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),

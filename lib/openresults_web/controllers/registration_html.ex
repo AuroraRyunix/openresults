@@ -278,6 +278,7 @@ defmodule OpenResultsWeb.RegistrationHTML do
       |> assign(:rating?, Tournament.show?(payload, "rating"))
       |> assign(:title?, Tournament.show?(payload, "title"))
       |> assign(:federation?, Tournament.show?(payload, "federation"))
+      |> assign(:flags?, Tournament.flags?(payload))
       |> assign(:club?, Tournament.show?(payload, "club"))
 
     ~H"""
@@ -311,7 +312,10 @@ defmodule OpenResultsWeb.RegistrationHTML do
               {player["name"]}
             </td>
             <td :if={@rating?} class="num">{rating(player["rating"])}</td>
-            <td :if={@federation?}>{player["federation"]}</td>
+            <td :if={@federation?}>
+              <Flags.flag :if={@flags?} code={player["federation"]} />
+              {player["federation"]}
+            </td>
             <td :if={@club?}>{player["club"]}</td>
           </tr>
         </tbody>
