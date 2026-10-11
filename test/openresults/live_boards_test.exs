@@ -367,6 +367,168 @@ defmodule OpenResults.LiveBoardsTest do
     end
   end
 
+  describe "PGN clock times" do
+    @h 3_600_000
+
+    defp movetext(pgn), do: pgn |> String.split("\n\n") |> List.last() |> String.trim()
+
+    test "each move is followed by its mover's clock, in the comment Lichess reads", %{slug: slug} do
+      # e4 and e5 reported on the press: the mover's clock already stands.
+      ingest!(
+        slug,
+        upd(moves: ~w(e4), white_ms: 90 * 60_000, black_ms: 90 * 60_000, running: "black")
+      )
+
+      ingest!(
+        slug,
+        upd(moves: ~w(e4 e5), white_ms: 90 * 60_000, black_ms: 5_390_000, running: "white"),
+        @t0 + 10_000
+      )
+
+      # Nf3 reported before the lever goes down: White's clock still runs.
+      ingest!(
+        slug,
+        upd(moves: ~w(e4 e5 Nf3), white_ms: 5_380_000, black_ms: 5_390_000, running: "white"),
+        @t0 + 30_000
+      )
+
+      pgn = Pgn.build(LiveBoards.view(game(slug), 0, @t0 + 31_000), [])
+
+      assert movetext(pgn) ==
+               "1. e4 {[%clk 1:30:00]} 1... e5 {[%clk 1:29:50]} 2. Nf3 {[%clk 1:29:40]} *"
+
+      # Nc6, again before the press. In its report White's clock stands
+      # still, with the increment the press gave: that is Nf3's clock time.
+      ingest!(
+        slug,
+        upd(moves: ~w(e4 e5 Nf3 Nc6), white_ms: 5_408_000, black_ms: 5_370_000, running: "black"),
+        @t0 + 50_000
+      )
+
+      pgn = Pgn.build(LiveBoards.view(game(slug), 0, @t0 + 51_000), [])
+
+      assert movetext(pgn) ==
+               "1. e4 {[%clk 1:30:00]} 1... e5 {[%clk 1:29:50]} 2. Nf3 {[%clk 1:30:08]} 2... Nc6\n{[%clk 1:29:30]} *"
+
+      # The press, told at the same ply: the last move's clock is the one
+      # the page shows, now that it stands still.
+      ingest!(
+        slug,
+        upd(moves: ~w(e4 e5 Nf3 Nc6), white_ms: 5_408_000, black_ms: 5_395_000, running: "white"),
+        @t0 + 55_000
+      )
+
+      # A minute on, White's clock has run down on the page; Black's has not.
+      view = LiveBoards.view(game(slug), 0, @t0 + 115_000)
+      assert view.clocks == %{white: 5_348_000, black: 5_395_000, running: "white"}
+      assert movetext(Pgn.build(view, [])) =~ "2... Nc6\n{[%clk 1:29:55]} *"
+      assert Pgn.clock_times(view) == [5_400_000, 5_390_000, 5_408_000, 5_395_000]
+    end
+
+    test "a move whose clock nobody reported has no comment, and nothing is made up", %{
+      slug: slug
+    } do
+      # Three moves in one report: its clocks belong to the last of them.
+      ingest!(slug, upd(moves: ~w(e4 e5 Nf3), white_ms: 2 * @h + 5_000, running: "black"))
+      # Then moves without clocks at all.
+      ingest!(slug, upd(moves: ~w(e4 e5 Nf3 Nc6 Bb5)), @t0 + 60_000)
+
+      view = LiveBoards.view(game(slug), 0, @t0 + 61_000)
+      assert Pgn.clock_times(view) == [nil, nil, 2 * @h + 5_000, nil, nil]
+      # The clocks the page still shows are older than Bb5: not Bb5's.
+      assert view.clocks.white == 2 * @h + 5_000
+      assert movetext(Pgn.build(view, [])) == "1. e4 e5 2. Nf3 {[%clk 2:00:05]} 2... Nc6 3. Bb5 *"
+
+      # No clocks ever: the movetext is what it always was.
+      ingest!(slug, upd(1, 2, moves: ~w(d4 d5 c4)))
+
+      assert movetext(Pgn.build(LiveBoards.view(game(slug, 1, 2), 0, @t0), [])) ==
+               "1. d4 d5 2. c4 *"
+    end
+
+    test "hours are not padded, seconds are whole, and Black's first move says its number", %{
+      slug: slug
+    } do
+      start = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+
+      ingest!(
+        slug,
+        upd(
+          moves: ~w(e5),
+          start_fen: start,
+          white_ms: 11 * @h,
+          black_ms: 205_999,
+          running: "white"
+        )
+      )
+
+      ingest!(
+        slug,
+        upd(
+          moves: ~w(e5 Nf3),
+          start_fen: start,
+          white_ms: 11 * @h + 1,
+          black_ms: 205_999,
+          running: "black"
+        ),
+        @t0 + 1_000
+      )
+
+      pgn = Pgn.build(LiveBoards.view(game(slug), 0, @t0 + 1_000), [])
+      assert movetext(pgn) == "1... e5 {[%clk 0:03:25]} 2. Nf3 {[%clk 11:00:00]} *"
+    end
+
+    test "under a delay a clock time is never newer than the newest move shown", %{slug: slug} do
+      delay = :timer.minutes(10)
+      now = @t0 + :timer.minutes(30)
+
+      ingest!(
+        slug,
+        upd(moves: ~w(e4), white_ms: 5_400_000, black_ms: 5_400_000, running: "black")
+      )
+
+      # e5 before its press; the press at the same ply a little later; then
+      # Nf3, in whose report Black's clock stands with its increment.
+      ingest!(
+        slug,
+        upd(moves: ~w(e4 e5), white_ms: 5_400_000, black_ms: 5_395_000, running: "black"),
+        @t0 + :timer.minutes(1)
+      )
+
+      ingest!(
+        slug,
+        upd(moves: ~w(e4 e5), white_ms: 5_400_000, black_ms: 5_420_000, running: "white"),
+        now - :timer.minutes(3)
+      )
+
+      ingest!(
+        slug,
+        upd(moves: ~w(e4 e5 Nf3), white_ms: 5_111_000, black_ms: 5_420_000, running: "white"),
+        now - :timer.minutes(2)
+      )
+
+      # Everything, to somebody with no delay.
+      open = Pgn.build(LiveBoards.view(game(slug), 0, now), [])
+      assert movetext(open) =~ "1... e5 {[%clk 1:30:20]} 2. Nf3 {[%clk 1:25:11]} *"
+
+      # Ten minutes behind: two moves, and the clocks as they were reported
+      # WITH them. Not Nf3, not its clock, and not what the press and Nf3's
+      # report said about Black's clock either.
+      behind = Pgn.build(LiveBoards.view(game(slug), delay, now), [])
+      assert movetext(behind) == "1. e4 {[%clk 1:30:00]} 1... e5 {[%clk 1:29:55]} *"
+      refute behind =~ "Nf3"
+      refute behind =~ "1:30:20"
+      refute behind =~ "1:25:11"
+
+      # Before anything is old enough there is no game, so no clock.
+      assert LiveBoards.view(game(slug), delay, @t0 + :timer.minutes(5)) == nil
+
+      # Once the delay has passed over all of it, it is the open file.
+      later = Pgn.build(LiveBoards.view(game(slug), delay, now + delay), [])
+      assert movetext(later) == movetext(open)
+    end
+  end
+
   describe "PGN" do
     test "writes the tags, the moves and the result", %{slug: slug} do
       ingest!(slug, upd(moves: ~w(f3 e5 g4 Qh4#), status: "finished", result: "0-1"))

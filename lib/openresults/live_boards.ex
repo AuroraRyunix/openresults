@@ -602,10 +602,11 @@ defmodule OpenResults.LiveBoards do
   when it had not started yet by then.
 
   A map with `:round, :board, :status, :result, :ply, :fen, :start_fen,
-  :plies, :last, :clocks, :clock_base`, where `:clocks` is
+  :plies, :last, :clocks, :clock_at`, where `:clocks` is
   `%{white: ms | nil, black: ms | nil, running: "white" | "black" | nil}` as
-  of `now_ms` (a running clock already counted down to this instant) and
-  `:last` is `{from, to}` square indices or `nil`.
+  of `now_ms` (a running clock already counted down to this instant),
+  `:clock_at` is when those clocks were reported (ms since the epoch, `nil`
+  when none were) and `:last` is `{from, to}` square indices or `nil`.
   """
   def view(%Game{} = game, delay_ms, now_ms) do
     cutoff = now_ms - delay_ms
@@ -629,7 +630,8 @@ defmodule OpenResults.LiveBoards do
       plies: game.plies,
       last: if(game.last_from, do: {game.last_from, game.last_to}),
       last_san: game.last_san,
-      clocks: clocks(game.white_ms, game.black_ms, game.running, game.clock_at_ms, now_ms)
+      clocks: clocks(game.white_ms, game.black_ms, game.running, game.clock_at_ms, now_ms),
+      clock_at: game.clock_at_ms
     }
   end
 
@@ -663,7 +665,8 @@ defmodule OpenResults.LiveBoards do
       plies: visible,
       last: last_squares(visible, ply),
       last_san: last_san(visible, ply),
-      clocks: clocks(white, black, if(finished?, do: nil, else: running), at, cutoff)
+      clocks: clocks(white, black, if(finished?, do: nil, else: running), at, cutoff),
+      clock_at: at
     }
   end
 

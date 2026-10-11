@@ -3,6 +3,36 @@ defmodule OpenResults.LiveBoards.Pgn do
   A game as PGN: the seven tag roster, the tags a tournament adds, and the
   movetext. Built from `OpenResults.LiveBoards.view/3`, so a game under a
   broadcast delay exports exactly what spectators were allowed to see.
+
+  ## Clock times
+
+  A move whose clock is known is followed by `{[%clk h:mm:ss]}`: the time
+  the player who made it had left once it was made, in the comment format
+  Lichess, chess.com and every PGN viewer since read. A move whose clock is
+  not known has no comment; nothing is made up.
+
+  A report carries both clocks as they read at that moment and which side's
+  runs. The mover's clock is the figure wanted once it stands still - after
+  the press, increment and all - so, in this order (`clock_times/2`):
+
+    1. the report that brought the NEXT move, when in it the mover's clock
+       stands still: it has stood still since the press that ended the move;
+    2. the report that brought the move itself (`"w"` / `"b"` of the ply),
+       when the mover's clock already stood still in it - a relay that
+       reports on the press;
+    3. for the last move of the game so far, the clocks the page itself
+       shows, when they are as new as the move and the mover's is not the
+       one running (a later report at the same ply: the press, a heartbeat);
+    4. the report that brought the move, with the mover's clock still
+       running: a relay that reports the move before the lever goes down.
+       A little high and an increment short, until 1 or 3 puts it right.
+
+  A move that arrived with several others in one report has only what 1
+  gives it; only the last move of a report carries that report's clocks.
+
+  All three read only the view: the plies a delay lets through and the
+  clocks it shows. A clock time can therefore never be newer than the
+  newest move in the file.
   """
 
   alias OpenResults.Chess
@@ -84,19 +114,79 @@ defmodule OpenResults.LiveBoards.Pgn do
         _error -> {:w, 1}
       end
 
+    times = clock_times(view, turn)
+
     view.plies
+    |> Enum.zip(times)
     |> Enum.with_index()
-    |> Enum.flat_map(fn {ply, i} ->
-      white_to_move? = if turn == :w, do: rem(i, 2) == 0, else: rem(i, 2) == 1
+    |> Enum.flat_map(fn {{ply, time}, i} ->
+      white_to_move? = white?(turn, i)
       move_number = number + div(i + if(turn == :b, do: 1, else: 0), 2)
+      # After a comment the move number is said again for Black, as the
+      # export format has it: `1. e4 {[%clk 1:30:00]} 1... e5`.
+      after_comment? = i > 0 and Enum.at(times, i - 1) != nil
+
+      move =
+        cond do
+          white_to_move? -> ["#{move_number}.", ply["san"]]
+          i == 0 or after_comment? -> ["#{move_number}...", ply["san"]]
+          true -> [ply["san"]]
+        end
+
+      if time, do: move ++ ["{[%clk #{clk(time)}]}"], else: move
+    end)
+  end
+
+  defp white?(turn, i), do: if(turn == :w, do: rem(i, 2) == 0, else: rem(i, 2) == 1)
+
+  @doc """
+  For each ply of `view`, the milliseconds its mover had left after it, or
+  `nil` when that is not known. See the module's "Clock times".
+  """
+  @spec clock_times(map(), :w | :b) :: [non_neg_integer() | nil]
+  def clock_times(view, turn \\ :w) do
+    plies = view.plies
+    last = length(plies) - 1
+    shown = Map.get(view, :clocks) || %{}
+
+    plies
+    |> Enum.with_index()
+    |> Enum.map(fn {ply, i} ->
+      {key, side, name} =
+        if white?(turn, i), do: {"w", :white, "white"}, else: {"b", :black, "black"}
+
+      later = Enum.at(plies, i + 1)
 
       cond do
-        white_to_move? -> ["#{move_number}.", ply["san"]]
-        i == 0 -> ["#{move_number}...", ply["san"]]
-        true -> [ply["san"]]
+        later != nil and is_integer(later[key]) and later["r"] != name ->
+          later[key]
+
+        is_integer(ply[key]) and ply["r"] != name ->
+          ply[key]
+
+        i == last and is_integer(shown[side]) and shown[:running] != name and
+          is_integer(view[:clock_at]) and is_integer(ply["at"]) and view[:clock_at] >= ply["at"] ->
+          shown[side]
+
+        is_integer(ply[key]) ->
+          ply[key]
+
+        true ->
+          nil
       end
     end)
   end
+
+  # `h:mm:ss`, whole seconds, the hours not padded: `0:03:25`, `1:30:00`.
+  defp clk(ms) do
+    seconds = div(max(ms, 0), 1000)
+    h = div(seconds, 3600)
+    m = seconds |> rem(3600) |> div(60)
+    s = rem(seconds, 60)
+    "#{h}:#{pad(m)}:#{pad(s)}"
+  end
+
+  defp pad(n), do: n |> Integer.to_string() |> String.pad_leading(2, "0")
 
   # Lines of at most 80 columns, broken between tokens.
   defp wrap(tokens) do

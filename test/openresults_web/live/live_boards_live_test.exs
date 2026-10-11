@@ -245,6 +245,44 @@ defmodule OpenResultsWeb.LiveBoardsLiveTest do
       refute pgn =~ "Nf3"
     end
 
+    test "the delay hides a move's clock with the move, in the game's PGN and the round's", %{
+      conn: conn
+    } do
+      slug = publish!()
+      {:ok, _} = LiveBoards.put_delay(slug, 10, "m@example.invalid")
+      now = System.os_time(:millisecond)
+      ago = fn minutes -> [now_ms: now - :timer.minutes(minutes)] end
+
+      clocks = fn white, black, running ->
+        %{"white_ms" => white, "black_ms" => black, "running" => running}
+      end
+
+      report(slug, 1, ~w(e4), clocks.(5_400_000, 5_400_000, "black"), ago.(21))
+      # e5 told before its press: Black's clock still running in the report.
+      report(slug, 1, ~w(e4 e5), clocks.(5_400_000, 5_395_000, "black"), ago.(20))
+      # Inside the delay: the press (Black's clock with its increment), and
+      # White's next move with White's clock.
+      report(slug, 1, ~w(e4 e5), clocks.(5_400_000, 5_420_000, "white"), ago.(3))
+      report(slug, 1, ~w(e4 e5 Nf3), clocks.(5_111_000, 5_420_000, "white"), ago.(2))
+
+      for path <- ["/t/#{slug}/live/5/1/pgn", "/t/#{slug}/live/5/pgn"] do
+        pgn = conn |> get(path) |> response(200)
+        assert pgn =~ "1. e4 {[%clk 1:30:00]} 1... e5 {[%clk 1:29:55]} *"
+        refute pgn =~ "Nf3"
+        # Neither Nf3's clock nor what was said about Black's since.
+        refute pgn =~ "1:25:11"
+        refute pgn =~ "1:30:20"
+      end
+
+      # With no delay, all of it.
+      {:ok, _} = LiveBoards.put_delay(slug, 0, "m@example.invalid")
+
+      for path <- ["/t/#{slug}/live/5/1/pgn", "/t/#{slug}/live/5/pgn"] do
+        pgn = conn |> get(path) |> response(200)
+        assert pgn =~ "1... e5 {[%clk 1:30:20]} 2. Nf3 {[%clk 1:25:11]} *"
+      end
+    end
+
     test "changing the delay changes the page at once", %{conn: conn} do
       slug = publish!()
       now = System.os_time(:millisecond)
@@ -649,6 +687,30 @@ defmodule OpenResultsWeb.LiveBoardsLiveTest do
       assert pgn =~ ~r/17\.\s+Rd8#\s+1-0/
     end
 
+    test "carries the clock time of every move that was reported with one", %{conn: conn} do
+      slug = publish!()
+
+      clocks = fn white, black, running ->
+        %{"white_ms" => white, "black_ms" => black, "running" => running}
+      end
+
+      report(slug, 3, ~w(e4), clocks.(5_400_000, 5_400_000, "black"))
+      report(slug, 3, ~w(e4 e5), clocks.(5_400_000, 5_390_000, "white"))
+      # Two moves in one report: the clocks are Nc6's.
+      report(slug, 3, ~w(e4 e5 Nf3 Nc6), clocks.(5_381_000, 5_365_000, "white"))
+
+      pgn = conn |> get("/t/#{slug}/live/5/3/pgn") |> response(200)
+
+      assert pgn =~
+               "1. e4 {[%clk 1:30:00]} 1... e5 {[%clk 1:29:50]} 2. Nf3 Nc6 {[%clk 1:29:25]} *"
+
+      # A game reported without clocks is the file it always was.
+      report(slug, 1, ~w(d4 d5))
+      plain = conn |> get("/t/#{slug}/live/5/1/pgn") |> response(200)
+      assert plain =~ "1. d4 d5 *"
+      refute plain =~ "%clk"
+    end
+
     test "leaves out the ratings the arbiter keeps off the pages", %{conn: conn} do
       slug = publish!(&put_in(&1, ["tournament", "display", "rating"], false))
       report(slug, 3, ~w(e4))
@@ -701,8 +763,44 @@ defmodule OpenResultsWeb.LiveBoardsLiveTest do
       for game <- Enum.reject(expected, &is_nil/1), do: assert(pgn =~ game)
 
       assert pgn =~ "1. e4 e5 *"
+      refute pgn =~ "%clk"
       assert pgn =~ ~r/17\.\s+Rd8#\s+1-0/
       assert length(games_of(pgn)) == 5
+    end
+
+    test "every game carries its clock times, as its own route writes them", %{conn: conn} do
+      slug = publish!()
+
+      clocks = fn white, black, running ->
+        %{"white_ms" => white, "black_ms" => black, "running" => running}
+      end
+
+      report(slug, 1, ~w(e4), clocks.(5_400_000, 5_400_000, "black"))
+      report(slug, 1, ~w(e4 e5), clocks.(5_400_000, 5_390_000, "white"))
+      # Told before the press: White's own clock still runs in the report.
+      report(slug, 2, ~w(d4), clocks.(180_000, 180_000, "white"))
+      report(slug, 4, ~w(c4 c5))
+
+      pgn = conn |> get("/t/#{slug}/live/5/pgn") |> response(200)
+
+      assert game_on(pgn, 1) =~ "1. e4 {[%clk 1:30:00]} 1... e5 {[%clk 1:29:50]} *"
+      assert game_on(pgn, 2) =~ "1. d4 {[%clk 0:03:00]} *"
+      assert game_on(pgn, 4) =~ "1. c4 c5 *"
+      refute game_on(pgn, 4) =~ "%clk"
+      refute game_on(pgn, 3) =~ "%clk"
+
+      for board <- [1, 2, 4] do
+        own = conn |> get("/t/#{slug}/live/5/#{board}/pgn") |> response(200)
+        assert pgn =~ own
+      end
+
+      # The press, told at the same ply (two seconds of increment): the
+      # move's clock is now the standing one, and the file's ETag moves.
+      first = get(conn, "/t/#{slug}/live/5/pgn")
+      [etag] = get_resp_header(first, "etag")
+      report(slug, 2, ~w(d4), clocks.(182_000, 180_000, "black"))
+      moved = conn |> put_req_header("if-none-match", etag) |> get("/t/#{slug}/live/5/pgn")
+      assert response(moved, 200) =~ "1. d4 {[%clk 0:03:02]} *"
     end
 
     test "boards nobody played are header-only games with their result", %{conn: conn} do

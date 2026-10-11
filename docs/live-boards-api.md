@@ -225,6 +225,60 @@ clocks shown come from the newest visible ply that carried any. A game
 reported by FIDE only (no `moves`) cannot be delayed ply by ply; it appears
 once its latest position is older than the delay.
 
+## Clock times in the PGN
+
+Both PGN URLs - the game's (`/t/<slug>/live/<round>/<board>/pgn`) and the
+round's (below) - follow a move with its clock time when they know it:
+
+```
+1. e4 {[%clk 1:30:00]} 1... e5 {[%clk 1:29:50]} 2. Nf3 {[%clk 1:30:08]} *
+```
+
+`[%clk h:mm:ss]` is the time the player had left after making the move, the
+comment Lichess and chess.com read to show clocks on a broadcast. Hours are
+not padded, seconds are whole (rounded down).
+
+**What is stored.** Clocks per move, and it always has been: each stored
+ply keeps the `white_ms`, `black_ms` and `running` of the report that first
+brought it, with the time that report was heard. Nothing was added to the
+store for this and no game needs migrating; a game stored before this
+existed gets its clock times too. Two limits follow from how reports work:
+
+- **Only the last move of a report carries its clocks.** A report that
+  brings three new moves at once (a relay catching up) says how the clocks
+  stand now, not how they stood after the first two. Those two have no
+  comment - unless the next rule gives them one.
+- **A move reported without clocks has none.** Nothing is interpolated.
+
+**Which reading is the move's.** A report says how both clocks read at that
+moment. What `%clk` wants is the mover's clock once it stands still: after
+the press, increment included. So, in this order:
+
+1. the report that brought the *next* move, if the mover's clock is not the
+   one running in it - it has stood still since the press;
+2. the move's own report, if the mover's clock already stood still in it (a
+   relay that reports on the press);
+3. for the newest move only: the clocks the page shows, if they were
+   reported with or after the move and the mover's is not the one running
+   (a later report at the same ply - the press, a heartbeat);
+4. the move's own report with the mover's clock still running (a relay that
+   reports the move before the lever goes down): a little high and an
+   increment short, and replaced by 1 or 3 as soon as either is there.
+
+So a clock time may change once, from 4 to the exact figure, when the next
+report arrives. A poller re-reads the whole document and never notices.
+
+**For a relay:** send `white_ms`, `black_ms` and `running` with every
+update, and one update per move. That is all it takes for every move to
+have its clock.
+
+**Under a broadcast delay** the file is built from what the delay lets
+through and nothing else: the plies heard before the cutoff, each with the
+clocks of its own report or of the report of a later ply that is itself
+visible. A move's clock is hidden exactly as long as the move is, and so is
+anything a newer report said about an older move's clock (rule 1 and 3 read
+only visible reports). The same is true of the page's clocks, and has been.
+
 ## The round as one PGN
 
 `GET /t/<slug>/live/<round>/pgn` returns every game of the round as ONE PGN
@@ -234,7 +288,8 @@ a URL") or chess.com's broadcast tool, or any other poller; it needs no
 login and no key.
 
 - Each game is what `/t/<slug>/live/<round>/<board>/pgn` serves for that
-  board, built by the same code, at the same broadcast delay.
+  board, built by the same code, at the same broadcast delay, with the same
+  clock times (above). Lichess in pull mode shows the clocks from them.
 - A board with no game to show - not started, still behind the delay, or
   forfeited - is a header-only game with its result: `*` until it has one,
   `1-0` / `0-1` for a forfeit, `*` for a double forfeit.
@@ -242,8 +297,8 @@ login and no key.
   as on the per-game URL: a server-side poller does not need them.
 - `Cache-Control: no-cache` and an `ETag` that is a hash of the body served.
   Poll every few seconds with `If-None-Match`; an unchanged round answers
-  `304` with no body. The body also changes when the delay uncovers a move,
-  and the ETag follows it. There is no `Last-Modified`: nothing stored says
+  `304` with no body. The body also changes when the delay uncovers a move
+  or a report refines a clock time, and the ETag follows it. There is no `Last-Modified`: nothing stored says
   when a delayed body last changed.
 - `404` for an unknown or unpublished round, a hidden tournament, and a
   tournament with its pairings switched off.
