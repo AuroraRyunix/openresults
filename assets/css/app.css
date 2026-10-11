@@ -699,6 +699,22 @@ tr.withheld th {
   font-size: 0.875rem;
 }
 
+/* A round-robin row whose results are not counted (FIDE C.05 6.6): in the
+   table, out of the ranking. */
+tr.uncounted td,
+tr.uncounted th,
+tr.uncounted a {
+  color: var(--quiet);
+}
+
+.uncounted-note {
+  color: var(--quiet);
+  display: block;
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 400;
+}
+
 .footnote {
   margin-top: 1rem;
   max-width: 34rem;

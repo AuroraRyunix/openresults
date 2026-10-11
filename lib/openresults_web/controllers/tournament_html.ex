@@ -656,9 +656,9 @@ defmodule OpenResultsWeb.TournamentHTML do
         </thead>
 
         <tbody>
-          <tr :for={row <- @rows}>
+          <tr :for={row <- @rows} class={Tournament.uncounted?(row) && "uncounted"}>
             <td class="num rank">
-              {row["rank"]}
+              {if(Tournament.uncounted?(row), do: "–", else: row["rank"])}
               <%!-- The place within the active category filter, e.g. "1 in
                     U1800" beside the overall rank - see
                     `Filter.standings/2`'s `places`, keyed by pairing number
@@ -684,6 +684,9 @@ defmodule OpenResultsWeb.TournamentHTML do
                 cards?={@show.player_cards}
                 detail
               />
+              <span :if={Tournament.uncounted?(row)} class="uncounted-note">
+                {gettext("results not counted (withdrawn)")}
+              </span>
             </th>
 
             <td :if={@show.rating} class="num col-rating">{rating(@players, row["player"])}</td>
@@ -724,6 +727,8 @@ defmodule OpenResultsWeb.TournamentHTML do
       </table>
     </div>
 
+    <.uncounted_footnote :if={Enum.any?(@rows, &Tournament.uncounted?/1)} />
+
     <%!-- Keizer's ladder is not a FIDE tiebreak table and reads like a broken
           one if nobody says so: the points move for reasons that are not in
           the results column. Kept out of `standings.html.heex` and put here
@@ -732,6 +737,22 @@ defmodule OpenResultsWeb.TournamentHTML do
     <p :if={@rows != [] and @keizer?} class="footnote">
       {gettext(
         "These are Keizer points, not FIDE tiebreaks - the whole ladder is recalculated from results, byes and absences every time."
+      )}
+    </p>
+    """
+  end
+
+  @doc """
+  The sentence under any table that lists a player whose results are not
+  counted: FIDE C.05 6.6, a round-robin player who left with fewer than
+  half the games played. Said once per table - the mark on the row says
+  which player, this says what it means for everybody else's points.
+  """
+  def uncounted_footnote(assigns) do
+    ~H"""
+    <p class="footnote uncounted-footnote">
+      {gettext(
+        "Results not counted (withdrawn): this player left the tournament with fewer than half of the games played. Under the round-robin rules (FIDE C.05 6.6) those games stay in the table but count for nobody - not for this player's place, and not in the other players' points."
       )}
     </p>
     """
@@ -1651,7 +1672,7 @@ defmodule OpenResultsWeb.TournamentHTML do
         </thead>
 
         <tbody>
-          <tr :for={row <- @rows}>
+          <tr :for={row <- @rows} class={row.uncounted? && "uncounted"}>
             <td class="num xt-no">{row.no}</td>
 
             <th scope="row" class="xt-name row-head">
@@ -1664,6 +1685,9 @@ defmodule OpenResultsWeb.TournamentHTML do
                 cards?={@show.player_cards}
                 detail
               />
+              <span :if={row.uncounted? and @show.standings} class="uncounted-note">
+                {gettext("results not counted (withdrawn)")}
+              </span>
             </th>
 
             <td :if={@show.rating} class="num">{dash(row.player["rating"])}</td>
@@ -1672,11 +1696,15 @@ defmodule OpenResultsWeb.TournamentHTML do
               {number(if(@keizer?, do: row.score, else: row.points))}
             </td>
 
-            <td :if={@show.standings and @placings?} class="num rank">{row.rank}</td>
+            <td :if={@show.standings and @placings?} class="num rank">
+              {if(row.uncounted?, do: "–", else: row.rank)}
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <.uncounted_footnote :if={@show.standings and Enum.any?(@rows, & &1.uncounted?)} />
 
     <%!-- The key. A cross-table is notation before it is a table, and a
           reader who has not seen one before is owed the sentence that turns
@@ -3003,11 +3031,20 @@ defmodule OpenResultsWeb.TournamentHTML do
                 </td>
             <% end %>
 
-            <td class="num strong">{number(entry.score)}</td>
+            <td class="num strong">
+              {number(entry.score)}
+              <span :if={entry.uncounted?} class="uncounted-note">{gettext("not counted")}</span>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <p :if={Enum.any?(@card, & &1.uncounted?)} class="footnote uncounted-footnote">
+      {gettext(
+        "Not counted: the opponent left the tournament with fewer than half of the games played, so under the round-robin rules (FIDE C.05 6.6) the game stays on record and adds nothing to the score."
+      )}
+    </p>
     """
   end
 
@@ -3174,15 +3211,23 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:show, display_rules(payload))
 
     ~H"""
-    <p :if={@row} class="placing">
+    <p :if={@row && not Tournament.uncounted?(@row)} class="placing">
       <span class="placing-rank">{@row["rank"]}</span>
       <span class="placing-of">
         {gettext("of %{total}, on %{points}",
-          total: length(Tournament.standings_rows(@payload)),
+          total: Tournament.ranked_total(@payload),
           points: number(@row["points"])
         )}
       </span>
     </p>
+
+    <%!-- No place to print: C.05 6.6 keeps the games and drops the row
+          from the ranking. --%>
+    <p :if={Tournament.uncounted?(@row)} class="placing placing-uncounted">
+      <span class="placing-of">{gettext("results not counted (withdrawn)")}</span>
+    </p>
+
+    <.uncounted_footnote :if={Tournament.uncounted?(@row)} />
 
     <table :if={@codes != [] and @show.tiebreaks} class="tiebreak-summary">
       <caption class="visually-hidden">{gettext("Tie-breaks")}</caption>

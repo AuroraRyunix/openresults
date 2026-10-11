@@ -403,6 +403,9 @@ defmodule OpenResultsWeb.Hall do
           rows:
             payload
             |> Tournament.standings_rows()
+            # A wall of places has no line for a row without one (C.05 6.6);
+            # the standings page lists it, marked.
+            |> Enum.reject(&Tournament.uncounted?/1)
             |> Enum.take(top)
             |> Enum.map(fn row ->
               no = Map.get(row, "player")

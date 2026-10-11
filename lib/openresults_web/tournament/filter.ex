@@ -228,6 +228,8 @@ defmodule OpenResultsWeb.Tournament.Filter do
 
   defp place_by_rank(rows, players, wanted) do
     rows
+    # No place in the event, so none in the category either.
+    |> Enum.reject(&Tournament.uncounted?/1)
     |> Enum.filter(&(wanted in player_categories(Map.get(players, &1["player"]))))
     |> Enum.map_reduce({:none, 0}, fn row, {prev_rank, place} ->
       place = if prev_rank == row["rank"], do: place, else: place + 1

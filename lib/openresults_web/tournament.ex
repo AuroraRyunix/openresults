@@ -924,6 +924,26 @@ defmodule OpenResultsWeb.Tournament do
   def tiebreaks_withheld?(payload), do: Map.get(standings(payload), "tiebreaks_withheld") == true
 
   @doc """
+  Whether a standings row is a round-robin player whose results are not
+  counted (FIDE C.05 6.6: withdrawn with fewer than half the games played).
+  OpenPairings sends `"uncounted": true` on such a row and nothing
+  otherwise. The row still carries a `rank` and `points`, for a server that
+  has never heard of the key; this one shows neither as a place.
+  """
+  def uncounted?(row), do: is_map(row) and Map.get(row, "uncounted") == true
+
+  @doc "The pairing numbers of the players whose results are not counted."
+  def uncounted_players(payload) do
+    for row <- standings_rows(payload), uncounted?(row), into: MapSet.new(), do: row["player"]
+  end
+
+  @doc """
+  How many rows have a place - the "of 12" beside a rank. A row that is not
+  counted is in the table and not in the ranking.
+  """
+  def ranked_total(payload), do: Enum.count(standings_rows(payload), &(not uncounted?(&1)))
+
+  @doc """
   One player's standings row, or `nil`.
   """
   def standings_row(payload, no) do
@@ -1102,6 +1122,7 @@ defmodule OpenResultsWeb.Tournament do
     # re-sorts the whole round list each time - so a card cost O(slots x
     # rounds) where the payload alone decides both.
     by_number = rounds_by_number(payload)
+    uncounted = uncounted_players(payload)
 
     payload
     |> round_slots()
@@ -1113,8 +1134,22 @@ defmodule OpenResultsWeb.Tournament do
     |> Enum.take_while(&results_public?(Map.get(by_number, &1)))
     |> Enum.map_reduce({:known, 0.0}, fn number, running ->
       entry = card_entry(index, by_number, number, no)
-      running = advance(running, entry.points || entry.provisional_points)
-      {Map.put(entry, :score, running_score(running)), running}
+
+      # A game against a player whose results are not counted (C.05 6.6)
+      # stays on the card and adds nothing: the standings, which this total
+      # has to land on, left it out. The withdrawn player's own card adds
+      # up as played - it is the record of what they did.
+      set_aside? =
+        entry.kind == :game and MapSet.member?(uncounted, entry.opponent_no) and
+          not MapSet.member?(uncounted, no)
+
+      running =
+        if set_aside?,
+          do: running,
+          else: advance(running, entry.points || entry.provisional_points)
+
+      {entry |> Map.put(:score, running_score(running)) |> Map.put(:uncounted?, set_aside?),
+       running}
     end)
     |> elem(0)
   end
@@ -1301,9 +1336,11 @@ defmodule OpenResultsWeb.Tournament do
         # `placing` is `%{}` for a player the standings do not carry, and
         # `Map.get/2` on it is `nil` three times over - which is what the
         # renderer prints as an empty cell rather than as a zero.
-        rank: Map.get(placing, "rank"),
+        rank: if(uncounted?(placing), do: nil, else: Map.get(placing, "rank")),
         points: Map.get(placing, "points"),
         score: Map.get(placing, "score"),
+        # C.05 6.6: the row is the record of the games, not a placing.
+        uncounted?: uncounted?(placing),
         cells: Enum.map(numbers, &cell_for(cells, &1, no))
       }
     end
@@ -1482,8 +1519,13 @@ defmodule OpenResultsWeb.Tournament do
     earlier = payload |> round_slots() |> Enum.filter(&(&1 < number))
     by_number = rounds_by_number(payload)
 
+    uncounted = uncounted_players(payload)
+
     contributions =
-      Map.new(earlier, fn n -> {n, round_contributions(Map.get(by_number, n))} end)
+      Map.new(earlier, fn n ->
+        round = Map.get(by_number, n)
+        {n, round |> round_contributions() |> set_aside(round, uncounted)}
+      end)
 
     {anchor_round, anchors} = standings_anchor(payload, number)
 
@@ -1569,6 +1611,26 @@ defmodule OpenResultsWeb.Tournament do
         not is_nil(no),
         into: from_boards,
         do: {no, Map.get(bye, "points")}
+  end
+
+  # The games against a player whose results are not counted (C.05 6.6) add
+  # nothing to the other seat, as in the standings. Nothing to do in every
+  # event that has no such player, which is nearly all of them.
+  defp set_aside(contributions, round, uncounted) do
+    if MapSet.size(uncounted) == 0 or contributions == %{} do
+      contributions
+    else
+      for board <- boards(round),
+          {seat, other} <- [
+            {Map.get(board, "white"), Map.get(board, "black")},
+            {Map.get(board, "black"), Map.get(board, "white")}
+          ],
+          MapSet.member?(uncounted, other) and not MapSet.member?(uncounted, seat),
+          is_number(Map.get(contributions, seat)),
+          reduce: contributions do
+        acc -> Map.put(acc, seat, 0.0)
+      end
+    end
   end
 
   defp board_contributions(board) do

@@ -165,7 +165,10 @@ defmodule OpenResultsWeb.Meta do
   def player(payload, player) do
     name = Map.get(player, "name") || gettext("Player %{number}", number: Map.get(player, "no"))
 
-    case Tournament.standings_row(payload, Map.get(player, "no")) do
+    row = Tournament.standings_row(payload, Map.get(player, "no"))
+
+    # A row that is not counted (C.05 6.6) has no place to describe.
+    case if(Tournament.uncounted?(row), do: nil, else: row) do
       nil ->
         gettext("%{player} in %{tournament}.", player: name, tournament: Tournament.name(payload))
 
@@ -174,7 +177,7 @@ defmodule OpenResultsWeb.Meta do
           player: name,
           points: TournamentHTML.number(row["points"]),
           rank: row["rank"],
-          total: length(Tournament.standings_rows(payload)),
+          total: Tournament.ranked_total(payload),
           tournament: Tournament.name(payload)
         )
     end

@@ -27,6 +27,17 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **A round-robin row that is not counted says so.** A player who
+  leaves a round robin with fewer than half the games played keeps the
+  games in the table and counts for nobody (FIDE C.05 6.6). OpenPairings
+  now marks that row (`standings.rows[].uncounted`), and this site stops
+  printing it as a last place with more points than the row above: no place
+  number, muted, "results not counted (withdrawn)" beside the name and the
+  rule in a footnote - on the standings, the cross-table and the player's
+  page, in English, Dutch and French. The other players' running scores
+  leave those games out, marked "not counted" on their cards, so a card
+  ends on the total the standings show. The hall display lists ranked rows
+  only. A payload without the key renders as before.
 - [Feature] **"not paired" has a name.** A player with no board and no bye
   in a round - withdrawn, or taken off a board by hand - arrives from
   OpenPairings as the bye kind `not-paired`, worth 0. It is printed as "not

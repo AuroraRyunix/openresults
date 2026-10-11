@@ -477,6 +477,33 @@ but worth knowing before adding more.
 columns ever showed, so it is not sent at all rather than sent and hidden -
 the same rule as a withheld round or board.
 
+**`rows[].uncounted`** - `true` on the row of a round-robin player whose
+results are not counted: FIDE C.05 6.6, a player who withdrew or was
+expelled with fewer than half of their games played. The results "remain in
+the tournament table" and count for nobody. Added 2026-10-11, additive;
+absent on every other row, so an older payload and a tournament with no
+such player read exactly as before.
+
+What travels with it, and what this server makes of it:
+
+- The row is still there, **last**, and still has a `rank` and its own
+  `points` - a server that has never heard of the key prints it as it
+  always did. This one prints no place for it (a dash), mutes the row, says
+  "results not counted (withdrawn)" beside the name and explains the rule
+  under the table: standings, cross-table and the player's own page. The
+  hall display's standings list ranked rows only. "of N" beside a place
+  counts the ranked rows.
+- The other rows' `points`, `tiebreaks` and `working` are already without
+  the games against that player - OpenPairings computed them that way.
+- `rounds[].boards` still carry those games, with the points they paid:
+  they were played and the cross-table shows them. So this server leaves
+  them out when it adds a running score up (`Tournament.card/2`,
+  `scores_before/2`) and marks the game "not counted" on the opponent's
+  card - otherwise a card would end on a total the standings do not have.
+  The withdrawn player's own card adds up as played.
+
+Contract fixture: `test/fixtures/snapshot_roundrobin_uncounted.json`.
+
 **`rows[].rounds_played`** - how many rounds that player was there for, byes
 included. Optional, and sent only by a tournament whose arbiter turned the
 column on (OpenPairings' "Rds" setting, added 2026-09-19); absent means the

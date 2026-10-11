@@ -120,9 +120,11 @@ defmodule OpenResultsWeb.PlayerHistory do
       end_date: string(info, "end_date"),
       player_no: no,
       player_name: Map.get(player, "name"),
-      rank: row && Map.get(row, "rank"),
+      # Not counted (C.05 6.6) is not a place: the entry reads as one the
+      # tournament did not rank.
+      rank: if(row && not Tournament.uncounted?(row), do: Map.get(row, "rank")),
       points: row && Map.get(row, "points"),
-      total: row && length(Tournament.standings_rows(payload)),
+      total: row && Tournament.ranked_total(payload),
       linkable?: Tournament.show?(payload, "player_cards")
     }
   end
