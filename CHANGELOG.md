@@ -27,15 +27,6 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
-- [Feature] **A flag for players listed under FIDE.** A federation code of
-  `FID` used to get the code and a blank where the flag goes, on the theory
-  that a player without a country has nothing to draw. They do now: a white
-  flag with the word FIDE. It is lettering from Wikimedia Commons under CC0
-  and not FIDE's knight, because the knight is a non-free logo that nobody
-  may hand out, however often it turns up on other sites. `RUS` and `BLR`
-  keep their national flags - the snapshot says which federation a player is
-  under, and one who plays under FIDE's arrives as `FID`. The licence note
-  is `priv/static/flags/LICENSE-fide.txt`.
 - [Feature] **"not paired" has a name.** A player with no board and no bye
   in a round - withdrawn, or taken off a board by hand - arrives from
   OpenPairings as the bye kind `not-paired`, worth 0. It is printed as "not

@@ -504,10 +504,9 @@ never heard of flags has not asked for any. Anything but `true` is off.
 Also off wherever `display.federation` is `false` - no code, no flag. The
 flag is chosen from the player's `federation` (FIDE's three-letter code) by
 a table this site keeps (`OpenResultsWeb.Flags`); a code that is not in it -
-a federation that no longer exists, a typo - is printed without one. `FID`
-(a player FIDE lists under its own flag) gets a white flag with the word
-FIDE; `RUS` and `BLR` get their national flags, since the snapshot is what
-says which of the two a player is under.
+`FID`, a federation that no longer exists, a typo - is printed without one.
+`RUS` and `BLR` get their national flags, since the snapshot is what says
+which of the two a player is under.
 OpenPairings sends `true` unless the arbiter unticks it.
 
 **`standings.manual_order`** - whether the arbiter set `rows[].rank` by hand
