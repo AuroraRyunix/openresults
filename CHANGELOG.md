@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] The line of facts under a tournament's name wraps one fact at a time: "Tempo:" no longer ends a line with its time control starting the next.
+
 - [Feature] **The flag is beside the player's name, on the pages people
   read.** Flags were drawn next to a federation code, which was tidy and
   meant the standings, the pairings and the cross-table - none of which

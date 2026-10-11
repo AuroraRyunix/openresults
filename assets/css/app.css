@@ -291,6 +291,15 @@ h2 {
   font-size: 0.875rem;
 }
 
+/* Each fact wraps as one piece. Inline, a line could end on "Tempo:" and
+   start the next with the time control it was introducing; a label parted
+   from its value is two half-facts. Only a fact wider than the line itself
+   still breaks inside. */
+.details span {
+  display: inline-block;
+  max-width: 100%;
+}
+
 .details span + span::before {
   content: "·";
   margin: 0 0.5rem;
