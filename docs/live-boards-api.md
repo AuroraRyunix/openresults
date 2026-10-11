@@ -225,6 +225,29 @@ clocks shown come from the newest visible ply that carried any. A game
 reported by FIDE only (no `moves`) cannot be delayed ply by ply; it appears
 once its latest position is older than the delay.
 
+## The round as one PGN
+
+`GET /t/<slug>/live/<round>/pgn` returns every game of the round as ONE PGN
+document, boards in ascending order, separated by a blank line. **This is the
+URL to give Lichess** (a broadcast round's "PGN source URL" under "Source:
+a URL") or chess.com's broadcast tool, or any other poller; it needs no
+login and no key.
+
+- Each game is what `/t/<slug>/live/<round>/<board>/pgn` serves for that
+  board, built by the same code, at the same broadcast delay.
+- A board with no game to show - not started, still behind the delay, or
+  forfeited - is a header-only game with its result: `*` until it has one,
+  `1-0` / `0-1` for a forfeit, `*` for a double forfeit.
+- Content type `application/x-chess-pgn; charset=utf-8`. No CORS headers,
+  as on the per-game URL: a server-side poller does not need them.
+- `Cache-Control: no-cache` and an `ETag` that is a hash of the body served.
+  Poll every few seconds with `If-None-Match`; an unchanged round answers
+  `304` with no body. The body also changes when the delay uncovers a move,
+  and the ETag follows it. There is no `Last-Modified`: nothing stored says
+  when a delayed body last changed.
+- `404` for an unknown or unpublished round, a hidden tournament, and a
+  tournament with its pairings switched off.
+
 ## Developing against it
 
 `mix openresults.live_sim --slug <slug> --token <ingest token>` replays PGN

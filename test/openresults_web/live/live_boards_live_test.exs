@@ -664,6 +664,165 @@ defmodule OpenResultsWeb.LiveBoardsLiveTest do
     end
   end
 
+  describe "the round as one PGN" do
+    # The games of a document: a blank line, then the next game's first tag.
+    defp games_of(pgn), do: String.split(pgn, ~r/\n\n(?=\[Event)/, trim: true)
+
+    # The tags and the result of the game on one board, from the document.
+    defp game_on(pgn, board),
+      do: Enum.find(games_of(pgn), &(&1 =~ ~s([Round "5.#{board}"])))
+
+    test "is every board of the round, in board order, as the per-game route writes them", %{
+      conn: conn
+    } do
+      slug = publish!()
+      report(slug, 3, @opera, %{"status" => "finished", "result" => "1-0"})
+      report(slug, 1, ~w(e4 e5))
+
+      conn = get(conn, "/t/#{slug}/live/5/pgn")
+      pgn = response(conn, 200)
+
+      assert [type] = get_resp_header(conn, "content-type")
+      assert type =~ "application/x-chess-pgn"
+      assert get_resp_header(conn, "cache-control") == ["no-cache"]
+
+      rounds = Regex.scan(~r/\[Round "(5\.\d)"\]/, pgn, capture: :all_but_first)
+      assert List.flatten(rounds) == ~w(5.1 5.2 5.3 5.4 5.5)
+
+      # Each game is exactly what its own route serves, blank-line separated.
+      expected =
+        for board <- 1..5 do
+          cond do
+            board in [1, 3] -> conn |> get("/t/#{slug}/live/5/#{board}/pgn") |> response(200)
+            true -> nil
+          end
+        end
+
+      for game <- Enum.reject(expected, &is_nil/1), do: assert(pgn =~ game)
+
+      assert pgn =~ "1. e4 e5 *"
+      assert pgn =~ ~r/17\.\s+Rd8#\s+1-0/
+      assert length(games_of(pgn)) == 5
+    end
+
+    test "boards nobody played are header-only games with their result", %{conn: conn} do
+      slug =
+        publish!(fn payload ->
+          update_in(payload["rounds"], fn rounds ->
+            Enum.map(rounds, fn
+              %{"number" => 5} = round ->
+                Map.update!(round, "boards", fn boards ->
+                  Enum.map(boards, fn
+                    %{"board" => 4} = b -> Map.put(b, "result", "1-0FF")
+                    %{"board" => 5} = b -> Map.put(b, "result", "0-0FF")
+                    b -> b
+                  end)
+                end)
+
+              round ->
+                round
+            end)
+          end)
+        end)
+
+      pgn = conn |> get("/t/#{slug}/live/5/pgn") |> response(200)
+      assert length(games_of(pgn)) == 5
+
+      for {board, result} <- [{2, "*"}, {4, "1-0"}, {5, "*"}] do
+        game = game_on(pgn, board)
+        assert game =~ ~s([Result "#{result}"])
+        assert game |> String.trim_trailing() |> String.ends_with?("]\n\n" <> result)
+        refute game =~ "FF"
+        refute game =~ ~r/\d\. /
+      end
+    end
+
+    test "respects the broadcast delay, per game", %{conn: conn} do
+      slug = publish!()
+      {:ok, _} = LiveBoards.put_delay(slug, 10, "m@example.invalid")
+      now = System.os_time(:millisecond)
+
+      report(slug, 1, ~w(e4 e5), %{}, now_ms: now - :timer.minutes(20))
+      report(slug, 1, ~w(e4 e5 Nf3 Nc6), %{}, now_ms: now - :timer.minutes(2))
+      report(slug, 2, ~w(d4 d5), %{}, now_ms: now - :timer.minutes(2))
+
+      pgn = conn |> get("/t/#{slug}/live/5/pgn") |> response(200)
+      assert pgn =~ "1. e4 e5 *"
+      refute pgn =~ "Nf3"
+      refute pgn =~ "d4"
+    end
+
+    test "answers 304 to a matching If-None-Match, and a new ETag once the body moves", %{
+      conn: conn
+    } do
+      slug = publish!()
+      report(slug, 1, ~w(e4 e5))
+
+      first = get(conn, "/t/#{slug}/live/5/pgn")
+      assert [etag] = get_resp_header(first, "etag")
+      assert response(first, 200) =~ "e4 e5"
+
+      again = conn |> put_req_header("if-none-match", etag) |> get("/t/#{slug}/live/5/pgn")
+      assert response(again, 304) == ""
+      assert get_resp_header(again, "etag") == [etag]
+
+      weak = conn |> put_req_header("if-none-match", "W/" <> etag) |> get("/t/#{slug}/live/5/pgn")
+      assert response(weak, 304) == ""
+
+      report(slug, 1, ~w(e4 e5 Nf3))
+
+      moved = conn |> put_req_header("if-none-match", etag) |> get("/t/#{slug}/live/5/pgn")
+      assert response(moved, 200) =~ "Nf3"
+      assert get_resp_header(moved, "etag") != [etag]
+    end
+
+    test "sends no CORS headers, like the per-game route", %{conn: conn} do
+      slug = publish!()
+      round = get(conn, "/t/#{slug}/live/5/pgn")
+      assert get_resp_header(round, "access-control-allow-origin") == []
+      assert round.status == 200
+    end
+
+    test "is a 404 for an unknown or unpublished round, a hidden tournament, pairings off", %{
+      conn: conn
+    } do
+      slug = publish!()
+      assert conn |> get("/t/#{slug}/live/9/pgn") |> response(404)
+      # The fixture's unpublished round.
+      assert conn |> get("/t/#{slug}/live/4/pgn") |> response(404)
+      assert conn |> get("/t/#{slug}/live/x/pgn") |> response(404)
+
+      assert conn
+             |> get("/t/no-such-#{System.unique_integer([:positive])}/live/5/pgn")
+             |> response(404)
+
+      off = publish!(&put_in(&1, ["tournament", "display", "pairings"], false))
+      assert conn |> get("/t/#{off}/live/5/pgn") |> response(404)
+
+      {:ok, _} = Moderation.hide(slug, %{email: "m@example.invalid"})
+      assert conn |> get("/t/#{slug}/live/5/pgn") |> response(404)
+    end
+
+    test "does not swallow the board page or the per-game PGN", %{conn: conn} do
+      slug = publish!()
+      report(slug, 1, ~w(e4 e5))
+
+      {:ok, view, _html} = live(conn, "/t/#{slug}/live/5/1")
+      assert has_element?(view, "#lb-pgn[href$='/live/5/1/pgn']")
+      assert conn |> get("/t/#{slug}/live/5/1/pgn") |> response(200) =~ "1. e4 e5 *"
+    end
+
+    test "is linked from the broadcast page and the all-boards page", %{conn: conn} do
+      slug = publish!()
+
+      {:ok, view, _html} = live(conn, "/t/#{slug}/live/5")
+      assert has_element?(view, "#lb-round-pgn[href$='/live/5/pgn']")
+
+      {:ok, view, _html} = live(conn, "/t/#{slug}/live/5/all")
+      assert has_element?(view, "#lb-round-pgn[href$='/live/5/pgn']")
+    end
+  end
+
   describe "the hall display" do
     test "skips the live view until a game is in progress", %{conn: conn} do
       slug = publish!()

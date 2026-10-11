@@ -27,6 +27,7 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] `/t/<slug>/live/<round>/pgn` serves the whole round as one PGN, for a broadcast tool that would rather follow one URL than forty: boards in order, the same games at the same broadcast delay as the per-game file, boards nobody played as header-only games, an ETag of what was actually served so a poller that asks every few seconds mostly gets a 304. Linked as "PGN of the round" from the broadcast and the all-boards pages. The per-game file never wrote clock comments, so neither does this.
 - [Fix] The line of facts under a tournament's name wraps one fact at a time: "Tempo:" no longer ends a line with its time control starting the next.
 
 - [Feature] **The flag is beside the player's name, on the pages people

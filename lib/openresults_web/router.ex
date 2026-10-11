@@ -147,6 +147,11 @@ defmodule OpenResultsWeb.Router do
     # only ever be a stale copy of what the socket is about to replace. A
     # second `live_session` because its root layout is the site's own, not
     # the hall's full-screen one.
+    # The whole round as one PGN, for a poller. A plain GET, but ahead of
+    # the `live_session` all the same: `/live/:round/:board` would take
+    # "pgn" for a board.
+    get "/t/:slug/live/:round/pgn", LivePgnController, :round_pgn
+
     live_session :live_boards,
       root_layout: {OpenResultsWeb.Layouts, :live_root},
       session: {OpenResultsWeb.HallLive, :session, []} do

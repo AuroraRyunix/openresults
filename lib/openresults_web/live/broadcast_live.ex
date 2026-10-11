@@ -589,31 +589,35 @@ defmodule OpenResultsWeb.BroadcastLive do
             <p class="lb-eyebrow">
               <span class="lb-live-dot" aria-hidden="true"></span>{gettext("Live boards")}
             </p>
+            
             <h1 id="lb-title" class="lb-bc-title">
               <a href={~p"/t/#{@slug}"}>{@title}</a>
             </h1>
           </div>
+          
           <div :if={@round} class="lb-head-tools">
             <.view_switch slug={@slug} round={@round} board={@board} current={:broadcast} />
             <ProjectorPicker.button />
           </div>
         </header>
-        <ProjectorPicker.picker picker={@projector} slug={@slug} round={@round} pieces={@pieces} />
-
+         <ProjectorPicker.picker picker={@projector} slug={@slug} round={@round} pieces={@pieces} />
         <p :if={is_nil(@payload)} id="lb-unavailable" class="empty">
           {gettext("Nothing is published for this tournament at the moment.")}
         </p>
+        
         <p :if={@payload && @rounds == []} id="lb-no-rounds" class="empty">
           {gettext("No round has been published yet, so there are no boards to follow.")}
         </p>
+        
         <p :if={@unknown_round?} id="lb-unknown-round" class="empty">
           {gettext("This round has not been published.")}
         </p>
-
+        
         <div :if={@round} id="lb-broadcast" class="lb-bc">
           <nav id="lb-rail" class="lb-rail" aria-label={gettext("Rounds and games")}>
             <div class="lb-panel lb-rounds-panel">
               <p class="lb-panel-label" id="lb-rounds-label">{gettext("Round")}</p>
+              
               <ul id="lb-rounds" class="lb-pills" aria-labelledby="lb-rounds-label">
                 <li :for={n <- @rounds}>
                   <.link
@@ -627,7 +631,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                 </li>
               </ul>
             </div>
-
+            
             <button
               type="button"
               id="lb-pairings-toggle"
@@ -642,9 +646,9 @@ defmodule OpenResultsWeb.BroadcastLive do
               <span>
                 {ngettext("%{count} game in this round", "%{count} games in this round", @game_count)}
               </span>
-              <span class="lb-chevron" aria-hidden="true"></span>
+               <span class="lb-chevron" aria-hidden="true"></span>
             </button>
-
+            
             <div id="lb-rail-panel" class="lb-panel lb-rail-panel">
               <.form
                 for={@search_form}
@@ -659,6 +663,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                     do: gettext("Find a player or a team"),
                     else: gettext("Find a player")}
                 </label>
+                
                 <input
                   type="search"
                   id="lb-search-q"
@@ -673,10 +678,12 @@ defmodule OpenResultsWeb.BroadcastLive do
                   phx-debounce="200"
                 />
               </.form>
+              
               <ul id="lb-pairings" class="lb-pairings" phx-update="stream">
                 <li id="lb-pairings-empty" class="lb-pairings-empty">
                   {gettext("No game matches that name.")}
                 </li>
+                
                 <li
                   :for={{id, item} <- @streams.pairings}
                   id={id}
@@ -690,7 +697,7 @@ defmodule OpenResultsWeb.BroadcastLive do
               </ul>
             </div>
           </nav>
-
+          
           <section
             id="lb-stage"
             class="lb-stage"
@@ -700,7 +707,7 @@ defmodule OpenResultsWeb.BroadcastLive do
             <p :if={is_nil(@featured)} id="lb-no-game" class="empty">
               {gettext("This board is not published.")}
             </p>
-
+            
             <div :if={@featured} id="lb-game" class="lb-game">
               <header class="lb-stage-head">
                 <h2 id="lb-game-title" class="lb-stage-title">
@@ -709,15 +716,14 @@ defmodule OpenResultsWeb.BroadcastLive do
                     board: @featured.label
                   )}
                 </h2>
-                <.status_badge id="lb-game-status" status={@status} />
+                 <.status_badge id="lb-game-status" status={@status} />
                 <.result_mark
                   :if={@result}
                   id="lb-game-result"
                   result={@result}
                   tile={@featured}
                   class="lb-stage-result"
-                />
-                <span class="lb-stage-spacer"></span>
+                /> <span class="lb-stage-spacer"></span>
                 <button
                   type="button"
                   id="lb-fullscreen"
@@ -733,10 +739,12 @@ defmodule OpenResultsWeb.BroadcastLive do
                   </svg>
                 </button>
               </header>
+              
               <p :if={@delay > 0 or @status == :waiting} class="lb-stage-note">
                 <span :if={@status == :waiting} id="lb-not-started">
                   {gettext("The game has not started yet.")}
                 </span>
+                
                 <span :if={@delay > 0} id="lb-delay">
                   {ngettext(
                     "shown %{count} minute behind the game",
@@ -745,7 +753,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                   )}
                 </span>
               </p>
-
+              
               <div class="lb-board-column">
                 <.player_bar
                   tile={@featured}
@@ -769,6 +777,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                     <span>{unplayed_note(@featured)}</span>
                   </p>
                 </div>
+                
                 <.player_bar
                   tile={@featured}
                   colour={@bottom}
@@ -776,7 +785,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                   score={@scores && side_score(@scores, @bottom)}
                 />
               </div>
-
+              
               <div
                 :if={not @unplayed?}
                 class="lb-controls"
@@ -794,6 +803,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                 >
                   &laquo;
                 </button>
+                
                 <button
                   type="button"
                   id="lb-prev"
@@ -805,6 +815,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                 >
                   &lsaquo;
                 </button>
+                
                 <button
                   type="button"
                   id="lb-next"
@@ -816,6 +827,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                 >
                   &rsaquo;
                 </button>
+                
                 <button
                   type="button"
                   id="lb-last"
@@ -827,9 +839,11 @@ defmodule OpenResultsWeb.BroadcastLive do
                 >
                   &raquo;
                 </button>
+                
                 <button type="button" id="lb-flip" phx-click="flip" class="lb-btn lb-btn-text">
                   {gettext("Flip board")}
                 </button>
+                
                 <button
                   :if={not @following? and @status == :live}
                   type="button"
@@ -842,24 +856,27 @@ defmodule OpenResultsWeb.BroadcastLive do
               </div>
             </div>
           </section>
-
+          
           <aside id="lb-side" class="lb-side" aria-label={gettext("Moves and event")}>
             <section id="lb-event" class="lb-panel lb-event">
               <p class="lb-panel-label">{@round_heading}</p>
+              
               <p class="lb-event-name">{@info.name}</p>
+              
               <p :if={@info.start_date || @info.city} class="lb-event-meta">
                 <span :if={@info.start_date}>
                   {if @info.end_date && @info.end_date != @info.start_date,
                     do: Format.date_range(@info.start_date, @info.end_date),
                     else: Format.date(@info.start_date)}
                 </span>
-                <span :if={@info.city}>{@info.city}</span>
+                 <span :if={@info.city}>{@info.city}</span>
               </p>
+              
               <p :if={@info.round_date} class="lb-event-meta">
                 {@round_heading}: {Format.date(@info.round_date)}
               </p>
             </section>
-
+            
             <section :if={@featured} class="lb-panel lb-moves-panel">
               <div class="lb-tabs" role="tablist" aria-label={gettext("Game")}>
                 <button
@@ -877,7 +894,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                   {label}
                 </button>
               </div>
-
+              
               <div
                 id="lb-panel-moves"
                 role="tabpanel"
@@ -888,6 +905,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                 <p :if={@rows == []} id="lb-no-moves" class="lb-quiet-line">
                   {if @unplayed?, do: unplayed_note(@featured), else: gettext("No moves yet.")}
                 </p>
+                
                 <div
                   :if={@rows != []}
                   id="lb-moves-scroll"
@@ -896,27 +914,34 @@ defmodule OpenResultsWeb.BroadcastLive do
                 >
                   <table id="lb-moves" class="lb-moves">
                     <caption class="visually-hidden">{gettext("Moves")}</caption>
+                    
                     <thead>
                       <tr>
                         <th scope="col" class="lb-move-number">
                           <span aria-hidden="true">#</span>
                           <span class="visually-hidden">{gettext("Move")}</span>
                         </th>
+                        
                         <th scope="col">{gettext("White")}</th>
+                        
                         <th scope="col">{gettext("Black")}</th>
                       </tr>
                     </thead>
+                    
                     <tbody>
                       <tr :for={row <- @rows} id={"lb-row-#{row.number}"}>
                         <th scope="row" class="lb-move-number">{row.number}</th>
+                        
                         <td>
                           <.move_button cell={row.white} colour="w" shown={@shown_ply} set={@pieces} />
                         </td>
+                        
                         <td>
                           <.move_button cell={row.black} colour="b" shown={@shown_ply} set={@pieces} />
                         </td>
                       </tr>
                     </tbody>
+                    
                     <tfoot :if={@result}>
                       <tr>
                         <td colspan="3" class="lb-moves-result">
@@ -927,7 +952,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                   </table>
                 </div>
               </div>
-
+              
               <div
                 id="lb-panel-info"
                 role="tabpanel"
@@ -937,16 +962,23 @@ defmodule OpenResultsWeb.BroadcastLive do
               >
                 <dl class="lb-facts">
                   <dt>{gettext("White")}</dt>
+                  
                   <dd>{person_line(@featured.white)}</dd>
+                  
                   <dt>{gettext("Black")}</dt>
+                  
                   <dd>{person_line(@featured.black)}</dd>
+                  
                   <dt>{gettext("Board")}</dt>
+                  
                   <dd>{@featured.label}</dd>
+                  
                   <dt>{gettext("Status")}</dt>
+                  
                   <dd>{status_label(@status, nil)}</dd>
                 </dl>
               </div>
-
+              
               <p class="lb-game-links">
                 <a
                   :if={@featured.view && not @unplayed?}
@@ -957,6 +989,7 @@ defmodule OpenResultsWeb.BroadcastLive do
                 >
                   {gettext("Download PGN")}
                 </a>
+                
                 <.link
                   id="lb-back"
                   class="lb-btn lb-btn-text"
@@ -968,14 +1001,25 @@ defmodule OpenResultsWeb.BroadcastLive do
             </section>
           </aside>
         </div>
-
+        
         <:foot>
+          <a
+            :if={@round}
+            id="lb-round-pgn"
+            class="feed-link"
+            href={~p"/t/#{@slug}/live/#{@round}/pgn"}
+            download
+          >
+            {gettext("PGN of the round")}
+          </a>
+          
           <a :if={@round} class="feed-link" href={~p"/t/#{@slug}/round/#{@round}"}>
             {gettext("Round page")}
           </a>
         </:foot>
       </.shell>
     </div>
+
     <script :type={Phoenix.LiveView.ColocatedHook} name=".GameKeys">
       const KEYS = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "f", "F"]
 
@@ -1012,6 +1056,7 @@ defmodule OpenResultsWeb.BroadcastLive do
         }
       }
     </script>
+
     <script :type={Phoenix.LiveView.ColocatedHook} name=".FollowMoves">
       // Keeps the current move in sight inside the list's own scroll box,
       // never by scrolling the page: on a phone the list is below the board
@@ -1032,6 +1077,7 @@ defmodule OpenResultsWeb.BroadcastLive do
         }
       }
     </script>
+
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Fullscreen">
       export default {
         mounted() {
@@ -1072,12 +1118,11 @@ defmodule OpenResultsWeb.BroadcastLive do
   defp pairing_row(%{item: %{kind: :match}} = assigns) do
     ~H"""
     <p class="lb-match-head">
-      <span class="lb-match-no">{@item.number}</span>
-      <span class="lb-match-team">{@item.a}</span>
+      <span class="lb-match-no">{@item.number}</span> <span class="lb-match-team">{@item.a}</span>
       <span class="lb-match-score">
         {if @item.score, do: "#{elem(@item.score, 0)}-#{elem(@item.score, 1)}", else: "-"}
       </span>
-      <span class="lb-match-team lb-match-team-b">{@item.b}</span>
+       <span class="lb-match-team lb-match-team-b">{@item.b}</span>
     </p>
     """
   end
@@ -1104,18 +1149,18 @@ defmodule OpenResultsWeb.BroadcastLive do
       }
     >
       <span class="lb-row-bd">
-        {@item.label}
-        <span :if={@status == :live} class="lb-live-dot" aria-hidden="true"></span>
+        {@item.label} <span :if={@status == :live} class="lb-live-dot" aria-hidden="true"></span>
       </span>
+      
       <span class="lb-row-players">
         <.row_player person={@item.white} colour="white" />
         <.row_player person={@item.black} colour="black" />
       </span>
+      
       <span class="lb-row-score" aria-hidden="true">
         <%= cond do %>
           <% @scores -> %>
-            <span>{elem(@scores, 0)}</span>
-            <span>{elem(@scores, 1)}</span>
+            <span>{elem(@scores, 0)}</span> <span>{elem(@scores, 1)}</span>
             <span :if={@forfeit?} class="lb-ff">FF</span>
           <% @status == :live -> %>
             <span class="lb-row-live">{gettext("Live")}</span>

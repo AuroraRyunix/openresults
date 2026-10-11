@@ -35,7 +35,8 @@ defmodule OpenResultsWeb.AccessibilityTest do
     "/t/:slug/events",
     "/sitemap.xml",
     # A PGN file, not a document.
-    "/t/:slug/live/:round/:board/pgn"
+    "/t/:slug/live/:round/:board/pgn",
+    "/t/:slug/live/:round/pgn"
   ]
 
   setup do

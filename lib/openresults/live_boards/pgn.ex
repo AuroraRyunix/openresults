@@ -35,6 +35,34 @@ defmodule OpenResults.LiveBoards.Pgn do
     header <> "\n\n" <> wrap(movetext(view, start) ++ [result]) <> "\n"
   end
 
+  @doc """
+  A game nobody has sent a move for - not started yet, or never to be played
+  (a forfeit) - as the tags and a bare result. The result tag is the tile's:
+  a forfeit's `FF` suffix is not PGN and is dropped, and a double forfeit,
+  which nobody won or drew, is `*`.
+  """
+  @spec build_header_only([{String.t(), String.t() | integer() | nil}]) :: String.t()
+  def build_header_only(tags) do
+    result =
+      case tags |> List.keyfind("Result", 0, {"Result", nil}) |> elem(1) do
+        value when value in ["1-0FF", "0-1FF"] -> String.replace_suffix(value, "FF", "")
+        value when value in ["1-0", "0-1", "1/2-1/2"] -> value
+        _none_or_double_forfeit -> "*"
+      end
+
+    tags =
+      tags
+      |> Enum.reject(fn {name, value} -> is_nil(value) and name not in roster() end)
+      |> Enum.reject(fn {name, _} -> name == "Result" end)
+
+    header =
+      Enum.map_join(tags ++ [{"Result", result}], "\n", fn {name, value} ->
+        ~s([#{name} "#{escape(value)}"])
+      end)
+
+    header <> "\n\n" <> result <> "\n"
+  end
+
   defp roster, do: ~w(Event Site Date Round White Black Result)
 
   defp escape(nil), do: "?"

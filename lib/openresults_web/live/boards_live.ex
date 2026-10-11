@@ -238,16 +238,17 @@ defmodule OpenResultsWeb.BoardsLive do
           <p class="lb-eyebrow">
             <span class="lb-live-dot" aria-hidden="true"></span>{gettext("Live boards")}
           </p>
+          
           <h1 id="lb-title" class="lb-bc-title">
             <a href={~p"/t/#{@slug}"}>{@title}</a>
           </h1>
         </div>
+        
         <div :if={@round} class="lb-head-tools">
-          <.view_switch slug={@slug} round={@round} current={:all} />
-          <ProjectorPicker.button />
+          <.view_switch slug={@slug} round={@round} current={:all} /> <ProjectorPicker.button />
         </div>
       </header>
-      <ProjectorPicker.picker picker={@projector} slug={@slug} round={@round} pieces={@pieces} />
+       <ProjectorPicker.picker picker={@projector} slug={@slug} round={@round} pieces={@pieces} />
       <p :if={@round_heading} id="lb-round" class="details lb-grid-details">
         <span>{@round_heading}</span>
         <span :if={@delay > 0} id="lb-delay">
@@ -258,7 +259,7 @@ defmodule OpenResultsWeb.BoardsLive do
           )}
         </span>
       </p>
-
+      
       <nav :if={length(@rounds) > 1} class="lb-grid-rounds" aria-label={gettext("Rounds")}>
         <ul id="lb-rounds" class="lb-pills">
           <li :for={n <- @rounds}>
@@ -273,22 +274,34 @@ defmodule OpenResultsWeb.BoardsLive do
           </li>
         </ul>
       </nav>
-
+      
       <p :if={is_nil(@payload)} id="lb-unavailable" class="empty">
         {gettext("Nothing is published for this tournament at the moment.")}
       </p>
+      
       <p :if={@payload && @rounds == []} id="lb-no-rounds" class="empty">
         {gettext("No round has been published yet, so there are no boards to follow.")}
       </p>
+      
       <p :if={@unknown_round?} id="lb-unknown-round" class="empty">
         {gettext("This round has not been published.")}
       </p>
-
+      
       <div id="lb-grid" class="lb-grid" phx-update="stream">
         <.tile :for={{_id, tile} <- @streams.tiles} tile={tile} slug={@slug} pieces={@pieces} />
       </div>
-
+      
       <:foot>
+        <a
+          :if={@round}
+          id="lb-round-pgn"
+          class="feed-link"
+          href={~p"/t/#{@slug}/live/#{@round}/pgn"}
+          download
+        >
+          {gettext("PGN of the round")}
+        </a>
+        
         <a :if={@round} class="feed-link" href={~p"/t/#{@slug}/round/#{@round}"}>
           {gettext("Round page")}
         </a>
