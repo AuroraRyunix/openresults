@@ -236,6 +236,140 @@ defmodule OpenResultsWeb.FlagsTest do
     end
   end
 
+  # 2026-10-11. A flag beside a federation code is no use on a page that
+  # prints no federation code, and those are the pages people read.
+  describe "before a player's name" do
+    defp name_flag(code, on) do
+      assigns = %{code: code, on: on}
+
+      rendered_to_string(~H"""
+      <Flags.name_flag code={@code} on={@on} />
+      """)
+    end
+
+    test "the component: the code as the picture's text, lazy, sized; an empty box for no flag" do
+      document = LazyHTML.from_fragment(name_flag("ned", true))
+
+      assert count(
+               document,
+               ~s(img.flag.flag-name[src="/flags/nl.svg"][alt="NED"][loading="lazy"][width="20"][height="15"])
+             ) == 1
+
+      for code <- ["FID", "XXX", nil, ""] do
+        document = LazyHTML.from_fragment(name_flag(code, true))
+        assert count(document, "img") == 0
+        assert count(document, ~s(span.flag.flag-name.flag-none[aria-hidden="true"])) == 1
+      end
+
+      assert String.trim(name_flag("NED", false)) == ""
+      assert String.trim(name_flag("FID", false)) == ""
+    end
+
+    test "the standings: one in front of every name", %{conn: conn} do
+      slug = publish!()
+      document = doc(conn, ~p"/t/#{slug}")
+
+      names = count(document, "th.row-head .player .name")
+      assert names > 0
+      assert count(document, "th.row-head .player > .flag-name") == names
+      assert count(document, ~s(th.row-head .player > img.flag[alt="BEL"][loading="lazy"])) > 0
+      # Before the name, inside the link, and never an empty alt: the code is
+      # printed nowhere else on this page.
+      assert count(document, ~s(.player img.flag[alt=""])) == 0
+      assert count(document, ".player > .flag-name:first-child") == names
+    end
+
+    test "a round's pairings: both players", %{conn: conn} do
+      slug = publish!()
+      document = doc(conn, ~p"/t/#{slug}/round/1")
+
+      names = count(document, "td .player .name")
+      assert names > 0
+      assert count(document, "td .player > .flag-name") == names
+      assert count(document, "td .player > img.flag-name") > 0
+    end
+
+    test "the round as the hall reads it", %{conn: conn} do
+      slug = publish!()
+      document = doc(conn, ~p"/t/#{slug}/round/1?display=1")
+
+      names = count(document, ".projector-pairings .player .name")
+      assert names > 0
+      assert count(document, ".projector-pairings .player > .flag-name") == names
+    end
+
+    test "the cross-table's name column", %{conn: conn} do
+      slug = publish!()
+      document = doc(conn, ~p"/t/#{slug}/crosstable")
+
+      names = count(document, "th.xt-name .player .name")
+      assert names > 0
+      assert count(document, "th.xt-name .player > .flag-name") == names
+    end
+
+    test "a team's roster and the list of teams", %{conn: conn} do
+      slug = unique_slug("flags-team")
+
+      payload =
+        SnapshotPayloads.team_round_robin()
+        |> put_in(["tournament", "slug"], slug)
+        |> display("flags", true)
+        |> display("federation", true)
+        |> update_in(["players"], fn players ->
+          Enum.map(players, &Map.put(&1, "federation", "BEL"))
+        end)
+
+      {:ok, _} = Snapshots.ingest(payload)
+
+      team = payload["teams"] |> hd() |> Map.fetch!("no")
+      document = doc(conn, ~p"/t/#{slug}/team/#{team}")
+      assert count(document, ~s(.player > img.flag-name[alt="BEL"])) > 0
+
+      document = doc(conn, ~p"/t/#{slug}/teams")
+      assert count(document, ~s(.player > img.flag-name[alt="BEL"])) > 0
+    end
+
+    test "a player with no flag to draw keeps the name where the others start", %{conn: conn} do
+      slug =
+        publish!(fn payload ->
+          update_in(payload["players"], fn [first | rest] ->
+            [Map.put(first, "federation", "FID") | rest]
+          end)
+        end)
+
+      document = doc(conn, ~p"/t/#{slug}")
+
+      assert count(document, "th.row-head .player > span.flag-none[aria-hidden=true]") == 1
+
+      assert count(document, "th.row-head .player > .flag-name") ==
+               count(document, "th.row-head .player .name")
+    end
+
+    test "one flag per row where the federation has a column of its own", %{conn: conn} do
+      slug = publish!()
+
+      card = doc(conn, ~p"/t/#{slug}/player/1")
+      assert count(card, ".flag-name") == 0
+      assert count(card, ~s(td .fed img.flag[alt=""])) > 0
+    end
+
+    test "none when the snapshot does not ask, the arbiter said no, or federations are hidden",
+         %{conn: conn} do
+      for tweak <- [
+            &without_flags/1,
+            &display(&1, "flags", false),
+            &display(&1, "federation", false)
+          ] do
+        slug = publish!(tweak)
+
+        for path <- ["", "/round/1", "/round/1?display=1", "/crosstable"] do
+          document = doc(conn, "/t/#{slug}" <> path)
+          assert count(document, ".flag") == 0, path
+        end
+      end
+    end
+  end
+
   describe "the live boards" do
     defp report(slug, board, moves) do
       assert {:ok, _} =

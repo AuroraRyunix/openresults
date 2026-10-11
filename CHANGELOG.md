@@ -27,6 +27,22 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **The flag is beside the player's name, on the pages people
+  read.** Flags were drawn next to a federation code, which was tidy and
+  meant the standings, the pairings and the cross-table - none of which
+  print a federation code - had none. Where the arbiter's app asks for
+  flags and shows federations, a small flag now sits before every name on
+  the standings, a round's pairings (both players, and the same round on
+  the hall's screen), the cross-table, the list of teams and a team's own
+  page. The federation code is the picture's text, since those pages print
+  it nowhere else. A player with no flag to draw (`FID`, a code that names
+  no country, none at all) gets an empty space of the same width, so the
+  names still line up. The starting list, a player's card and the entry
+  list keep theirs in the federation column and do not get a second one.
+  Same files, same month's cache, loaded lazily: a standings page of two
+  hundred players is two hundred `img` tags and a request per country.
+  Nothing in the snapshot changed.
+
 - [Feature] **A round-robin row that is not counted says so.** A player who
   leaves a round robin with fewer than half the games played keeps the
   games in the table and counts for nobody (FIDE C.05 6.6). OpenPairings

@@ -1389,6 +1389,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 player={player}
                 show={@show}
                 cards?={@show.player_cards}
+                flag={false}
                 detail
               />
             </th>
@@ -2982,6 +2983,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                     player={entry.opponent}
                     show={@show}
                     cards?={@show.player_cards}
+                    flag={false}
                   />
                 </td>
 
@@ -3096,6 +3098,15 @@ defmodule OpenResultsWeb.TournamentHTML do
 
   attr :cards?, :boolean, default: true, doc: "false renders the name without a link"
 
+  attr :flag, :boolean,
+    default: true,
+    doc: """
+    The federation's flag before the name, when the arbiter asked for flags
+    (`@show.flags` - absent means off, unlike every other key in `show`).
+    Pass false in a row that already prints the federation code with its own
+    flag: one flag per player per row is plenty.
+    """
+
   attr :q, :string,
     default: nil,
     doc: """
@@ -3115,6 +3126,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       class="player"
       data-player={@no}
     >
+      <Flags.name_flag :if={@flag} code={@player && @player["federation"]} on={flags?(@show)} />
       <span :if={@detail && shown?(@show, :title) && @player && @player["title"]} class="title">
         {@player["title"]}
       </span>
@@ -3125,6 +3137,7 @@ defmodule OpenResultsWeb.TournamentHTML do
     </a>
 
     <span :if={@no && not @cards?} class="player">
+      <Flags.name_flag :if={@flag} code={@player && @player["federation"]} on={flags?(@show)} />
       <span :if={@detail && shown?(@show, :title) && @player && @player["title"]} class="title">
         {@player["title"]}
       </span>
@@ -3368,6 +3381,7 @@ defmodule OpenResultsWeb.TournamentHTML do
       player={@player}
       show={@show}
       cards?={Map.get(@show, :player_cards, true)}
+      flag={false}
     />
     <span :if={is_nil(@part["opponent"])} class="quiet">
       {source_label(@part)}
@@ -3578,6 +3592,11 @@ defmodule OpenResultsWeb.TournamentHTML do
   # Missing means shown, matching `Tournament.show?/2`. Callers build this map
   # once per table rather than asking the payload per cell.
   defp shown?(show, key), do: Map.get(show, key, true)
+
+  # The one key of `show` where a missing entry means OFF: a caller that
+  # never mentioned flags has not asked for any. `display_rules/1` puts the
+  # effective value there (flags asked for AND federations shown).
+  defp flags?(show), do: Map.get(show, :flags, false) == true
 
   @doc """
   A result token, with its forfeit or unrated marker spelled out.

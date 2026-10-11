@@ -27,10 +27,12 @@ defmodule OpenResultsWeb.Flags do
   it existed, and an arbiter's app that has never heard of flags has not
   asked for any. See `OpenResultsWeb.Tournament.flags?/1`.
 
-  The image is decorative (`alt=""`) wherever the code is printed beside it,
-  which is everywhere a page has room for the code. Where only the flag
-  fits - a small live-board tile - the code is its `alt`, so nobody is told
-  less than the picture says.
+  The image is decorative (`alt=""`) wherever the code is printed beside it.
+  Where only the flag is drawn - a small live-board tile, and since
+  2026-10-11 before the name on the standings, the pairings, the cross-table
+  and the team pages (`name_flag/1`) - the code is its `alt`, so nobody is
+  told less than the picture says. A row that prints the code in a column of
+  its own gets one flag, in that column.
   """
   use Phoenix.Component
 
@@ -102,10 +104,37 @@ defmodule OpenResultsWeb.Flags do
       src={@src}
       width="20"
       height="15"
-      alt={if(@label && is_binary(@code), do: @code, else: "")}
+      alt={if(@label && is_binary(@code), do: @code |> String.trim() |> String.upcase(), else: "")}
       loading="lazy"
       decoding="async"
     />
+    """
+  end
+
+  @doc """
+  The flag before a player's name, on the pages that print a name and no
+  federation code: the standings, the pairings, the cross-table, a team's
+  roster. Which turned out to be the pages people look at (2026-10-11).
+
+  Nothing at all when `on` is false. When it is true, every name gets the
+  same width in front of it: the flag, or - for `FID`, an unknown code, a
+  player with none - an empty box of the same size, so a column of names
+  stays a column. The picture's text is the code, because on these pages it
+  is printed nowhere else; a row that already has a code column does not use
+  this (it has `fed/1`), so nobody hears "BEL" twice.
+  """
+  attr :code, :any, default: nil
+  attr :on, :boolean, default: false
+
+  def name_flag(assigns) do
+    assigns = assign(assigns, :src, assigns.on && path(assigns.code))
+
+    ~H"""
+    <.flag :if={@src} src={@src} code={@code} label class="flag-name" /><span
+      :if={@on && !@src}
+      class="flag flag-name flag-none"
+      aria-hidden="true"
+    ></span>
     """
   end
 

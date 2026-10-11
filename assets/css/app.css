@@ -4980,6 +4980,36 @@ a.xt-opp:hover {
   white-space: nowrap;
 }
 
+/* The flag before a name (`Flags.name_flag/1`). `.flag-none` is the same
+   box with nothing in it, for a player with no flag to draw, so the names
+   below and above still start at the same place. */
+.flag-none {
+  box-shadow: none;
+}
+
+/* The round as a hall reads it: four columns that must fit without a
+   scrollbar, at a type size chosen for the back of the room. The flags get
+   less of it than the names do. */
+.projector-pairings .flag {
+  font-size: 0.75em;
+}
+
+/* Paper: the hairline is a screen nicety that prints as a grey smudge at
+   some printer resolutions, and the picture is allowed to keep its colours
+   where the printer has any. */
+@media print {
+  .flag {
+    box-shadow: none;
+    outline: 0.5pt solid #999999;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .flag-none {
+    outline-color: transparent;
+  }
+}
+
 .lb-fed {
   padding: 0 0.3rem;
   border: 1px solid var(--quiet);

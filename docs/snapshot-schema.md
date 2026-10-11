@@ -528,7 +528,12 @@ player's federation code. **Absent means off**, the one display key read
 that way here: every other key hides something the arbiter already
 publishes, this one adds a picture, and a snapshot from an app that has
 never heard of flags has not asked for any. Anything but `true` is off.
-Also off wherever `display.federation` is `false` - no code, no flag. The
+Also off wherever `display.federation` is `false` - no code, no flag
+(OpenPairings sends `false` there itself since 2026-10-11, and does not
+offer the tick while "Federations" is off). Where it is drawn: beside the
+federation code where a page prints one (starting list, player card, entry
+list, hall display, live boards), and before the player's name where it
+does not (standings, pairings, cross-table, team pages). The
 flag is chosen from the player's `federation` (FIDE's three-letter code) by
 a table this site keeps (`OpenResultsWeb.Flags`); a code that is not in it -
 `FID`, a federation that no longer exists, a typo - is printed without one.
