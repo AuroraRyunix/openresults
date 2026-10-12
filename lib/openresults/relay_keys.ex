@@ -26,9 +26,35 @@ defmodule OpenResults.RelayKeys do
   timestamp rather than deleting, so the list can say what was revoked and
   when, and a revoked key is told so rather than treated as a stranger.
 
-  Creating and revoking are the admin panel's, and are logged as
-  `relay_key_create` / `relay_key_revoke` with the key's id and label. The
-  secret never reaches the log.
+  Creating and revoking are logged as `relay_key_create` /
+  `relay_key_revoke` with the key's id and label. The secret never reaches
+  the log.
+
+  ## Two makers
+
+  `origin` says who made a key:
+
+    * `"publisher"` - the tournament's own publisher, over
+      `POST /api/tournaments/:slug/relay-keys`
+      (`OpenResultsWeb.RelayKeyController`), with the credentials a publish
+      takes. The normal way: the arbiter's program asks, hands the key to the
+      box, and nobody copies anything.
+    * `"admin"` - the panel, for a box that has no such program behind it.
+
+  A publisher's key is **rotated by label**: asking again under the same
+  label revokes the one it made before and returns a new one. The server
+  keeps a fingerprint and cannot return the same key twice, so "ask again"
+  can only mean "the old one is lost"; revoking it is what keeps a retry
+  after a lost reply from piling keys up. An admin's key is never touched by
+  that, whatever its label.
+
+  ## When a publisher loses its keys
+
+  A takedown deletes every key of the tournament; a transfer to another
+  installation revokes them; revoking an installation revokes the keys of
+  all its tournaments. Hiding a tournament revokes nothing and needs not to:
+  the live endpoint refuses a hidden tournament whatever is presented, and
+  unhiding it should not cost the hall a new key.
   """
 
   import Ecto.Query, warn: false
@@ -60,9 +86,10 @@ defmodule OpenResults.RelayKeys do
   # Inside the caller's transaction (`OpenResults.Moderation`), which writes
   # the log row beside it. Returns the key - the only time it exists outside
   # the relay.
-  @spec create(String.t(), String.t() | nil, String.t()) ::
+  @spec create(String.t(), String.t() | nil, String.t(), String.t()) ::
           {:ok, %{relay_key: RelayKey.t(), key: String.t()}} | {:error, :too_many}
-  def create(slug, label, created_by) when is_binary(slug) do
+  def create(slug, label, created_by, origin \\ "admin")
+      when is_binary(slug) and origin in ["admin", "publisher"] do
     if active_count(slug) >= @max_active do
       {:error, :too_many}
     else
@@ -74,7 +101,8 @@ defmodule OpenResults.RelayKeys do
           key_hash: hash(key),
           label: label,
           hint: String.slice(key, -4, 4),
-          created_by: created_by
+          created_by: created_by,
+          origin: origin
         })
 
       {:ok, %{relay_key: relay_key, key: key}}
@@ -98,6 +126,55 @@ defmodule OpenResults.RelayKeys do
          |> Ecto.Changeset.change(revoked_at: now, revoked_by: revoked_by)
          |> Repo.update!()}
     end
+  end
+
+  @doc false
+  # The publisher's live keys of a tournament - under one label, or all of
+  # them for `nil` - revoked. Inside the caller's transaction, like `create/4`.
+  # Returns the keys as they were, for the log.
+  @spec revoke_publisher_keys(String.t(), String.t() | nil, String.t(), DateTime.t()) ::
+          [RelayKey.t()]
+  def revoke_publisher_keys(slug, label, revoked_by, now \\ DateTime.utc_now())
+      when is_binary(slug) do
+    query =
+      from k in RelayKey,
+        where: k.tournament_slug == ^slug and k.origin == "publisher" and is_nil(k.revoked_at)
+
+    query = if is_binary(label), do: where(query, [k], k.label == ^label), else: query
+    keys = Repo.all(query)
+
+    if keys != [] do
+      ids = Enum.map(keys, & &1.id)
+
+      Repo.update_all(from(k in RelayKey, where: k.id in ^ids),
+        set: [revoked_at: now, revoked_by: revoked_by]
+      )
+    end
+
+    keys
+  end
+
+  @doc """
+  Revokes every live key of every tournament of an installation - what
+  revoking the installation does. A publisher that may no longer publish
+  does not keep a box that may.
+  """
+  @spec revoke_all_for_installation(String.t(), String.t(), DateTime.t()) :: non_neg_integer()
+  def revoke_all_for_installation(installation_id, revoked_by, now \\ DateTime.utc_now()) do
+    slugs =
+      from t in OpenResults.Tournaments.Tournament,
+        where: t.installation_id == ^installation_id,
+        select: t.slug
+
+    {count, _} =
+      Repo.update_all(
+        from(k in RelayKey,
+          where: k.tournament_slug in subquery(slugs) and is_nil(k.revoked_at)
+        ),
+        set: [revoked_at: now, revoked_by: revoked_by]
+      )
+
+    count
   end
 
   @doc "One key of a tournament, or `nil`. The slug is part of the lookup on purpose."

@@ -307,6 +307,17 @@ defmodule OpenResultsWeb.Router do
     post "/tournaments/:slug/live", LiveBoardController, :create,
       private: %{installation_access: :live, relay_access: true}
 
+    # The tournament's publisher asking for a relay key for its own hall box,
+    # and withdrawing the ones it made - `OpenResultsWeb.RelayKeyController`.
+    # The credentials of a publish, the ownership check of a publish, and the
+    # tournament's key in the header as for a publish. A relay key is NOT
+    # accepted here: a box must not be able to mint itself a successor.
+    post "/tournaments/:slug/relay-keys", RelayKeyController, :create,
+      private: %{installation_access: :relay_key}
+
+    delete "/tournaments/:slug/relay-keys", RelayKeyController, :delete,
+      private: %{installation_access: :relay_key_revoke}
+
     # History is a WRITE-side privilege, not a read-side one. An earlier
     # snapshot can hold a round or board the arbiter has since retracted, so
     # walking back through the append-only table is exactly as sensitive as

@@ -331,6 +331,78 @@ defmodule OpenResults.Moderation do
     end
   end
 
+  @doc """
+  The tournament's publisher making a relay key for it, over the API -
+  `OpenResultsWeb.RelayKeyController`, which has already checked that the
+  caller may publish to `slug`. Any key the publisher made earlier under the
+  same label is revoked in the same transaction (`OpenResults.RelayKeys`,
+  "Two makers"). Logged like the panel's, with the publisher as the actor.
+  """
+  @spec publisher_relay_key(
+          String.t(),
+          String.t(),
+          {:installation, String.t()} | :operator_token
+        ) ::
+          {:ok,
+           %{
+             relay_key: OpenResults.RelayKeys.RelayKey.t(),
+             key: String.t(),
+             replaced: [integer()]
+           }}
+          | {:error, :too_many}
+  def publisher_relay_key(slug, label, actor) when is_binary(slug) and is_binary(label) do
+    who = api_actor(actor)
+
+    transaction(fn ->
+      replaced = OpenResults.RelayKeys.revoke_publisher_keys(slug, label, who)
+
+      case OpenResults.RelayKeys.create(slug, label, who, "publisher") do
+        {:ok, %{relay_key: relay_key} = made} ->
+          log!(who, "relay_key_create", "tournament", slug, %{
+            id: relay_key.id,
+            label: label,
+            hint: relay_key.hint,
+            origin: "publisher",
+            replaced: Enum.map(replaced, & &1.id)
+          })
+
+          Map.put(made, :replaced, Enum.map(replaced, & &1.id))
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  The publisher withdrawing the relay keys it made for `slug` - under one
+  label, or all of them for `nil`. An admin's keys are not its to withdraw.
+  Returns how many went; logged when any did.
+  """
+  @spec publisher_revoke_relay_keys(
+          String.t(),
+          String.t() | nil,
+          {:installation, String.t()} | :operator_token
+        ) :: {:ok, non_neg_integer()}
+  def publisher_revoke_relay_keys(slug, label, actor) when is_binary(slug) do
+    who = api_actor(actor)
+
+    transaction(fn ->
+      revoked = OpenResults.RelayKeys.revoke_publisher_keys(slug, label, who)
+
+      for relay_key <- revoked do
+        log!(who, "relay_key_revoke", "tournament", slug, %{
+          id: relay_key.id,
+          label: relay_key.label,
+          hint: relay_key.hint,
+          origin: "publisher"
+        })
+      end
+
+      length(revoked)
+    end)
+  end
+
   @doc "Revokes a relay key of a tournament. Logged; the key stops working at once."
   @spec revoke_relay_key(String.t(), term(), actor()) ::
           {:ok, OpenResults.RelayKeys.RelayKey.t()} | {:error, :not_found | :already_revoked}
@@ -526,10 +598,16 @@ defmodule OpenResults.Moderation do
           {:ok, installation} ->
             hidden = if hide?, do: Tournaments.hide_all_for(installation.id), else: []
 
+            # The boxes go with the publisher: a key it minted for a hall
+            # relay is a way to keep writing after the right to was taken.
+            relay_keys_revoked =
+              OpenResults.RelayKeys.revoke_all_for_installation(installation.id, email)
+
             row =
               log!(email, "revoke", "installation", installation.id, %{
                 hide_tournaments: hide?,
                 hidden: hidden,
+                relay_keys_revoked: relay_keys_revoked,
                 was_trusted: was_trusted
               })
 

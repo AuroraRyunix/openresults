@@ -16,6 +16,8 @@ defmodule OpenResults.RelayKeys.RelayKey do
     field :label, :string
     field :hint, :string
     field :created_by, :string
+    # "admin" or "publisher" - see `OpenResults.RelayKeys`, "Two makers".
+    field :origin, :string, default: "admin"
     field :revoked_at, :utc_datetime_usec
     field :revoked_by, :string
     field :last_used_at, :utc_datetime_usec

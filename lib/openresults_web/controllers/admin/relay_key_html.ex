@@ -29,6 +29,13 @@ defmodule OpenResultsWeb.Admin.RelayKeyHTML do
       Put one on the relay instead of the tournament's own key or an installation key.
     </p>
 
+    <p id="relay-keys-how">
+      Normally nobody makes one here. The program that publishes the tournament (OpenPairings)
+      asks this server for a key and hands it to its box; such a key is listed below as made by
+      the publisher, and can be revoked here like any other. Make one by hand only for a box
+      that has no such program behind it.
+    </p>
+
     <nav class="admin-actions-bar" id="relay-keys-actions" aria-label="Actions">
       <a :if={@active < @max_active} href={~p"/admin/tournaments/#{@tournament.slug}/relay-keys/new"}>
         Make a relay key
@@ -54,7 +61,12 @@ defmodule OpenResultsWeb.Admin.RelayKeyHTML do
           <tr :for={key <- @keys} id={"relay-key-#{key.id}"}>
             <td>{key.label || "(no label)"}</td>
             <td><code>{key.hint}</code></td>
-            <td>{at(key.inserted_at)} <span class="quiet">by {key.created_by}</span></td>
+            <td>
+              {at(key.inserted_at)}
+              <span class="quiet">
+                by {key.created_by}{if key.origin == "publisher", do: " (the publisher, over the API)"}
+              </span>
+            </td>
             <td>{at(key.last_used_at, "never")}</td>
             <td>
               <%= if key.revoked_at do %>
@@ -110,6 +122,9 @@ defmodule OpenResultsWeb.Admin.RelayKeyHTML do
           autocomplete="off"
         />
         <p class="hint">Optional. What is written on the box, so you can tell the keys apart.</p>
+        <p class="hint">
+          A box run from OpenPairings needs no key from here: OpenPairings fetches one by itself.
+        </p>
       </div>
     </.confirmation>
     """

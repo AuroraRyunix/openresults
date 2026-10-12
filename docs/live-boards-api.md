@@ -32,10 +32,13 @@ Content-Type: application/json
 **A relay key is the credential for a hall relay.** The other two can rewrite
 the tournament; a relay is a box in a playing hall that can be lost or stolen.
 
-- a **relay key** (`orrk_...`), made per tournament by an admin in the panel
-  (Tournaments, the tournament, Relay keys). It is shown once, when made, and
-  the server keeps only a fingerprint; list, last use and revoking are on the
-  same page. It authorises **this route for that one tournament and nothing
+- a **relay key** (`orrk_...`), made per tournament. Normally the
+  tournament's publisher asks for one over the API and hands it to its box
+  ("A relay key from the publisher", below); an admin can also make one in
+  the panel (Tournaments, the tournament, Relay keys) for a box with no such
+  program behind it. Either way it is handed out once, when made, and the
+  server keeps only a fingerprint; every key, who made it, its last use and
+  revoking it are on that page of the panel. It authorises **this route for that one tournament and nothing
   else** - not another slug (`403 relay_key_wrong_tournament`), not a publish,
   history, registrations, delete or the admin panel (the anonymous
   `401 unauthorized`, as for any credential the route does not take). A
@@ -65,6 +68,86 @@ per installation (a relay posts a board every few seconds, which the publish
 budget would refuse), `429 rate_limited` with `Retry-After` beyond it. A
 paused server (`publishing_paused`) and a blocked address are refused as for a
 publish.
+
+### A relay key from the publisher
+
+The program that publishes a tournament (OpenPairings) gets the relay key for
+its hall box by asking, with the credentials it publishes with. Nobody copies
+a key, and no administrator of this server is needed.
+
+```
+POST /api/tournaments/:slug/relay-keys
+Authorization: Bearer <ingest token or installation key>
+X-OpenResults-Key: <the tournament's key, if it has been claimed>
+Content-Type: application/json
+
+{"label": "openpairings"}
+```
+
+**Who may: exactly who may publish to the slug.** The same plug, the same
+checks: the operator's ingest token, or an installation key for an
+installation that owns the slug (`403 not_owner`; `403 installation_suspended`
+/ `installation_revoked`), and the tournament's own key in the header when the
+slug has been claimed (`403 key_required` / `403 key_mismatch`; the header is
+never used to claim a slug here). A relay key is **not** accepted on this
+route - the anonymous `401` - so a box cannot mint itself a successor. The
+tournament must have published (`404 tournament_not_published`) and must not
+be hidden (`403 tournament_hidden` for its owner): the conditions under which
+the live endpoint would take the key. A paused server (`503
+publishing_paused`) and a blocked address are refused as for a publish.
+
+`label` is optional text of at most 80 characters, shown in the admin panel;
+without one it is `"publisher"`.
+
+```
+201 Created
+Cache-Control: no-store
+
+{"status": "ok", "slug": "...", "relay_key": "orrk_...", "id": 12,
+ "label": "openpairings", "hint": "x9Qa", "replaced": 0,
+ "created_at": "2026-10-12T18:00:00.000000Z"}
+```
+
+`relay_key` is in this reply and nowhere else, ever: the server keeps a
+fingerprint. `hint` is its last four characters, which is what the panel
+shows.
+
+**Asking again rotates.** The server cannot return a key it does not have, so
+a second `POST` under the same `label` revokes the key this publisher made
+under it before and returns a new one (`replaced` says how many were
+revoked). That is the idempotency rule, and it is the safe one: a retry after
+a lost reply leaves one live key, not two, and the lost one - which nobody
+holds - stops working. A different `label` is a different key (a second
+hall). A key an admin made in the panel is never rotated or revoked by this
+route, whatever its label. A tournament holds at most ten live keys (`409
+relay_key_limit`).
+
+```
+DELETE /api/tournaments/:slug/relay-keys?label=openpairings
+```
+
+revokes the publisher's own keys under that label, or all of the publisher's
+keys without `label`, and answers `200 {"status": "ok", "slug": "...",
+"revoked": 1}` - also when there was nothing to revoke. Same credentials,
+except that a suspended installation may still withdraw: it only ever takes
+access away.
+
+Budget: six requests per ten minutes per tournament, both verbs together
+(`429 rate_limited` with `Retry-After`). Every key made or revoked this way
+is in the admin action log (`relay_key_create` / `relay_key_revoke`, with the
+publisher as the actor, the key's id, label and last four characters - never
+the key).
+
+**A server from before this route** answers `404` with a body that has no
+`error` code of this API (Phoenix's own "Not Found"). A client must tell that
+from `tournament_not_published` by the code, and fall back to a key made in
+the panel.
+
+A publisher loses its keys with the tournament: a takedown (`DELETE
+/api/tournaments/:slug`) deletes them, a transfer to another installation
+revokes them, and revoking an installation revokes the keys of all its
+tournaments. Hiding a tournament revokes nothing: the live endpoint refuses a
+hidden tournament whatever is presented.
 
 ### Body
 

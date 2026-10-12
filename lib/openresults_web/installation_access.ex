@@ -17,6 +17,13 @@ defmodule OpenResultsWeb.InstallationAccess do
   | `:registrations` | `GET /api/tournaments/:slug/registrations` | path slug | yes | yes | - |
   | `:delete` | `DELETE /api/tournaments/:slug` | path slug | **no** | **no** | - |
   | `:live` | `POST /api/tournaments/:slug/live` | path slug | yes | yes | its own budget, block, pause |
+  | `:relay_key` | `POST /api/tournaments/:slug/relay-keys` | path slug | yes | yes | block, pause; the route's own budget per tournament |
+  | `:relay_key_revoke` | `DELETE /api/tournaments/:slug/relay-keys` | path slug | **no** | yes | the route's own budget per tournament |
+
+  `:relay_key` hands out a credential for `:live`, so it is refused whenever
+  `:live` would be - a hidden tournament included. Withdrawing one
+  (`:relay_key_revoke`) only ever takes access away, so a suspended
+  installation may still do it.
 
   `:live` is a write, but not a publish: a hall relay posts a board every few
   seconds, so it has its own generous per-minute budget (`@live_per_minute`
@@ -64,9 +71,18 @@ defmodule OpenResultsWeb.InstallationAccess do
   alias OpenResultsWeb.ClientAddress
   alias OpenResultsWeb.Plugs.IngestAuth
 
-  @actions [:mint, :publish, :history, :registrations, :delete, :live]
+  @actions [
+    :mint,
+    :publish,
+    :history,
+    :registrations,
+    :delete,
+    :live,
+    :relay_key,
+    :relay_key_revoke
+  ]
   @writes [:mint, :publish]
-  @refused_while_suspended [:mint, :publish, :history, :registrations, :live]
+  @refused_while_suspended [:mint, :publish, :history, :registrations, :live, :relay_key]
   @live_per_minute 1200
 
   @doc "The actions a route may opt in to."
@@ -135,13 +151,14 @@ defmodule OpenResultsWeb.InstallationAccess do
 
   defp budget(_installation, _action), do: :ok
 
-  defp address_block(address, action) when action in @writes or action == :live do
+  defp address_block(address, action)
+       when action in @writes or action in [:live, :relay_key] do
     if AddressBlocks.blocked?(address), do: {:error, :address_blocked}, else: :ok
   end
 
   defp address_block(_address, _action), do: :ok
 
-  defp pause(action) when action in @writes or action == :live do
+  defp pause(action) when action in @writes or action in [:live, :relay_key] do
     if Settings.get(:public_publishing_paused), do: {:error, :publishing_paused}, else: :ok
   end
 
@@ -202,8 +219,12 @@ defmodule OpenResultsWeb.InstallationAccess do
     end
   end
 
-  defp ownership(conn, installation, :live) do
+  defp ownership(conn, installation, action) when action in [:live, :relay_key] do
     Tournaments.authorize_owner(conn.path_params["slug"], installation, :publish)
+  end
+
+  defp ownership(conn, installation, :relay_key_revoke) do
+    Tournaments.authorize_owner(conn.path_params["slug"], installation, :delete)
   end
 
   defp ownership(conn, installation, action) when action in [:history, :registrations] do

@@ -30,6 +30,9 @@ defmodule OpenResultsWeb.ApiError do
     not_owner: {403, "this tournament was not minted for this installation"},
     relay_key_revoked: {403, "this relay key has been revoked; ask the organiser for a new one"},
     relay_key_wrong_tournament: {403, "this relay key belongs to a different tournament"},
+    relay_key_limit:
+      {409,
+       "this tournament already holds as many relay keys as it may; an administrator of this server can revoke some"},
     tournament_hidden:
       {403,
        "this tournament has been hidden by the operator; it can be deleted but not published"},
