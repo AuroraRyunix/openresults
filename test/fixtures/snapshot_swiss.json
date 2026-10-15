@@ -1026,6 +1026,7 @@
       "player_cards": true,
       "rating": true,
       "rounds_played": false,
+      "screen_links": true,
       "standings": true,
       "tiebreak_working": true,
       "tiebreaks": true,
