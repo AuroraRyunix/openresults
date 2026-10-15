@@ -71,6 +71,30 @@ defmodule OpenResultsWeb.ScreensTest do
       assert count(html, "#screens") == 0
     end
 
+    test "the arbiter can hide both cards, and the screens still open", %{conn: conn} do
+      slug =
+        publish(
+          put_in(SnapshotPayloads.swiss(), ["tournament", "display", "screen_links"], false)
+        )
+
+      html = conn |> get("/t/#{slug}") |> html_response(200)
+
+      assert count(html, "#screens") == 0
+      assert count(html, "#projector-link") == 0
+      assert count(html, "#hall-display-link") == 0
+      assert {:ok, _view, _html} = live(conn, "/t/#{slug}/projector")
+      assert {:ok, _view, _html} = live(conn, "/t/#{slug}/hall")
+    end
+
+    test "an explicit true or an absent key keeps the cards", %{conn: conn} do
+      slug =
+        publish(put_in(SnapshotPayloads.swiss(), ["tournament", "display", "screen_links"], true))
+
+      html = conn |> get("/t/#{slug}") |> html_response(200)
+      assert count(html, "#projector-link") == 1
+      assert count(html, "#hall-display-link") == 1
+    end
+
     test "nothing to project when the arbiter hides the pairings", %{conn: conn} do
       slug =
         publish(put_in(SnapshotPayloads.swiss(), ["tournament", "display", "pairings"], false))
