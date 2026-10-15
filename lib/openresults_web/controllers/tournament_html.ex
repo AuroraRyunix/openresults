@@ -1754,7 +1754,10 @@ defmodule OpenResultsWeb.TournamentHTML do
       |> assign(:cards?, shown?(assigns.show, :player_cards))
       |> assign(
         :postponed_title,
-        postponed_title(assigns.cell.postponed_date, shown?(assigns.show, :dates))
+        if(Map.get(assigns.cell, :pending),
+          do: pending_words(),
+          else: postponed_title(assigns.cell.postponed_date, shown?(assigns.show, :dates))
+        )
       )
 
     ~H"""
@@ -2028,6 +2031,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               <.result
                 token={@results? && board["result"]}
                 postponed={Tournament.postponed?(board)}
+                pending={Tournament.pending?(board)}
                 postponed_date={postponed_date(@show, board)}
               />
             </td>
@@ -2362,12 +2366,31 @@ defmodule OpenResultsWeb.TournamentHTML do
       assign(assigns,
         provisional?: provisional?,
         count: count,
+        unreported?: Tournament.standings_unreported?(assigns.payload),
         valuation: valuation_phrase(Tournament.postponed_valuation(assigns.payload))
       )
 
     ~H"""
     <p :if={@provisional?} id="standings-provisional" class="footnote standings-provisional">
       <%= cond do %>
+        <%!-- Some of the games are pending boards (`boards[].pending`):
+              not postponed by anybody, just without a result in a round
+              the tournament has moved past - so they are not called
+              postponed. `standings_unreported?/1` is only ever true with a
+              count. --%>
+        <% @unreported? and is_nil(@valuation) -> %>
+          {ngettext(
+            "Provisional: 1 game has no result yet and counts as a draw until it has.",
+            "Provisional: %{count} games have no result yet and count as draws until they have.",
+            @count
+          )}
+        <% @unreported? -> %>
+          {ngettext(
+            "Provisional: 1 game has no result yet and counts %{valuation} until it has.",
+            "Provisional: %{count} games have no result yet and count %{valuation} until they have.",
+            @count,
+            valuation: @valuation
+          )}
         <% is_nil(@valuation) and @count -> %>
           {ngettext(
             "Provisional: 1 postponed game is still to be played and counts as a draw until it is.",
@@ -2631,6 +2654,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                 <.result
                   token={@results? && board["result"]}
                   postponed={Tournament.postponed?(board)}
+                  pending={Tournament.pending?(board)}
                   postponed_date={postponed_date(@show, board)}
                 />
               </td>
@@ -3000,6 +3024,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                   <.result
                     token={entry.result}
                     postponed={entry.postponed}
+                    pending={entry.pending}
                     postponed_date={if(@show.dates, do: entry.postponed_date)}
                   />
                 </td>
@@ -3615,6 +3640,10 @@ defmodule OpenResultsWeb.TournamentHTML do
   attr :postponed, :boolean, default: false, doc: "`Tournament.postponed?/1` for the board"
   attr :postponed_date, :string, default: nil, doc: "the agreed date, already gated"
 
+  attr :pending, :boolean,
+    default: false,
+    doc: "`Tournament.pending?/1` for the board: counted, not postponed, no result yet"
+
   def result(assigns) do
     {base, note} = Tournament.result_parts(assigns.token)
 
@@ -3622,7 +3651,8 @@ defmodule OpenResultsWeb.TournamentHTML do
       assigns
       |> assign(:base, base)
       |> assign(:note, note_label(note))
-      |> assign(:postponed, is_nil(base) and assigns.postponed)
+      |> assign(:pending, is_nil(base) and assigns.pending)
+      |> assign(:postponed, is_nil(base) and assigns.postponed and not assigns.pending)
 
     ~H"""
     <span class="result">
@@ -3632,9 +3662,15 @@ defmodule OpenResultsWeb.TournamentHTML do
           do: gettext("Postponed, to be played %{date}", date: date(@postponed_date)),
           else: gettext("Postponed")}
       </span>
+      <%!-- A pending board (`boards[].pending`): the standings count it,
+            nobody postponed it, and it may have been played and not typed
+            in yet - so it says exactly that much. --%>
+      <span :if={@pending} class="postponed pending" title={pending_words()}>
+        {pending_words()}
+      </span>
 
       <span
-        :if={is_nil(@base) and not @postponed}
+        :if={is_nil(@base) and not @postponed and not @pending}
         class="unreported"
         title={gettext("not yet reported")}
       >
@@ -3656,6 +3692,9 @@ defmodule OpenResultsWeb.TournamentHTML do
   # cell and a round's own page never say this two different ways. The date
   # is gated on the arbiter's "dates" tick here too, exactly as `postponed_date/2`
   # gates it for that page.
+  # What a pending board says, on a round's page and on its cross-table mark.
+  defp pending_words, do: gettext("Result not yet in")
+
   defp postponed_title(iso_date, dates_shown?) do
     if iso_date && dates_shown? do
       gettext("Postponed, to be played %{date}", date: date(iso_date))

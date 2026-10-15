@@ -1,0 +1,594 @@
+{
+  "players": [
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "Peeters, An",
+      "no": 1,
+      "rating": 2105,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "Wouters, Bram",
+      "no": 2,
+      "rating": 2050,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "Mertens, Celine",
+      "no": 3,
+      "rating": 1988,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "Hermans, Dirk",
+      "no": 4,
+      "rating": 1932,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "Goossens, Eva",
+      "no": 5,
+      "rating": 1870,
+      "title": null
+    },
+    {
+      "categories": [],
+      "category": null,
+      "club": null,
+      "federation": "BEL",
+      "fide_id": null,
+      "name": "Jacobs, Frank",
+      "no": 6,
+      "rating": 1811,
+      "title": null
+    }
+  ],
+  "published_at": "2026-08-29T00:00:00Z",
+  "rounds": [
+    {
+      "boards": [
+        {
+          "black": 6,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 5,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 2
+        },
+        {
+          "black": 4,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 3
+        }
+      ],
+      "byes": [],
+      "date": "2026-09-03",
+      "number": 1,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 4,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 6
+        },
+        {
+          "black": 3,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 5
+        },
+        {
+          "black": 2,
+          "board": 3,
+          "label": "3",
+          "pending": true,
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "postponed_as": {
+            "black": "draw",
+            "white": "draw"
+          },
+          "result": null,
+          "white": 1
+        }
+      ],
+      "byes": [],
+      "date": "2026-09-10",
+      "number": 2,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 6,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "postponed": true,
+          "postponed_as": {
+            "black": "draw",
+            "white": "draw"
+          },
+          "result": null,
+          "white": 2
+        },
+        {
+          "black": 1,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 1.0,
+            "white": 0.0
+          },
+          "result": "0-1",
+          "white": 3
+        },
+        {
+          "black": 5,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 4
+        }
+      ],
+      "byes": [],
+      "date": "2026-09-17",
+      "number": 3,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 5,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.5,
+            "white": 0.5
+          },
+          "result": "1/2-1/2",
+          "white": 6
+        },
+        {
+          "black": 4,
+          "board": 2,
+          "label": "2",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 1
+        },
+        {
+          "black": 3,
+          "board": 3,
+          "label": "3",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 2
+        }
+      ],
+      "byes": [],
+      "date": "2026-09-24",
+      "number": 4,
+      "results_public": true
+    },
+    {
+      "boards": [
+        {
+          "black": 6,
+          "board": 1,
+          "label": "1",
+          "points": {
+            "black": 0.0,
+            "white": 1.0
+          },
+          "result": "1-0",
+          "white": 3
+        },
+        {
+          "black": 2,
+          "board": 2,
+          "label": "2",
+          "result": null,
+          "white": 4
+        },
+        {
+          "black": 1,
+          "board": 3,
+          "label": "3",
+          "result": null,
+          "white": 5
+        }
+      ],
+      "byes": [],
+      "date": "2026-10-01",
+      "number": 5,
+      "results_public": true
+    }
+  ],
+  "schema": "openresults/snapshot",
+  "source": {
+    "app": "openpairings",
+    "version": "0.0.0-fixture"
+  },
+  "standings": {
+    "after_round": 4,
+    "manual_incomplete": false,
+    "manual_order": false,
+    "manual_stale": false,
+    "pending_games": 2,
+    "postponed_games": 1,
+    "provisional": true,
+    "rows": [
+      {
+        "category": null,
+        "player": 1,
+        "points": 3.5,
+        "rank": 1,
+        "tiebreaks": [
+          6.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 6,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 2,
+                "round": 2,
+                "value": 1.5
+              },
+              {
+                "opponent": 3,
+                "round": 3,
+                "value": 1.5
+              },
+              {
+                "opponent": 4,
+                "round": 4,
+                "value": 2.0
+              }
+            ],
+            "total": 6.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 2,
+        "points": 3.0,
+        "rank": 2,
+        "tiebreaks": [
+          4.75,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 5,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 2,
+                "value": 1.75
+              },
+              {
+                "opponent": 6,
+                "round": 3,
+                "value": 0.5
+              },
+              {
+                "opponent": 3,
+                "round": 4,
+                "value": 1.5
+              }
+            ],
+            "total": 4.75
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 4,
+        "points": 2.0,
+        "rank": 3,
+        "tiebreaks": [
+          2.25,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 3,
+                "round": 1,
+                "value": 0.75
+              },
+              {
+                "opponent": 6,
+                "round": 2,
+                "value": 1.0
+              },
+              {
+                "opponent": 5,
+                "round": 3,
+                "value": 0.5
+              },
+              {
+                "opponent": 1,
+                "round": 4,
+                "value": 0.0
+              }
+            ],
+            "total": 2.25
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 3,
+        "points": 1.5,
+        "rank": 4,
+        "tiebreaks": [
+          2.0,
+          0.0
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 4,
+                "round": 1,
+                "value": 1.0
+              },
+              {
+                "opponent": 5,
+                "round": 2,
+                "value": 1.0
+              },
+              {
+                "opponent": 1,
+                "round": 3,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 4,
+                "value": 0.0
+              }
+            ],
+            "total": 2.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 6,
+        "points": 1.0,
+        "rank": 5,
+        "tiebreaks": [
+          2.0,
+          0.5
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 1,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 4,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 2,
+                "round": 3,
+                "value": 1.5
+              },
+              {
+                "opponent": 5,
+                "round": 4,
+                "value": 0.5
+              }
+            ],
+            "total": 2.0
+          }
+        }
+      },
+      {
+        "category": null,
+        "player": 5,
+        "points": 1.0,
+        "rank": 6,
+        "tiebreaks": [
+          1.5,
+          0.5
+        ],
+        "working": {
+          "SB": {
+            "parts": [
+              {
+                "opponent": 2,
+                "round": 1,
+                "value": 0.0
+              },
+              {
+                "opponent": 3,
+                "round": 2,
+                "value": 0.0
+              },
+              {
+                "opponent": 4,
+                "round": 3,
+                "value": 1.0
+              },
+              {
+                "opponent": 6,
+                "round": 4,
+                "value": 0.5
+              }
+            ],
+            "total": 1.5
+          }
+        }
+      }
+    ],
+    "tiebreaks": [
+      {
+        "code": "SB",
+        "label": "Sonneborn-Berger"
+      },
+      {
+        "code": "DE",
+        "label": "Direct encounter"
+      }
+    ],
+    "tiebreaks_withheld": false
+  },
+  "tournament": {
+    "arbiter": "Arbiter Fixture",
+    "categories": [],
+    "city": "Lier",
+    "deputy": null,
+    "display": {
+      "arbiter": true,
+      "byes": true,
+      "category": true,
+      "city": true,
+      "club": true,
+      "dates": true,
+      "deputy": true,
+      "federation": true,
+      "fide_badge": true,
+      "flags": true,
+      "pairing_scores": true,
+      "pairings": true,
+      "player_cards": true,
+      "rating": true,
+      "rounds_played": false,
+      "screen_links": true,
+      "standings": true,
+      "tiebreak_working": true,
+      "tiebreaks": true,
+      "time_control": true,
+      "title": true
+    },
+    "end_date": "2026-10-01",
+    "federation": "BEL",
+    "fide_rated": false,
+    "hall": {
+      "hold_new_round": true,
+      "names": true,
+      "page_seconds": 15,
+      "pairings": true,
+      "results": true,
+      "standings": true,
+      "standings_top": 10
+    },
+    "listed": false,
+    "match_format": false,
+    "name": "Clubkampioenschap Lier 2026-2027",
+    "registration": {
+      "list_public": false,
+      "taken": 6
+    },
+    "registration_open": false,
+    "rounds_count": 5,
+    "scoring": {
+      "bye": 1.0,
+      "draw": 0.5,
+      "forfeit_loss": 0.0,
+      "forfeit_win": 1.0,
+      "loss": 0.0,
+      "presence": null,
+      "win": 1.0
+    },
+    "slug": "lier-club-2026",
+    "start_date": "2026-09-03",
+    "system": "roundrobin",
+    "tempo": "standard",
+    "time_control": null
+  },
+  "version": 1
+}

@@ -244,6 +244,19 @@ result. OpenResults shows "Postponed" where the result goes instead of the
 waiting on - a round whose only missing results are postponed games is not
 shown as live.
 
+**`boards[].pending`** (added 2026-10-15) - `true` on a board in an
+individual round robin that nobody has entered a result for, in a round the
+tournament has since moved past: a LATER round is complete. OpenPairings
+counts it in the standings exactly as an unnamed postponed game - its
+`points` and `postponed_as` say how - so the standings can go through the
+latest round instead of stopping before it for the rest of the season
+(OpenPairings' `docs/postponed-rethink.md`). **Absent means not pending**;
+only ever `true`, only beside `result: null`, and never together with
+`postponed` - nobody postponed it, and it may be a game that was played and
+not typed in. Withheld with the results, like `postponed`. OpenResults reads
+it like a postponed board everywhere it adds points up or decides whether a
+round is live, and words it "Result not yet in" rather than "Postponed".
+
 **`boards[].postponed_date`** - `"YYYY-MM-DD"`, the date the two players
 agreed to play a postponed game. Present only when `postponed` is `true` AND
 the arbiter entered an agreed date; **absent means no agreed date**, not "no
@@ -319,7 +332,7 @@ result token for points when this is present. The figures are the ones the
 standings are computed from, so a running score built from them agrees with
 `standings.rows[].points`.
 
-**`boards[].postponed_as`** - on a postponed board only: how each seat's game
+**`boards[].postponed_as`** - on a postponed or pending board only: how each seat's game
 counts until it is played, `{ "white": "draw", "black": "draw" }`, each
 `"win"`, `"draw"` or `"loss"`. A draw unless the tournament counts it
 otherwise for the player who asked to postpone. The points it is worth are
@@ -568,6 +581,20 @@ never recomputes anything.
 
 ```json
 "standings": { "after_round": 5, "provisional": true, "postponed_games": 2, "rows": [] }
+```
+
+**`standings.pending_games`** (added 2026-10-15) - every game the standings
+count before it has a result, in the rounds they cover: the postponed boards
+AND the pending boards (`boards[].pending`). Present, with `provisional:
+true`, whenever it is above zero; absent otherwise. Since then
+`postponed_games` counts postponed boards only and is absent at zero, so
+`provisional: true` can arrive with `pending_games` and no `postponed_games`.
+OpenResults prints `pending_games` when it is there and falls back to
+`postponed_games`, and calls the games "postponed" only when every one of
+them is (`pending_games` equal to `postponed_games`).
+
+```json
+"standings": { "after_round": 4, "provisional": true, "postponed_games": 1, "pending_games": 2, "rows": [] }
 ```
 
 **`system`** - `"swiss"`, `"roundrobin"` or `"keizer"`. Keizer standings

@@ -556,7 +556,7 @@ defmodule OpenResultsWeb.Tournament do
   """
   def live_round?(round) do
     results_public?(round) and
-      Enum.any?(boards(round), &(not is_binary(Map.get(&1, "result")) and not postponed?(&1)))
+      Enum.any?(boards(round), &(not is_binary(Map.get(&1, "result")) and not outstanding?(&1)))
   end
 
   @doc """
@@ -572,6 +572,28 @@ defmodule OpenResultsWeb.Tournament do
     do: Map.get(board, "postponed") == true and not is_binary(Map.get(board, "result"))
 
   def postponed?(_not_a_board), do: false
+
+  @doc """
+  Whether a board is a pending game - `boards[].pending` in
+  `docs/snapshot-schema.md`: a round-robin board nobody has entered, in a
+  round the tournament has since moved past, which OpenPairings' standings
+  count until its result is in. Not a postponed game - nobody postponed it,
+  and it may have been played and simply not typed in - so it is worded
+  differently ("Result not yet in"), and otherwise read exactly like one.
+
+  Same rule as `postponed?/1`: a literal `true`, on a board with no result.
+  """
+  def pending?(board) when is_map(board),
+    do: Map.get(board, "pending") == true and not is_binary(Map.get(board, "result"))
+
+  def pending?(_not_a_board), do: false
+
+  @doc """
+  A game the standings count before it has a result: `postponed?/1` or
+  `pending?/1`. What every sum, valuation and "is this round still live"
+  check asks; only the wording tells the two apart.
+  """
+  def outstanding?(board), do: postponed?(board) or pending?(board)
 
   @doc """
   The date the two players agreed to play a postponed game, as the ISO string
@@ -599,22 +621,39 @@ defmodule OpenResultsWeb.Tournament do
   def match_postponed_boards(_not_a_match), do: 0
 
   @doc """
-  Whether the published standings are provisional because a postponed game
-  in the rounds they cover is still to be played, as `{provisional?, count}` -
-  `standings.provisional` and `standings.postponed_games`. `count` is `nil`
-  when the flag arrives without a usable number.
+  Whether the published standings are provisional because a game in the
+  rounds they cover is still to come, as `{provisional?, count}` -
+  `standings.provisional`, and `standings.pending_games` (every such game,
+  postponed or pending) or, from an older publisher, `standings.postponed_games`.
+  `count` is `nil` when the flag arrives without a usable number.
   """
   def standings_provisional(payload) do
     standings = standings(payload)
 
     count =
-      case Map.get(standings, "postponed_games") do
-        n when is_integer(n) and n > 0 -> n
-        _absent_or_junk -> nil
-      end
+      positive(Map.get(standings, "pending_games")) ||
+        positive(Map.get(standings, "postponed_games"))
 
     {Map.get(standings, "provisional") == true, count}
   end
+
+  @doc """
+  Whether any of the games `standings_provisional/1` counts is a pending
+  board rather than a postponed game - `pending_games` above
+  `postponed_games` - so the line above the table must not call them all
+  postponed. False for an older snapshot, which only knew postponed games.
+  """
+  def standings_unreported?(payload) do
+    standings = standings(payload)
+
+    case positive(Map.get(standings, "pending_games")) do
+      nil -> false
+      pending -> pending > (positive(Map.get(standings, "postponed_games")) || 0)
+    end
+  end
+
+  defp positive(n) when is_integer(n) and n > 0, do: n
+  defp positive(_absent_or_junk), do: nil
 
   @doc """
   How the postponed games the standings count are valued, from
@@ -633,7 +672,7 @@ defmodule OpenResultsWeb.Tournament do
           is_integer(covered) and number_of(round) <= covered,
           results_public?(round),
           board <- boards(round),
-          postponed?(board),
+          outstanding?(board),
           do: valuation_pair(board)
 
     cond do
@@ -1057,7 +1096,7 @@ defmodule OpenResultsWeb.Tournament do
         {white, black}
 
       _absent_or_unreadable ->
-        if postponed?(board), do: nil, else: result_points(Map.get(board, "result"))
+        if outstanding?(board), do: nil, else: result_points(Map.get(board, "result"))
     end
   end
 
@@ -1165,6 +1204,7 @@ defmodule OpenResultsWeb.Tournament do
       opponent_no: nil,
       result: nil,
       postponed: false,
+      pending: false,
       postponed_date: nil,
       bye: nil,
       points: nil,
@@ -1205,7 +1245,10 @@ defmodule OpenResultsWeb.Tournament do
     # while it waits travels apart from `points`, so the row still shows no
     # score for it and the running total still counts it, as OpenPairings'
     # own does.
-    postponed = postponed?(board)
+    #
+    # A pending board (`pending?/1`) is read the same way; `pending` only
+    # changes what the row says about it.
+    postponed = outstanding?(board)
     points = if postponed, do: nil, else: mine
 
     %{
@@ -1217,6 +1260,7 @@ defmodule OpenResultsWeb.Tournament do
         opponent_no: opponent_no,
         result: result,
         postponed: postponed,
+        pending: pending?(board),
         postponed_date: postponed_date(board),
         points: points,
         provisional_points: if(postponed, do: mine)
@@ -1250,6 +1294,7 @@ defmodule OpenResultsWeb.Tournament do
     bye: nil,
     points: nil,
     postponed: false,
+    pending: false,
     postponed_date: nil
   }
 
@@ -1400,7 +1445,8 @@ defmodule OpenResultsWeb.Tournament do
     white = Map.get(board, "white")
     black = Map.get(board, "black")
     result = Map.get(board, "result")
-    postponed = postponed?(board)
+    postponed = outstanding?(board)
+    pending = pending?(board)
     postponed_date = postponed_date(board)
 
     # A token this server cannot read leaves BOTH seats without a score
@@ -1410,12 +1456,38 @@ defmodule OpenResultsWeb.Tournament do
       if postponed, do: {nil, nil}, else: board_points(board) || {nil, nil}
 
     [
-      {white, game_cell(number, :white, black, result, white_points, postponed, postponed_date)},
-      {black, game_cell(number, :black, white, result, black_points, postponed, postponed_date)}
+      {white,
+       game_cell(
+         number,
+         :white,
+         black,
+         result,
+         white_points,
+         {postponed, pending},
+         postponed_date
+       )},
+      {black,
+       game_cell(
+         number,
+         :black,
+         white,
+         result,
+         black_points,
+         {postponed, pending},
+         postponed_date
+       )}
     ]
   end
 
-  defp game_cell(number, colour, opponent_no, result, points, postponed, postponed_date) do
+  defp game_cell(
+         number,
+         colour,
+         opponent_no,
+         result,
+         points,
+         {postponed, pending},
+         postponed_date
+       ) do
     %{
       @empty_cell
       | round: number,
@@ -1429,6 +1501,7 @@ defmodule OpenResultsWeb.Tournament do
         # a round and a player's card, so this is not a second answer to the
         # same question.
         postponed: postponed,
+        pending: pending,
         postponed_date: postponed_date
     }
   end
@@ -1645,7 +1718,7 @@ defmodule OpenResultsWeb.Tournament do
       # zero. A postponed game with no published points is an older snapshot
       # that does not say how it is valued - see `scores_before/2`.
       nil ->
-        gap = if postponed?(board), do: :postponed, else: :unknown
+        gap = if outstanding?(board), do: :postponed, else: :unknown
         Enum.map(seats, &{&1, gap})
     end
   end
