@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Security] Bandit 1.12.5 → 1.13.1 (EEF-CVE-2026-105660, EEF-CVE-2026-105659) and decimal 3.1.1 → 3.2.0 (EEF-CVE-2026-97853). Same three advisories OpenPairings closed in 0.88.1; this site was running the same web server and the same gullible arithmetic. No behaviour changes.
+
 - [Feature] **Pending games.** A round-robin board nobody has entered, in a round the tournament has since moved past, now arrives as `boards[].pending` with the points OpenPairings counts it for, and the standings bring a `pending_games` count. The round page says "Result not yet in" where the hyphen was, the cross-table gives it the hourglass a postponed game gets, and the line above the standings says "2 games have no result yet" instead of calling every one of them postponed, which would have been a confident claim about games nobody postponed. Running totals count it, and a round is not "live" for its sake. A snapshot without the new keys reads exactly as before.
 - [Feature] An arbiter can hide the projector-view and hall-display cards at the foot of the standings, pairings and crosstable (the `screen_links` display tick, new in the snapshot). Only the cards go; `/t/<slug>/projector` and `/t/<slug>/hall` keep answering, so a screen already running in a hall carries on. Absent or true shows them, as before.
 
