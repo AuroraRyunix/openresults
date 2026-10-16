@@ -1348,11 +1348,19 @@ defmodule OpenResultsWeb.TournamentHTML do
   def starting_rank_table(assigns) do
     payload = assigns.payload
     show = display_rules(payload)
+    rows = Tournament.starting_rank(payload)
 
     assigns =
       assigns
-      |> assign(:rows, Tournament.starting_rank(payload))
+      |> assign(:rows, rows)
       |> assign(:show, show)
+      # Same rule as the standings: a column only when the field is actually
+      # split into categories. This list forgot categories existed, so the
+      # arbiter's tick sat there doing nothing until round 1 was paired.
+      |> assign(
+        :categories?,
+        show.category and Enum.any?(rows, &(&1["category"] not in [nil, ""]))
+      )
 
     ~H"""
     <p :if={@rows == []} class="empty">
@@ -1378,6 +1386,8 @@ defmodule OpenResultsWeb.TournamentHTML do
             <th :if={@show.federation} scope="col">{gettext("Federation")}</th>
 
             <th :if={@show.club} scope="col">{gettext("Club")}</th>
+
+            <th :if={@categories?} scope="col">{gettext("Category")}</th>
           </tr>
         </thead>
 
@@ -1404,6 +1414,8 @@ defmodule OpenResultsWeb.TournamentHTML do
             </td>
 
             <td :if={@show.club}>{dash(player["club"])}</td>
+
+            <td :if={@categories?} class="col-cat">{dash(player["category"])}</td>
           </tr>
         </tbody>
       </table>

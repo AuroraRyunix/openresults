@@ -251,6 +251,42 @@ defmodule OpenResultsWeb.TournamentControllerTest do
              |> Enum.any?()
     end
 
+    test "players' categories get a column, when the field has them", %{conn: conn, swiss: swiss} do
+      categorised =
+        update_in(swiss["players"], fn players ->
+          Enum.map(players, &Map.put(&1, "category", if(&1["no"] <= 5, do: "-10", else: "-8")))
+        end)
+
+      publish(no_rounds(categorised))
+      document = conn |> get(~p"/t/#{swiss["tournament"]["slug"]}") |> doc()
+
+      assert "Category" in texts(document, "table.starting-rank thead th")
+
+      assert texts(document, "table.starting-rank td.col-cat") ==
+               ~w(-10 -10 -10 -10 -10 -8 -8 -8 -8 -8)
+    end
+
+    test "no category column when the arbiter hides categories, or nobody has one", %{
+      conn: conn,
+      swiss: swiss
+    } do
+      uncategorised =
+        update_in(swiss["players"], &Enum.map(&1, fn p -> Map.delete(p, "category") end))
+
+      publish(no_rounds(uncategorised))
+      document = conn |> get(~p"/t/#{swiss["tournament"]["slug"]}") |> doc()
+      assert texts(document, "table.starting-rank td.col-cat") == []
+
+      hidden =
+        swiss
+        |> update_in(["players"], &Enum.map(&1, fn p -> Map.put(p, "category", "-8") end))
+        |> put_in(["tournament", "display"], %{"category" => false})
+
+      publish(no_rounds(hidden))
+      document = conn |> get(~p"/t/#{swiss["tournament"]["slug"]}") |> doc()
+      assert texts(document, "table.starting-rank td.col-cat") == []
+    end
+
     test "a keizer tournament gets the fallback too", %{conn: conn, keizer: keizer} do
       publish(no_rounds(keizer))
       html = conn |> get(~p"/t/#{keizer["tournament"]["slug"]}") |> html_response(200)

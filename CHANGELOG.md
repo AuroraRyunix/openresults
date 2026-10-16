@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Fix] **Categories before round 1.** The list a tournament shows before its first round had a column for rating, federation and club, and none for category, so an arbiter ticking "Categories" saw nothing happen and reasonably assumed the tick was broken. It was the list. It now gets a Category column whenever the players have one and the tick is on, the same rule the standings already followed.
+
 - [Security] Bandit 1.12.5 → 1.13.1 (EEF-CVE-2026-105660, EEF-CVE-2026-105659) and decimal 3.1.1 → 3.2.0 (EEF-CVE-2026-97853). Same three advisories OpenPairings closed in 0.88.1; this site was running the same web server and the same gullible arithmetic. No behaviour changes.
 
 - [Feature] **Pending games.** A round-robin board nobody has entered, in a round the tournament has since moved past, now arrives as `boards[].pending` with the points OpenPairings counts it for, and the standings bring a `pending_games` count. The round page says "Result not yet in" where the hyphen was, the cross-table gives it the hourglass a postponed game gets, and the line above the standings says "2 games have no result yet" instead of calling every one of them postponed, which would have been a confident claim about games nobody postponed. Running totals count it, and a round is not "live" for its sake. A snapshot without the new keys reads exactly as before.
