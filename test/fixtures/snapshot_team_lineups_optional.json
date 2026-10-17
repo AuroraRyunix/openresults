@@ -492,6 +492,7 @@
       "flags": true,
       "pairing_scores": true,
       "pairings": true,
+      "performance": false,
       "player_cards": true,
       "rating": true,
       "rounds_played": false,

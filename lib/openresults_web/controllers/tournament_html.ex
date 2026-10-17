@@ -527,6 +527,9 @@ defmodule OpenResultsWeb.TournamentHTML do
       # the rows rather than of a display tick, because a tournament that
       # does not send it has no tick either.
       |> assign(:rounds_played?, Enum.any?(all_rows, &Map.has_key?(&1, "rounds_played")))
+      # The performance column, likewise: only when a row carries it, which
+      # OpenPairings does only for an arbiter who ticked "Performance".
+      |> assign(:performance?, Enum.any?(all_rows, &Map.has_key?(&1, "performance")))
       # A finer tick than `tiebreaks` itself: an arbiter can publish the
       # columns while keeping the per-round arithmetic behind them closed.
       # Absent means shown, like every other key `Tournament.show?/2` reads.
@@ -643,6 +646,15 @@ defmodule OpenResultsWeb.TournamentHTML do
               </.sort_link>
             </th>
 
+            <th
+              :if={@performance? and not @keizer?}
+              class="num col-perf"
+              scope="col"
+              title={gettext("Performance")}
+            >
+              {gettext("Perf.")}
+            </th>
+
             <%= if @keizer? do %>
               <th class="num" scope="col">{gettext("Value")}</th>
 
@@ -703,6 +715,10 @@ defmodule OpenResultsWeb.TournamentHTML do
             <td :if={@categories? and @show.category} class="col-cat">{dash(row["category"])}</td>
 
             <td :if={@rounds_played?} class="num col-rds">{dash(row["rounds_played"])}</td>
+
+            <td :if={@performance? and not @keizer?} class="num col-perf">
+              {dash(row["performance"])}
+            </td>
 
             <%= if @keizer? do %>
               <td class="num">{number(row["value"])}</td>

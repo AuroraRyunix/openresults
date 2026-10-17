@@ -27,6 +27,7 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Performance column.** When the arbiter ticks "Performance" in OpenPairings, the Swiss and round-robin standings gain a Perf. column with each player's performance rating as of that round. A player with no finished game gets a dash. The tick starts off, and a snapshot whose rows do not carry the number gets no column, which is every snapshot published until now, none of which needed a word of warning.
 - [Feature] **Sex column.** When the arbiter ticks "Sex" in OpenPairings, the standings and the starting list gain an M/F column. The tick starts off, so nothing changes until somebody asks. A snapshot that does not carry the field gets no column, which is also what every snapshot published before today gets, and none of them needed to be told.
 - [Fix] **Categories before round 1.** The list a tournament shows before its first round had a column for rating, federation and club, and none for category, so an arbiter ticking "Categories" saw nothing happen and reasonably assumed the tick was broken. It was the list. It now gets a Category column whenever the players have one and the tick is on, the same rule the standings already followed.
 

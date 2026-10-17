@@ -535,6 +535,17 @@ their browser and has no bearing on this, in either direction. Withheld means
 absent, so a tournament that turns it off looks, from here, exactly like one
 that never had it.
 
+**`rows[].performance`** (OpenPairings' "Performance" tick, added 2026-10-17,
+additive) - an integer: the player's performance rating after that round,
+the average rating of the opponents met in finished games plus
+400 x (wins - losses) / games, rounded; the same number as the "Perf" column on
+the arbiter's Players page. Optional, and sent only on Swiss and round-robin
+standings by a tournament whose arbiter turned "Performance" on, which starts
+OFF. A player with no finished game has no key (never null or 0). Absent from
+every row means no Performance column; the site prints the number it is handed.
+`display.performance` says whether the tick is on, but the rows carry the
+answer. Contract fixtures carry only the `display` flag, `false`.
+
 **`tournament.display.flags`** (OpenPairings' "Federation flags" tick,
 added 2026-10-10, additive) - `true` asks for a small flag beside each
 player's federation code. **Absent means off**, the one display key read
