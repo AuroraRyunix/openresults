@@ -40,6 +40,17 @@
 </section>
 
 <section id="player-detail">
+  <%!-- Outside the summary, so the right-click peek does not carry a switch
+        for the page it is peeking at. Only where the pages it pins rows on
+        exist. --%>
+  <.follow_button
+    :if={
+      Tournament.show?(@payload, "player_cards") and
+        (Tournament.show?(@payload, "standings") or Tournament.show?(@payload, "pairings"))
+    }
+    slug={@slug}
+    no={@player["no"]}
+  />
   <%!-- Deliberately outside #player-summary: the overlay lifts that section
         verbatim for the right-click peek, and this is not part of the peek -
         it is a reason to leave this tournament altogether, which belongs
