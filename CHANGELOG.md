@@ -31,7 +31,7 @@ Each entry is tagged so a version can be skimmed:
 - [Change] **Pairings on a phone.** Each board is two lines: White over Black, a square for each colour, the board number on the left and the result on the right. The old row of four columns came to a few pixels more than a 375px screen, so every board scrolled sideways by exactly enough to be irritating. Desktops and the projector view are unchanged.
 - [Change] **Rounds on a phone** are one line that swipes, with the round you are on - or the newest one - already in view, under the Standings and Cross-table links. Before, nine rounds wrapped into three rows of chips and the first board started somewhere below the fold.
 - [Fix] **Standings on a phone with Sex or Performance switched on.** Those two columns pushed the points off the right edge. On a phone they now join rating, category and rounds present in one quiet line under the name, so nothing is lost and the points are back where people look for them.
-- [Change] On a phone, a player's round-by-round table drops the pairing number, federation, title and opponent's total and draws the colour as a square, and the list before round 1 keeps number and name in place while the rest scrolls, long club names wrapping instead of widening the table.
+- [Change] On a phone, a player's round-by-round table drops the pairing number, federation, title and opponent's total and draws the colour as a square, and the list before round 1 keeps number and name in place while the rest scrolls, long club names wrapping instead of widening the table. A team round's match list wraps team names too, which in club chess are less names than sentences.
 
 ## [0.23.0] - 2026-10-17
 

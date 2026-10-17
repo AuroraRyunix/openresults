@@ -4138,6 +4138,17 @@ tr.is-followed > :first-child {
     padding-right: 0.35rem;
   }
 
+  /* A team round's match list: team names wrap rather than push the score
+     and the second team off the edge - club teams are named like
+     sentences ("Koninklijke Schaakclub Rochade Eupen-Kelmis 2"). */
+  .matches td {
+    white-space: normal;
+  }
+
+  .matches td:not(.num) {
+    min-width: 6.5rem;
+  }
+
   /* The pinned columns carry their own opaque ground, so the followed row
      says so on them too. */
   .standings tr.is-followed > :first-child,
