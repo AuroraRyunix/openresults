@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-17
+
 - [Feature] **Follow a player.** A player's page now has "Follow this player". After that, their row sits pinned above the standings and their board above each round, and is marked where it sits in the table as well. The choice lives in this browser only, per tournament; the server never hears about it, which also means the page cache never has to. "Stop following" undoes it, for the parent whose child has asked them to stop.
 - [Change] **Pairings on a phone.** Each board is two lines: White over Black, a square for each colour, the board number on the left and the result on the right. The old row of four columns came to a few pixels more than a 375px screen, so every board scrolled sideways by exactly enough to be irritating. Desktops and the projector view are unchanged.
 - [Change] **Rounds on a phone** are one line that swipes, with the round you are on - or the newest one - already in view, under the Standings and Cross-table links. Before, nine rounds wrapped into three rows of chips and the first board started somewhere below the fold.
