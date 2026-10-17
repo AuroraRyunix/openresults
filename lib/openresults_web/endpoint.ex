@@ -51,6 +51,11 @@ defmodule OpenResultsWeb.Endpoint do
   end
 
   plug Plug.RequestId
+
+  # Short-link host -> tournament page, and old host -> canonical host (both
+  # off unless configured; see config/runtime.exs).
+  plug OpenResultsWeb.Plugs.ShortHost
+  plug OpenResultsWeb.Plugs.CanonicalHost
   # `log: :debug` rather than the default `:info`: the 2026-09-12 load test's
   # own numbers (see docs/load-test-2026-09-12.md) showed this plug's two
   # lines a request ("GET /path", "Sent 200 in Xms") adding real, measured

@@ -310,7 +310,60 @@ if config_env() == :prod do
 
   config :openresults, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Hostnames. PHX_HOST is the canonical one - every link, feed entry, sitemap
+  # line and og:url is built from it. During a domain move these matter too,
+  # all comma-separated and empty by default, which keeps today's behaviour:
+  #
+  #   * PHX_ALLOWED_HOSTS - further hosts whose pages may open the hall
+  #     display's websocket (`check_origin`). PHX_HOST is always allowed.
+  #   * PHX_REDIRECT_HOSTS - old hosts whose GET/HEAD requests are answered with
+  #     a 301 to PHX_HOST (`OpenResultsWeb.Plugs.CanonicalHost`). Each is also
+  #     an allowed origin, so a hall display left open across the switch keeps
+  #     its socket.
+  #   * PHX_SHORT_HOST - the short-link host (one name, e.g. pairings.cloud):
+  #     `/` and `/t/...` there 301 to the same path on PHX_HOST, everything
+  #     else is a 404 (`OpenResultsWeb.Plugs.ShortHost`).
+  #
+  # Something that does not look like a hostname stops the boot: a typo here
+  # would otherwise quietly refuse every websocket from the real site.
+  parse_hosts = fn variable ->
+    (System.get_env(variable) || "")
+    |> String.split(",")
+    |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.map(fn entry ->
+      if entry =~ ~r/\A[a-z0-9]([a-z0-9.-]*[a-z0-9])?\z/ do
+        entry
+      else
+        raise "#{variable} has an entry that is not a hostname: #{inspect(entry)}. " <>
+                "Use bare names separated by commas, e.g. old.example.org,www.example.org."
+      end
+    end)
+    |> Enum.uniq()
+  end
+
+  canonical_host = String.downcase(host)
+  allowed_hosts = parse_hosts.("PHX_ALLOWED_HOSTS")
+  redirect_hosts = parse_hosts.("PHX_REDIRECT_HOSTS") -- [canonical_host]
+
+  short_host =
+    case parse_hosts.("PHX_SHORT_HOST") do
+      [] -> nil
+      [one] -> one
+      _many -> raise "PHX_SHORT_HOST takes exactly one hostname."
+    end
+
+  if short_host == canonical_host do
+    raise "PHX_SHORT_HOST is the same as PHX_HOST; the short host would redirect to itself."
+  end
+
+  config :openresults, :host_policy,
+    canonical: canonical_host,
+    redirect_hosts: redirect_hosts,
+    short_host: short_host
+
   config :openresults, OpenResultsWeb.Endpoint,
+    check_origin: Enum.map(Enum.uniq([host | allowed_hosts ++ redirect_hosts]), &("//" <> &1)),
     url: [host: host, port: 443, scheme: "https"],
     http: [
       # Enable IPv6 and bind on all interfaces.
