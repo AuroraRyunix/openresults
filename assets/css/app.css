@@ -6482,8 +6482,17 @@ button.lb-move:hover {
     display: none;
   }
 
+  /* One line, never two or three: the facts run on and the end is an
+     ellipsis. Clipped, not removed - a screen reader still reads them all. */
   .masthead .details {
     font-size: 0.8125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .masthead .details span {
+    display: inline;
   }
 
   /* A rank is one to three digits; it was given the width of a short name. */
