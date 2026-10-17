@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-10-17
+
 - [Change] **Phone leftovers.** The line of facts under a tournament's name (city, dates, arbiter, tempo) stays on one line on a phone and trails off with an ellipsis instead of taking three; a screen reader still gets all of it. The player you follow is now marked on the cross-table too, in the same tint as on the standings, since it seemed unfair that only two of three pages noticed.
 - [Change] **Standings on a phone, second opinion.** Tie-break columns are headed by their abbreviation (BH-C1, BH, SB) instead of "Buchholz Cut-1" spelled out at the width of a player's name; the full name is still there for a screen reader and on a wider screen. Tapping a tie-break opens its working as a sheet from the bottom of the screen, with whose number it is and a Close button, instead of inside the cell, where it made one row a quarter of a screen tall. The site's name and its language and theme buttons share one line again, and the byes table and a player's round-by-round card no longer run a few pixels past the edge.
 - [Feature] The site can now answer on a second address: pages opened on the old address keep working while the new one is switched on, and the old address can be set to forward visitors to the new one. Off until it is turned on.
