@@ -277,5 +277,31 @@ defmodule OpenResultsWeb.PhoneTest do
       assert html =~ ~s("openresults:follow:" + slug)
       assert html =~ ~r/try \{ return localStorage\.getItem\(key\(slug\)\); \} catch/
     end
+
+    test "the cross-table carries the hook the followed row is marked by", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+      document = conn |> get(~p"/t/#{slug}/crosstable") |> doc()
+
+      assert present?(document, "table.crosstable[data-follow-table='#{slug}']")
+      assert present?(document, "table.crosstable tbody th.row-head a.player[data-player='1']")
+      # Marked by the script alone: nothing followed arrives in the bytes.
+      refute present?(document, "table.crosstable tr.is-followed")
+
+      html = conn |> get(~p"/t/#{slug}/crosstable") |> html_response(200)
+      assert html =~ "table.crosstable[data-follow-table]"
+      assert stylesheet() =~ ~r/tr\.is-followed > \*/
+    end
+  end
+
+  describe "the masthead's facts on a phone" do
+    test "stay on one line, clipped rather than removed", %{conn: conn} do
+      slug = publish(SnapshotPayloads.swiss())
+      document = conn |> get(~p"/t/#{slug}") |> doc()
+
+      assert present?(document, "header.masthead p.details")
+
+      assert stylesheet() =~
+               ~r/\.masthead \.details \{[^}]*white-space: nowrap;[^}]*text-overflow: ellipsis/s
+    end
   end
 end
