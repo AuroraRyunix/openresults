@@ -32,7 +32,16 @@ defmodule OpenResultsWeb.TournamentControllerTest do
   defp texts(document, selector) do
     document
     |> LazyHTML.query(selector)
-    |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim() |> String.replace(~r/\s+/, " ")))
+    |> Enum.map(&(&1 |> seen_text() |> String.trim() |> String.replace(~r/\s+/, " ")))
+  end
+
+  # A cell's text without the phone-only line under a standings name
+  # (`TournamentHTML.row_meta/1`), which repeats the columns beside it and
+  # is `display: none` everywhere but a narrow screen.
+  defp seen_text(cell) do
+    meta = cell |> LazyHTML.query(".row-meta") |> LazyHTML.text()
+    text = LazyHTML.text(cell)
+    if meta == "", do: text, else: String.replace(text, meta, "")
   end
 
   # The plain value a standings cell shows, ignoring a tiebreak's own
@@ -47,7 +56,7 @@ defmodule OpenResultsWeb.TournamentControllerTest do
     |> Enum.map(fn td ->
       case LazyHTML.query(td, "details > summary") |> Enum.to_list() do
         [] ->
-          td |> LazyHTML.text() |> String.trim() |> String.replace(~r/\s+/, " ")
+          td |> seen_text() |> String.trim() |> String.replace(~r/\s+/, " ")
 
         [summary] ->
           summary

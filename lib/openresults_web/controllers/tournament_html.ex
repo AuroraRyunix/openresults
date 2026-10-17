@@ -177,23 +177,31 @@ defmodule OpenResultsWeb.TournamentHTML do
           {gettext("Board prizes")}
         </a>
 
-        <%= for {n, published?} <- @slots, @show.pairings do %>
-          <a
-            :if={published?}
-            href={~p"/t/#{@slug}/round/#{n}?#{@query}"}
-            class={["chip", @current == {:round, n} && "current"]}
-            aria-current={@current == {:round, n} && "page"}
-            aria-label={round_link_label(@payload, n)}
-          >
-            {Tournament.round_label(@payload, n)}
-          </a>
+        <%!-- The rounds in a wrapper of their own, which on a desktop is no
+              box at all (`display: contents`) and on a phone is one line
+              that swipes sideways, the current or newest round scrolled
+              into view - see `.round-strip` in app.css. Nine rounds wrapped
+              into three lines of 44px chips put the table a whole screen
+              below the tournament's name. --%>
+        <span :if={@show.pairings and @slots != []} id="round-strip" class="round-strip">
+          <%= for {n, published?} <- @slots do %>
+            <a
+              :if={published?}
+              href={~p"/t/#{@slug}/round/#{n}?#{@query}"}
+              class={["chip", @current == {:round, n} && "current"]}
+              aria-current={@current == {:round, n} && "page"}
+              aria-label={round_link_label(@payload, n)}
+            >
+              {Tournament.round_label(@payload, n)}
+            </a>
 
-          <span :if={not published?} class="chip withheld" title={gettext("not published")}>
-            {Tournament.round_label(@payload, n)}<span class="visually-hidden">{gettext(
-              ", not published"
-            )}</span>
-          </span>
-        <% end %>
+            <span :if={not published?} class="chip withheld" title={gettext("not published")}>
+              {Tournament.round_label(@payload, n)}<span class="visually-hidden">{gettext(
+                ", not published"
+              )}</span>
+            </span>
+          <% end %>
+        </span>
 
         <%!-- Beside the rounds, on the arbiter's word alone - see
               `Tournament.live_boards?/1` for why not on whether a game has
@@ -554,6 +562,18 @@ defmodule OpenResultsWeb.TournamentHTML do
       )
       |> assign(:total_players, length(all_rows))
 
+    # What the phone's line under each name carries: exactly the columns
+    # it hides (see `.row-meta` in app.css), each only where the column
+    # itself is drawn.
+    assigns =
+      assign(assigns, :meta_columns, %{
+        rating: show.rating,
+        sex: show.sex,
+        category: categories? and show.category,
+        rounds_played: assigns.rounds_played?,
+        performance: assigns.performance? and not assigns.keizer?
+      })
+
     ~H"""
     <p :if={@manual_order?} class="footnote manual-order">
       {gettext(
@@ -591,6 +611,8 @@ defmodule OpenResultsWeb.TournamentHTML do
         "How each tie-break was reached is on the player's own page - open a name. Search for a player, or filter, to see it in this table."
       )}
     </p>
+
+    <.follow_pin :if={@rows != []} slug={@slug} on={@show.player_cards} />
 
     <FilterBar.filter_bar
       :if={@rows != [] or @empty?}
@@ -706,6 +728,11 @@ defmodule OpenResultsWeb.TournamentHTML do
               <span :if={Tournament.uncounted?(row)} class="uncounted-note">
                 {gettext("results not counted (withdrawn)")}
               </span>
+              <%!-- The columns a phone drops, said under the name instead -
+                    see `.row-meta` in app.css. One span of plain text per
+                    row, because a thousand-player open pays for every
+                    element twice: once to download, once per refresh. --%>
+              <.row_meta text={standings_meta(row, @players[row["player"]], @meta_columns)} />
             </th>
 
             <td :if={@show.rating} class="num col-rating">{rating(@players, row["player"])}</td>
@@ -764,6 +791,104 @@ defmodule OpenResultsWeb.TournamentHTML do
     </p>
     """
   end
+
+  @doc """
+  The followed player's row, pinned above the table - empty in the HTML and
+  filled by the root layout's follow script from the visitor's own choice
+  (`localStorage`, per tournament, set on a player's page by
+  `follow_button/1`). The server sends every visitor the same bytes, so the
+  page cache keyed by snapshot stays right; with no script, or nobody
+  followed, it stays `hidden` and costs nothing but these few elements.
+  """
+  attr :slug, :string, required: true
+  attr :on, :boolean, default: true, doc: "false where names are not links, so nothing can match"
+
+  def follow_pin(assigns) do
+    ~H"""
+    <div :if={@on} id="follow-pin" class="follow-pin" data-follow-pin={@slug} hidden>
+      <div class="follow-pin-head">
+        <span class="follow-pin-label">{gettext("Following")}</span>
+        <button type="button" id="follow-stop" class="follow-stop" data-follow-stop>
+          {gettext("Stop following")}
+        </button>
+      </div>
+      <div class="scroller follow-pin-rows" data-follow-rows></div>
+    </div>
+    """
+  end
+
+  @doc """
+  The switch on a player's page that makes them the one this device follows
+  - see `follow_pin/1`. Hidden until the script shows it, because a button
+  that does nothing without JavaScript is worse than no button.
+  """
+  attr :slug, :string, required: true
+  attr :no, :integer, required: true
+
+  def follow_button(assigns) do
+    ~H"""
+    <div class="follow-control">
+      <button
+        type="button"
+        id="follow-player"
+        class="follow-button"
+        data-follow-slug={@slug}
+        data-follow-no={@no}
+        data-label-follow={gettext("Follow this player")}
+        data-label-following={gettext("Stop following")}
+        hidden
+      >
+        {gettext("Follow this player")}
+      </button>
+      <p class="quiet follow-hint" hidden>
+        {gettext(
+          "Their row stays at the top of the standings, and their board at the top of each round - on this device only."
+        )}
+      </p>
+    </div>
+    """
+  end
+
+  @doc """
+  The quiet line under a name that carries, on a phone, the columns the
+  phone hides. Renders nothing when there is nothing to say.
+  """
+  attr :text, :string, default: nil
+
+  def row_meta(assigns) do
+    ~H"""
+    <span :if={@text} class="row-meta">{@text}</span>
+    """
+  end
+
+  @doc """
+  The text of `row_meta/1` for one standings row: rating, sex, category,
+  rounds present and performance, each only where its column is drawn and
+  the row has a value. `nil` when none of them do.
+  """
+  def standings_meta(row, player, columns) do
+    player = player || %{}
+
+    [
+      columns.rating && present(player["rating"]),
+      columns.sex && present(player["sex"]),
+      columns.category && present(row["category"]),
+      columns.rounds_played && labelled(gettext("Rds"), row["rounds_played"]),
+      columns.performance && labelled(gettext("Perf."), row["performance"])
+    ]
+    |> Enum.filter(&(is_binary(&1) and &1 != ""))
+    |> case do
+      [] -> nil
+      parts -> Enum.join(parts, " · ")
+    end
+  end
+
+  defp present(nil), do: nil
+  defp present(value), do: to_string(value)
+
+  defp labelled(_label, nil), do: nil
+  defp labelled(label, value) when is_number(value), do: "#{label} #{number(value)}"
+  defp labelled(label, value), do: "#{label} #{value}"
 
   @doc """
   The sentence under any table that lists a player whose results are not
@@ -1405,7 +1530,7 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <th :if={@show.federation} scope="col">{gettext("Federation")}</th>
 
-            <th :if={@show.club} scope="col">{gettext("Club")}</th>
+            <th :if={@show.club} class="col-club" scope="col">{gettext("Club")}</th>
 
             <th :if={@show.sex} scope="col">{gettext("Sex")}</th>
 
@@ -1435,7 +1560,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               <Flags.fed code={player["federation"]} on={@show.flags} />
             </td>
 
-            <td :if={@show.club}>{dash(player["club"])}</td>
+            <td :if={@show.club} class="col-club">{dash(player["club"])}</td>
 
             <td :if={@show.sex}>{dash(player["sex"])}</td>
 
@@ -1966,6 +2091,8 @@ defmodule OpenResultsWeb.TournamentHTML do
       <a :if={@empty?} href={~p"/t/#{@slug}/round/#{@round["number"]}"}>{gettext("Clear filters")}</a>
     </p>
 
+    <.follow_pin :if={@tagged != []} slug={@slug} on={@show.player_cards} />
+
     <FilterBar.filter_bar
       :if={@tagged != [] or @empty?}
       action={~p"/t/#{@slug}/round/#{@round["number"]}"}
@@ -1980,14 +2107,14 @@ defmodule OpenResultsWeb.TournamentHTML do
       unit={:boards}
     />
     <div :if={@tagged != []} class="scroller">
-      <table class="pairings">
+      <table id="pairings" class="pairings">
         <caption class="visually-hidden">
           {Tournament.round_heading(@payload, @round["number"])}
         </caption>
 
         <thead>
           <tr>
-            <th class="num" scope="col">{gettext("Bd")}</th>
+            <th class="num col-bd" scope="col">{gettext("Bd")}</th>
 
             <th :if={@show.rating} class="num col-rating" scope="col">{gettext("Elo")}</th>
 
@@ -2002,7 +2129,7 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <th scope="col">{gettext("White")}</th>
 
-            <th class="num" scope="col">{gettext("Result")}</th>
+            <th class="num col-result" scope="col">{gettext("Result")}</th>
 
             <th scope="col">{gettext("Black")}</th>
 
@@ -2042,7 +2169,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             :for={{board, tag, k} <- group.rows}
             id={is_integer(board["board"]) && "board-#{board["board"]}"}
           >
-            <th scope="row" class="num row-head">{k || Tournament.board_label(board)}</th>
+            <th scope="row" class="num row-head col-bd">{k || Tournament.board_label(board)}</th>
 
             <td :if={@show.rating} class="num col-rating">{rating(@players, board["white"])}</td>
 
@@ -2050,7 +2177,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               <.score points={@scores[board["white"]]} reason={@gaps[board["white"]]} />
             </td>
 
-            <td class={seat_class(tag.white?)} aria-current={tag.white? && "true"}>
+            <td class={seat_class(:white, tag.white?)} aria-current={tag.white? && "true"}>
               <.player_link
                 slug={@slug}
                 no={board["white"]}
@@ -2063,7 +2190,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               <span :if={tag.white?} class="visually-hidden">{gettext("matches your filter")}</span>
             </td>
 
-            <td class="num">
+            <td class="num col-result">
               <.result
                 token={@results? && board["result"]}
                 postponed={Tournament.postponed?(board)}
@@ -2072,7 +2199,7 @@ defmodule OpenResultsWeb.TournamentHTML do
               />
             </td>
 
-            <td class={seat_class(tag.black?)} aria-current={tag.black? && "true"}>
+            <td class={seat_class(:black, tag.black?)} aria-current={tag.black? && "true"}>
               <.player_link
                 slug={@slug}
                 no={board["black"]}
@@ -2101,10 +2228,11 @@ defmodule OpenResultsWeb.TournamentHTML do
   # list prints two of these on each of five hundred boards.
   defp rating(players, no), do: dash(players[no]["rating"])
 
-  # A seat cell's classes: `seat` for the phone layout, the match mark when
-  # the filter bar picked this seat out.
-  defp seat_class(true), do: "seat pairing-match"
-  defp seat_class(_matched), do: "seat"
+  # A seat cell's classes: `seat` and its colour for the phone layout (which
+  # stacks White over Black - see `.pairings` in app.css), the match mark
+  # when the filter bar picked this seat out.
+  defp seat_class(colour, true), do: ["seat", "seat-#{colour}", "pairing-match"]
+  defp seat_class(colour, _matched), do: ["seat", "seat-#{colour}"]
 
   # A team round's boards grouped under their matches, in the order the
   # boards are listed: `%{match:, anchor:, rows: [{board, tag, k}]}`, where
@@ -2989,17 +3117,17 @@ defmodule OpenResultsWeb.TournamentHTML do
           <tr>
             <th class="num" scope="col">{gettext("Rd")}</th>
 
-            <th scope="col">{gettext("Colour")}</th>
+            <th class="col-colour" scope="col">{gettext("Colour")}</th>
 
-            <th class="num" scope="col" title={gettext("Opponent's pairing number")}>
+            <th class="num col-no" scope="col" title={gettext("Opponent's pairing number")}>
               {gettext("No")}
             </th>
 
-            <th :if={@show.federation} scope="col">{gettext("Nat")}</th>
+            <th :if={@show.federation} class="col-fed" scope="col">{gettext("Nat")}</th>
 
-            <th :if={@show.title} scope="col">{gettext("Tit")}</th>
+            <th :if={@show.title} class="col-title" scope="col">{gettext("Tit")}</th>
 
-            <th scope="col">{gettext("Opponent")}</th>
+            <th class="col-opponent" scope="col">{gettext("Opponent")}</th>
 
             <th :if={@show.rating} class="num" scope="col">{gettext("Elo")}</th>
 
@@ -3011,7 +3139,12 @@ defmodule OpenResultsWeb.TournamentHTML do
                   table the arbiter is withholding, one player at a time.
                   The cross-table hides its rank and points columns on the
                   same tick, and the two have to agree. --%>
-            <th :if={@show.standings} class="num" scope="col" title={gettext("Opponent's total")}>
+            <th
+              :if={@show.standings}
+              class="num col-opp-pts"
+              scope="col"
+              title={gettext("Opponent's total")}
+            >
               {gettext("Pts")}
             </th>
 
@@ -3027,17 +3160,26 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <%= case entry.kind do %>
               <% :game -> %>
-                <td>{if(entry.colour == :white, do: gettext("White"), else: gettext("Black"))}</td>
+                <%!-- The word for a reader, the square for a phone, which has
+                      room for the square only - see `.colour-mark`. --%>
+                <td class="col-colour">
+                  <span class={["colour-mark", "colour-#{entry.colour}"]} aria-hidden="true"></span>
+                  <span class="colour-word">
+                    {if(entry.colour == :white, do: gettext("White"), else: gettext("Black"))}
+                  </span>
+                </td>
 
-                <td class="num">{entry.opponent_no}</td>
+                <td class="num col-no">{entry.opponent_no}</td>
 
-                <td :if={@show.federation}>
+                <td :if={@show.federation} class="col-fed">
                   <Flags.fed code={entry.opponent && entry.opponent["federation"]} on={@show.flags} />
                 </td>
 
-                <td :if={@show.title}>{dash(entry.opponent && entry.opponent["title"])}</td>
+                <td :if={@show.title} class="col-title">
+                  {dash(entry.opponent && entry.opponent["title"])}
+                </td>
 
-                <td>
+                <td class="col-opponent">
                   <.player_link
                     slug={@slug}
                     no={entry.opponent_no}
@@ -3052,7 +3194,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                   {dash(entry.opponent && entry.opponent["rating"])}
                 </td>
 
-                <td :if={@show.standings} class="num">
+                <td :if={@show.standings} class="num col-opp-pts">
                   <.score points={@totals[entry.opponent_no]} />
                 </td>
 
@@ -3071,13 +3213,13 @@ defmodule OpenResultsWeb.TournamentHTML do
                       from "No" onwards, so the text started two or three
                       columns to the left of every name above and below it and
                       read as if it had landed in the wrong column. --%>
-                <td></td>
+                <td class="col-colour"></td>
 
-                <td></td>
+                <td class="col-no"></td>
 
-                <td :if={@show.federation}></td>
+                <td :if={@show.federation} class="col-fed"></td>
 
-                <td :if={@show.title}></td>
+                <td :if={@show.title} class="col-title"></td>
 
                 <td
                   colspan={1 + count_if([@show.rating, @show.standings])}

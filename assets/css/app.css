@@ -3709,12 +3709,19 @@ a.xt-opp:hover {
   }
 
   /* Rank, name, points first: what a player asks the standings. Rating,
-     category and rounds present are on each player's page, and they pushed
-     the points off the right edge. */
+     sex, category, rounds present and performance pushed the points off the
+     right edge, so they move into one quiet line under the name
+     (`.row-meta`) instead of leaving the page altogether. */
   .standings .col-rating,
+  .standings .col-sex,
   .standings .col-cat,
-  .standings .col-rds {
+  .standings .col-rds,
+  .standings .col-perf {
     display: none;
+  }
+
+  .standings .row-meta {
+    display: block;
   }
 
   /* The standings scroll sideways through their tie-breaks; the rank and the
@@ -3779,6 +3786,388 @@ a.xt-opp:hover {
 
   .xt-scroller {
     scroll-padding-left: calc(2.75rem + 7.5rem);
+  }
+}
+
+/* ---- Phone, the second pass ----------------------------------------------
+
+   What the first pass left: a pairing list whose two 7rem names, board and
+   result came to a few pixels more than a 375px screen, so every board
+   scrolled sideways by a hair; a round strip that wrapped nine 44px chips
+   into three lines before the first board; a player's round-by-round table
+   of ten columns; and no way to keep your own child's row in view. */
+
+/* The rounds: on a desktop the wrapper is not a box at all, and the chips
+   sit in the strip beside Standings exactly as they always did. */
+.round-strip {
+  display: contents;
+}
+
+/* The line under a standings name that only a phone shows - see the phone
+   rules below and `TournamentHTML.row_meta/1`. */
+.row-meta {
+  display: none;
+  color: var(--quiet);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+}
+
+/* White or Black as a square, the way a scoresheet draws it. Edged in ink
+   in both cases, so the white one is still a shape on a white page. */
+.colour-mark {
+  display: inline-block;
+  flex: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.35rem;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  vertical-align: -0.05em;
+}
+
+.colour-white {
+  background: var(--panel);
+}
+
+.colour-black {
+  background: var(--ink);
+}
+
+/* ---- the followed player ----
+   `TournamentHTML.follow_pin/1` and `follow_button/1`; the root layout's
+   follow script fills and shows them. */
+.follow-pin {
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.6rem 0.25rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.follow-pin[hidden],
+.follow-control [hidden] {
+  display: none;
+}
+
+.follow-pin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.follow-pin-label {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.follow-stop,
+.follow-button {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--quiet);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.follow-stop {
+  border-color: transparent;
+  color: var(--quiet);
+}
+
+.follow-stop:hover,
+.follow-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.follow-button.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.follow-control {
+  margin: 1rem 0;
+}
+
+.follow-hint {
+  margin: 0.35rem 0 0;
+}
+
+/* The pinned copy: no rule under its one row. */
+.follow-pin-rows tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+/* The same row in the table itself, marked where it sits: a tint and a
+   rule on the left edge, so it is not colour alone. */
+tr.is-followed > * {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+}
+
+tr.is-followed > :first-child {
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .follow-stop,
+  .follow-button {
+    transition: none;
+  }
+}
+
+@media screen and (pointer: coarse) {
+  .follow-stop,
+  .follow-button {
+    min-height: 2.75rem;
+  }
+}
+
+@media screen and (max-width: 40rem) {
+  /* One line of rounds that swipes, under the page links rather than in
+     among them, with the current (or newest) round scrolled into view by
+     the root layout's script. It runs to the screen's edges, so a chip cut
+     off at the edge says "there is more this way". */
+  .rounds .round-strip {
+    display: flex;
+    flex: 1 0 100%;
+    order: 9;
+    gap: 0.375rem;
+    margin: 0 -1rem;
+    padding: 0.1rem 1rem 0.25rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding: 0 1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rounds .round-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .round-strip > .chip {
+    flex: none;
+  }
+
+  /* A board as two lines - White over Black, a colour square before each -
+     with the board number on the left and the result beside both on the
+     right. Same table, same cells, same order for a screen reader; only
+     the boxes move. The column headings go out of sight but not out of the
+     document. */
+  .pairings:not(.projector-pairings),
+  .pairings:not(.projector-pairings) > tbody {
+    display: block;
+  }
+
+  .pairings:not(.projector-pairings) > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .pairings:not(.projector-pairings) > tbody > tr:not(.match-head) {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      "bd white res"
+      "bd black res";
+    align-items: center;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .pairings:not(.projector-pairings) > tbody > tr.match-head,
+  .pairings:not(.projector-pairings) > tbody > tr.match-head > th {
+    display: block;
+  }
+
+  .pairings:not(.projector-pairings) > tbody > tr:not(.match-head) > * {
+    border-bottom: 0;
+  }
+
+  .pairings:not(.projector-pairings) .col-bd {
+    grid-area: bd;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    color: var(--quiet);
+    font-size: 0.8125rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .pairings:not(.projector-pairings) td.seat {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+
+  .pairings:not(.projector-pairings) td.seat-white {
+    grid-area: white;
+    padding-top: 0.55rem;
+  }
+
+  .pairings:not(.projector-pairings) td.seat-black {
+    grid-area: black;
+    padding-bottom: 0.55rem;
+  }
+
+  .pairings:not(.projector-pairings) td.seat::before {
+    content: "";
+    flex: none;
+    width: 0.65rem;
+    height: 0.65rem;
+    margin-right: 0.45rem;
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+  }
+
+  .pairings:not(.projector-pairings) td.seat-white::before {
+    background: var(--panel);
+  }
+
+  .pairings:not(.projector-pairings) td.seat-black::before {
+    background: var(--ink);
+  }
+
+  .pairings:not(.projector-pairings) td.col-result {
+    grid-area: res;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.75rem;
+    padding-left: 0.5rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .pairings:not(.projector-pairings) td.col-result .postponed {
+    max-width: 6.5rem;
+    font-weight: 400;
+  }
+
+  /* The board a link landed on, and the followed one: marked on the row,
+     since its cells no longer cover all of it. */
+  .pairings:not(.projector-pairings) tr:target,
+  .pairings:not(.projector-pairings) tr.is-followed {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  /* The starting list before round 1: number and name stay put while the
+     rest scrolls, as in the standings, and a club wraps rather than
+     stretching the table a whole name wider. */
+  .starting-rank tr > :first-child,
+  .starting-rank tr > :nth-child(2) {
+    position: sticky;
+    z-index: 1;
+    background: var(--bg);
+    box-shadow:
+      inset -1px 0 var(--rule),
+      inset 0 -1px var(--rule);
+  }
+
+  .starting-rank tr > :first-child {
+    left: 0;
+    box-sizing: border-box;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    max-width: 2.75rem;
+  }
+
+  .starting-rank tr > :nth-child(2) {
+    left: 2.75rem;
+    min-width: 8rem;
+    max-width: 11rem;
+    white-space: normal;
+  }
+
+  .starting-rank .col-club {
+    min-width: 8rem;
+    white-space: normal;
+  }
+
+  /* A player's rounds: round, colour as a square, opponent, rating, result,
+     score. The pairing number, federation, title and the opponent's total
+     went; the opponent's name is one tap away from all of them. */
+  .card .col-no,
+  .card .col-fed,
+  .card .col-title,
+  .card .col-opp-pts {
+    display: none;
+  }
+
+  .card .colour-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .card .colour-mark {
+    margin-right: 0;
+  }
+
+  .card .col-opponent {
+    min-width: 7rem;
+    white-space: normal;
+  }
+
+  .card th,
+  .card td {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+  }
+
+  /* A team round's match list: team names wrap rather than push the score
+     and the second team off the edge - club teams are named like
+     sentences ("Koninklijke Schaakclub Rochade Eupen-Kelmis 2"). */
+  .matches td {
+    white-space: normal;
+  }
+
+  .matches td:not(.num) {
+    min-width: 6.5rem;
+  }
+
+  /* The pinned columns carry their own opaque ground, so the followed row
+     says so on them too. */
+  .standings tr.is-followed > :first-child,
+  .standings tr.is-followed > :nth-child(2) {
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+  }
+
+  .follow-pin .standings tr > :first-child,
+  .follow-pin .standings tr > :nth-child(2),
+  .follow-pin .starting-rank tr > :first-child,
+  .follow-pin .starting-rank tr > :nth-child(2) {
+    background: var(--panel);
+  }
+
+  .standings tr.is-followed > :first-child {
+    box-shadow:
+      inset 3px 0 var(--accent),
+      inset -1px 0 var(--rule),
+      inset 0 -1px var(--rule);
   }
 }
 

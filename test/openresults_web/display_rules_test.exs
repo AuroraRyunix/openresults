@@ -312,7 +312,7 @@ defmodule OpenResultsWeb.DisplayRulesTest do
       html = conn |> get(~p"/t/#{slug}/round/2") |> html_response(200)
 
       refute html =~ ~s(<table class="byes">)
-      assert html =~ ~s(<table class="pairings">)
+      assert html =~ ~s(<table id="pairings" class="pairings">)
     end
 
     test "a withheld page says so rather than claiming not to exist", %{conn: conn} do
