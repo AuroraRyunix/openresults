@@ -27,6 +27,7 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Feature] **Sex column.** When the arbiter ticks "Sex" in OpenPairings, the standings and the starting list gain an M/F column. The tick starts off, so nothing changes until somebody asks. A snapshot that does not carry the field gets no column, which is also what every snapshot published before today gets, and none of them needed to be told.
 - [Fix] **Categories before round 1.** The list a tournament shows before its first round had a column for rating, federation and club, and none for category, so an arbiter ticking "Categories" saw nothing happen and reasonably assumed the tick was broken. It was the list. It now gets a Category column whenever the players have one and the tick is on, the same rule the standings already followed.
 
 - [Security] Bandit 1.12.5 → 1.13.1 (EEF-CVE-2026-105660, EEF-CVE-2026-105659) and decimal 3.1.1 → 3.2.0 (EEF-CVE-2026-97853). Same three advisories OpenPairings closed in 0.88.1; this site was running the same web server and the same gullible arithmetic. No behaviour changes.

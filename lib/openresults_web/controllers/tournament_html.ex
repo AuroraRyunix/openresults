@@ -625,6 +625,8 @@ defmodule OpenResultsWeb.TournamentHTML do
               <.sort_link slug={@slug} filters={@filters} key="rating">{gettext("Rating")}</.sort_link>
             </th>
 
+            <th :if={@show.sex} class="col-sex" scope="col">{gettext("Sex")}</th>
+
             <th :if={@categories? and @show.category} class="col-cat" scope="col">
               {gettext("Cat")}
             </th>
@@ -695,6 +697,8 @@ defmodule OpenResultsWeb.TournamentHTML do
             </th>
 
             <td :if={@show.rating} class="num col-rating">{rating(@players, row["player"])}</td>
+
+            <td :if={@show.sex} class="col-sex">{dash(@players[row["player"]]["sex"])}</td>
 
             <td :if={@categories? and @show.category} class="col-cat">{dash(row["category"])}</td>
 
@@ -1387,6 +1391,8 @@ defmodule OpenResultsWeb.TournamentHTML do
 
             <th :if={@show.club} scope="col">{gettext("Club")}</th>
 
+            <th :if={@show.sex} scope="col">{gettext("Sex")}</th>
+
             <th :if={@categories?} scope="col">{gettext("Category")}</th>
           </tr>
         </thead>
@@ -1414,6 +1420,8 @@ defmodule OpenResultsWeb.TournamentHTML do
             </td>
 
             <td :if={@show.club}>{dash(player["club"])}</td>
+
+            <td :if={@show.sex}>{dash(player["sex"])}</td>
 
             <td :if={@categories?} class="col-cat">{dash(player["category"])}</td>
           </tr>
@@ -3108,6 +3116,8 @@ defmodule OpenResultsWeb.TournamentHTML do
     )
     # Not a `show?/2` key: absent means off - see `Tournament.flags?/1`.
     |> Map.put(:flags, Tournament.flags?(payload))
+    # Nor this one: absent means no column. See `Tournament.sex?/1`.
+    |> Map.put(:sex, Tournament.sex?(payload))
   end
 
   @doc """

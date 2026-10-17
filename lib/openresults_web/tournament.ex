@@ -125,6 +125,16 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  Whether the players carry a sex, and so whether a Sex column is drawn.
+
+  Asked of the players themselves, not of a display tick: OpenPairings sends
+  `players[].sex` ("M" or "F") only when the arbiter turned "Sex" on, which
+  is off by default, so absent means no column - and a snapshot from before
+  the field existed renders exactly as it did.
+  """
+  def sex?(payload), do: Enum.any?(players(payload), &(Map.get(&1, "sex") in ["M", "F"]))
+
+  @doc """
   Whether the cross-table page is offered at all.
 
   Two ticks, and both have to be on.

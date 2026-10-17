@@ -554,6 +554,15 @@ a table this site keeps (`OpenResultsWeb.Flags`); a code that is not in it -
 which of the two a player is under.
 OpenPairings sends `true` unless the arbiter unticks it.
 
+**`players[].sex`** (OpenPairings' "Sex" tick, added 2026-10-17, additive) -
+`"M"` or `"F"`, the player's sex as the arbiter recorded it. Optional, and
+sent only by a tournament whose arbiter turned "Sex" on, which starts OFF:
+it is personal data, and nothing was published before it existed. Absent
+means no Sex column on the standings or the starting list, and a player with
+no sex recorded simply has no key. Withheld means absent, not blank, so a
+tournament that never sent it and one that turned it off look the same from
+here. There is no `display.sex` to read: the players carry the answer.
+
 **`standings.manual_order`** - whether the arbiter set `rows[].rank` by hand
 instead of computing it from the tiebreaks. Added 2026-08-29. Absent means
 no.
