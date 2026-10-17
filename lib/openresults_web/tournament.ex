@@ -948,6 +948,19 @@ defmodule OpenResultsWeb.Tournament do
   end
 
   @doc """
+  A tiebreak's short heading, for a column with no room for its name: the
+  code the arbiter's app sends (the regulations' abbreviation), with the cut
+  written the way the regulations write it - `BHC1` is `BH-C1`. The label
+  when there is no code.
+  """
+  def tiebreak_short(tiebreak) do
+    case string(tiebreak, "code") do
+      nil -> tiebreak_label(tiebreak)
+      code -> String.replace(code, ~r/^([A-Z]+?)([CM])(\d)$/, "\\1-\\2\\3")
+    end
+  end
+
+  @doc """
   The tiebreak value in position `index` of a standings row.
 
   Positional, and short rows are tolerated rather than padded: a client that

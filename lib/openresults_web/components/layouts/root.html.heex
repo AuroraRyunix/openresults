@@ -192,7 +192,8 @@
               title={gettext("Colour theme")}
               aria-label={gettext("Colour theme")}
             >
-              <span class="theme-picker-swatch" aria-hidden="true"></span> {gettext("Theme")}
+              <span class="theme-picker-swatch" aria-hidden="true"></span>
+              <span class="theme-picker-word">{gettext("Theme")}</span>
             </summary>
             <div class="theme-picker-panel" role="group" aria-label={gettext("Colour theme")}>
               <button
@@ -405,6 +406,21 @@
         // next Tab is the first field.
         const refused = document.querySelector("#registration-form .alarm, #report-form .alarm");
         if (refused) { refused.focus(); }
+
+        // A tie-break's working opens as a sheet on a phone: its Close button
+        // shuts it, and opening one shuts the one before, so two sheets never
+        // stack. Delegated, so it survives the refresher's swaps.
+        document.addEventListener("click", (event) => {
+          const close = event.target.closest("[data-close-detail]");
+          if (close) { close.closest("details").open = false; }
+        });
+        document.addEventListener("toggle", (event) => {
+          const opened = event.target;
+          if (!(opened instanceof HTMLDetailsElement) || !opened.open || !opened.matches(".tb-detail")) { return; }
+          document.querySelectorAll("details.tb-detail[open]").forEach((other) => {
+            if (other !== opened) { other.open = false; }
+          });
+        }, true);
 
         // ---- finding an element again after the refresher replaced it ----
         //

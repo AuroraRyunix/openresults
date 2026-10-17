@@ -690,7 +690,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                     is hiding the arithmetic, not the result - the order is
                     still exactly the one they computed. --%>
               <th :for={tiebreak <- @tiebreaks} :if={@show.tiebreaks} class="num" scope="col">
-                {Tournament.tiebreak_label(tiebreak)}
+                <.tiebreak_heading tiebreak={tiebreak} />
               </th>
             <% end %>
           </tr>
@@ -767,6 +767,7 @@ defmodule OpenResultsWeb.TournamentHTML do
                   show={@show}
                   code={tiebreak["code"]}
                   label={Tournament.tiebreak_label(tiebreak)}
+                  who={get_in(@players, [row["player"], "name"])}
                   key={"#{row["player"]}-#{at}"}
                   value={Tournament.tiebreak_value(row, at)}
                   working={working}
@@ -950,7 +951,7 @@ defmodule OpenResultsWeb.TournamentHTML do
             <th class="num" scope="col">{gettext("GP")}</th>
 
             <th :for={tiebreak <- @tiebreaks} class="num" scope="col">
-              {Tournament.tiebreak_label(tiebreak)}
+              <.tiebreak_heading tiebreak={tiebreak} />
             </th>
           </tr>
         </thead>
@@ -983,6 +984,26 @@ defmodule OpenResultsWeb.TournamentHTML do
         </tbody>
       </table>
     </div>
+    """
+  end
+
+  # A tie-break's column heading. The full name on a screen with room for it,
+  # the regulations' abbreviation on a phone - "Buchholz Cut-1" spelled out
+  # made one column wider than the name beside it. The abbreviation carries
+  # the full name as its title.
+  attr :tiebreak, :map, required: true
+
+  defp tiebreak_heading(assigns) do
+    assigns =
+      assign(assigns,
+        label: Tournament.tiebreak_label(assigns.tiebreak),
+        short: Tournament.tiebreak_short(assigns.tiebreak)
+      )
+
+    # The text stays the name, so a screen reader and a copy-paste get the
+    # name; a phone's stylesheet swaps what is drawn for `data-short`.
+    ~H"""
+    <span class="tb-head" title={@label} data-short={@short != @label && @short}>{@label}</span>
     """
   end
 
@@ -1601,6 +1622,10 @@ defmodule OpenResultsWeb.TournamentHTML do
     default: nil,
     doc: "the tiebreak's own label, which names the small table inside"
 
+  attr :who, :string,
+    default: nil,
+    doc: "the player the row is, named in the sheet a phone opens this as"
+
   attr :key, :string,
     default: nil,
     doc: """
@@ -1636,6 +1661,20 @@ defmodule OpenResultsWeb.TournamentHTML do
       </summary>
 
       <div class="scroller">
+        <%!-- On a phone this opens as a sheet over the bottom of the screen,
+              not inside the cell (which made the row a quarter of a screen
+              tall and pushed every other tie-break out of sight), and the
+              sheet needs to say whose number it explains. The table's own
+              caption already says it to a screen reader. --%>
+        <div class="tb-sheet-head">
+          <span aria-hidden="true">
+            <strong>{@label}</strong>
+            <span :if={@who} class="quiet">· {@who}</span>
+          </span>
+          <button type="button" class="tb-sheet-close" data-close-detail>
+            {gettext("Close")}
+          </button>
+        </div>
         <%!-- The column headings are there for a screen reader and hidden
               from the eye, which already has the full table's headings on the
               player's page and needs none inside a cell this small. --%>

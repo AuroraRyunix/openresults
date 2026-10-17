@@ -98,6 +98,16 @@ defmodule OpenResultsWeb.TournamentTest do
       assert Tournament.tiebreak_label(%{"code" => "ARO"}) == "ARO"
     end
 
+    test "a phone's short heading is the code, cut written as the regulations write it" do
+      assert Tournament.tiebreak_short(%{"code" => "BHC1", "label" => "Buchholz Cut-1"}) ==
+               "BH-C1"
+
+      assert Tournament.tiebreak_short(%{"code" => "AROC1"}) == "ARO-C1"
+      assert Tournament.tiebreak_short(%{"code" => "SB", "label" => "Sonneborn-Berger"}) == "SB"
+      assert Tournament.tiebreak_short(%{"code" => "MBH"}) == "MBH"
+      assert Tournament.tiebreak_short(%{"label" => "Wins"}) == "Wins"
+    end
+
     test "row values are read positionally and short rows blank out", %{swiss: swiss} do
       row = hd(Tournament.standings_rows(swiss))
 

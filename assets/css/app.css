@@ -6453,3 +6453,133 @@ button.lb-move:hover {
     transition: none;
   }
 }
+
+/* ---- tie-break headings: the name where there is room, the abbreviation
+   where there is not (`tiebreak_heading/1`) ---- */
+@media screen and (max-width: 40rem) {
+  .tb-head[data-short] {
+    font-size: 0;
+  }
+
+  .tb-head[data-short]::after {
+    content: attr(data-short);
+    font-size: 0.75rem;
+  }
+
+  /* The brand and its tools on one line. The language links and the theme
+     swatch fit beside the logo once the word "Theme" goes - the swatch and
+     its label still say what it is to anyone who asks. */
+  .masthead-bar {
+    flex-wrap: nowrap;
+    margin-bottom: 1rem;
+  }
+
+  .masthead-tools {
+    gap: 0.25rem;
+  }
+
+  .theme-picker-word {
+    display: none;
+  }
+
+  .masthead .details {
+    font-size: 0.8125rem;
+  }
+
+  /* A rank is one to three digits; it was given the width of a short name. */
+  .standings {
+    --st-rank: 2.25rem;
+  }
+}
+
+@media screen and (max-width: 40rem) and (pointer: coarse) {
+  .lang-opt {
+    min-width: 2.5rem;
+  }
+}
+
+/* ---- a tie-break's working as a sheet, on a phone ---- */
+.tb-sheet-head {
+  display: none;
+}
+
+@media screen and (max-width: 40rem) {
+  .tb-cell details.tb-detail[open] > .scroller {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    max-height: 60vh;
+    overflow: auto;
+    padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--rule);
+    border-radius: 12px 12px 0 0;
+    background: var(--bg);
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
+    font-size: 0.9375rem;
+  }
+
+  .tb-cell details.tb-detail[open] .tb-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tb-sheet-close {
+    display: none;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  html.has-js .tb-sheet-close {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .tb-cell details.tb-detail[open] .tb-working {
+    width: 100%;
+    font-size: inherit;
+  }
+}
+
+@media screen and (max-width: 40rem) {
+  /* The sheet's table sits inside the standings, so the standings' sticky
+     rank and name columns reached into it too. It has no columns to pin. */
+  .standings .tb-working tr > :first-child,
+  .standings .tb-working tr > :nth-child(2) {
+    position: static;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+@media screen and (max-width: 40rem) {
+  /* Four short columns that ran 50px past a phone because none would wrap:
+     "half-point bye" and a long name can take two lines like anything else. */
+  .byes th,
+  .byes td {
+    white-space: normal;
+  }
+}
+
+@media screen and (max-width: 40rem) {
+  /* The round-by-round card was a few pixels wider than a phone, on cell
+     padding alone. */
+  table.card th,
+  table.card td {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+  }
+}

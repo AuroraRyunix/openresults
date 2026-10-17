@@ -27,6 +27,8 @@ Each entry is tagged so a version can be skimmed:
 
 ## [Unreleased]
 
+- [Change] **Standings on a phone, second opinion.** Tie-break columns are headed by their abbreviation (BH-C1, BH, SB) instead of "Buchholz Cut-1" spelled out at the width of a player's name; the full name is still there for a screen reader and on a wider screen. Tapping a tie-break opens its working as a sheet from the bottom of the screen, with whose number it is and a Close button, instead of inside the cell, where it made one row a quarter of a screen tall. The site's name and its language and theme buttons share one line again, and the byes table and a player's round-by-round card no longer run a few pixels past the edge.
+
 ## [0.24.0] - 2026-10-17
 
 - [Feature] **Follow a player.** A player's page now has "Follow this player". After that, their row sits pinned above the standings and their board above each round, and is marked where it sits in the table as well. The choice lives in this browser only, per tournament; the server never hears about it, which also means the page cache never has to. "Stop following" undoes it, for the parent whose child has asked them to stop.
