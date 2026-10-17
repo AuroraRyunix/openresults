@@ -1027,6 +1027,7 @@
       "rating": true,
       "rounds_played": false,
       "screen_links": true,
+      "sex": false,
       "standings": true,
       "tiebreak_working": true,
       "tiebreaks": true,
